@@ -1,28 +1,301 @@
 import { COOKIE_NAME } from "@shared/const";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
-import { publicProcedure, router } from "./_core/trpc";
+import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
+import { z } from "zod";
+import { TRPCError } from "@trpc/server";
+import { storagePut } from "./storage";
+import { nanoid } from "nanoid";
+import {
+  createScenario,
+  getScenarioById,
+  getScenariosByUserId,
+  updateScenarioStatus,
+  deleteScenario,
+  insertScenes,
+  insertCharacters,
+  insertSceneCharacters,
+  insertDialogues,
+  getScenesByScenarioId,
+  getCharactersByScenarioId,
+  getSceneCharactersBySceneIds,
+  getDialoguesBySceneId,
+  getDashboardStats,
+} from "./db";
+import { parseScenarioWithLLM } from "./scenarioParser";
 
 export const appRouter = router({
-    // if you need to use socket.io, read and register route in server/_core/index.ts, all api should start with '/api/' so that the gateway can route correctly
   system: systemRouter,
   auth: router({
-    me: publicProcedure.query(opts => opts.ctx.user),
+    me: publicProcedure.query((opts) => opts.ctx.user),
     logout: publicProcedure.mutation(({ ctx }) => {
       const cookieOptions = getSessionCookieOptions(ctx.req);
       ctx.res.clearCookie(COOKIE_NAME, { ...cookieOptions, maxAge: -1 });
-      return {
-        success: true,
-      } as const;
+      return { success: true } as const;
     }),
   }),
 
-  // TODO: add feature routers here, e.g.
-  // todo: router({
-  //   list: protectedProcedure.query(({ ctx }) =>
-  //     db.getUserTodos(ctx.user.id)
-  //   ),
-  // }),
+  scenario: router({
+    // Upload a scenario file (base64 encoded) and trigger parsing
+    upload: protectedProcedure
+      .input(
+        z.object({
+          fileName: z.string(),
+          fileBase64: z.string(),
+          contentType: z.string(),
+        })
+      )
+      .mutation(async ({ ctx, input }) => {
+        const userId = ctx.user.id;
+        const ext = input.fileName.split(".").pop()?.toLowerCase() ?? "";
+        const allowed = ["pdf", "fdx", "docx"];
+        if (!allowed.includes(ext)) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: `Format non supporté. Formats acceptés : ${allowed.join(", ")}`,
+          });
+        }
+
+        // Upload to S3
+        const fileKey = `scenarios/${userId}/${nanoid()}-${input.fileName}`;
+        const buffer = Buffer.from(input.fileBase64, "base64");
+        const { url: fileUrl } = await storagePut(fileKey, buffer, input.contentType);
+
+        // Create scenario record
+        const title = input.fileName.replace(/\.[^.]+$/, "").replace(/[-_]/g, " ");
+        const scenarioId = await createScenario({
+          userId,
+          title,
+          fileName: input.fileName,
+          fileUrl,
+          fileKey,
+          fileSize: buffer.length,
+          status: "processing",
+        });
+
+        // Parse asynchronously (don't block the response)
+        processScenario(scenarioId, fileUrl, input.fileName).catch((err) => {
+          console.error(`[Scenario] Parse error for ${scenarioId}:`, err);
+        });
+
+        return { scenarioId, status: "processing" };
+      }),
+
+    // List all scenarios for the current user
+    list: protectedProcedure.query(async ({ ctx }) => {
+      return getScenariosByUserId(ctx.user.id);
+    }),
+
+    // Get a single scenario with full breakdown
+    get: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .query(async ({ ctx, input }) => {
+        const scenario = await getScenarioById(input.id);
+        if (!scenario || scenario.userId !== ctx.user.id) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Scénario introuvable" });
+        }
+        return scenario;
+      }),
+
+    // Get full breakdown data for a scenario
+    breakdown: protectedProcedure
+      .input(z.object({ scenarioId: z.number() }))
+      .query(async ({ ctx, input }) => {
+        const scenario = await getScenarioById(input.scenarioId);
+        if (!scenario || scenario.userId !== ctx.user.id) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Scénario introuvable" });
+        }
+
+        const scenesData = await getScenesByScenarioId(input.scenarioId);
+        const charactersData = await getCharactersByScenarioId(input.scenarioId);
+        const sceneIds = scenesData.map((s) => s.id);
+        const sceneChars = await getSceneCharactersBySceneIds(sceneIds);
+
+        // Build scene → characters map
+        const charMap = new Map(charactersData.map((c) => [c.id, c.name]));
+        const sceneCharMap = new Map<number, string[]>();
+        for (const sc of sceneChars) {
+          const arr = sceneCharMap.get(sc.sceneId) ?? [];
+          const name = charMap.get(sc.characterId);
+          if (name) arr.push(name);
+          sceneCharMap.set(sc.sceneId, arr);
+        }
+
+        // Build dialogues per scene
+        const dialoguesMap = new Map<number, { character: string; text: string }[]>();
+        for (const scene of scenesData) {
+          const dials = await getDialoguesBySceneId(scene.id);
+          dialoguesMap.set(
+            scene.id,
+            dials.map((d) => ({
+              character: charMap.get(d.characterId ?? 0) ?? "Inconnu",
+              text: d.text ?? "",
+            }))
+          );
+        }
+
+        const scenesWithDetails = scenesData.map((scene) => ({
+          ...scene,
+          characters: sceneCharMap.get(scene.id) ?? [],
+          dialogues: dialoguesMap.get(scene.id) ?? [],
+        }));
+
+        return {
+          scenario,
+          scenes: scenesWithDetails,
+          characters: charactersData,
+          uniqueLocations: Array.from(new Set(scenesData.map((s) => s.location).filter((l): l is string => l !== null))),
+        };
+      }),
+
+    // Delete a scenario and all related data
+    delete: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        const scenario = await getScenarioById(input.id);
+        if (!scenario || scenario.userId !== ctx.user.id) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Scénario introuvable" });
+        }
+        await deleteScenario(input.id);
+        return { success: true };
+      }),
+
+    // Export breakdown as CSV text
+    exportCsv: protectedProcedure
+      .input(z.object({ scenarioId: z.number() }))
+      .query(async ({ ctx, input }) => {
+        const scenario = await getScenarioById(input.scenarioId);
+        if (!scenario || scenario.userId !== ctx.user.id) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Scénario introuvable" });
+        }
+
+        const scenesData = await getScenesByScenarioId(input.scenarioId);
+        const charactersData = await getCharactersByScenarioId(input.scenarioId);
+        const sceneIds = scenesData.map((s) => s.id);
+        const sceneChars = await getSceneCharactersBySceneIds(sceneIds);
+
+        const charMap = new Map(charactersData.map((c) => [c.id, c.name]));
+        const sceneCharMap = new Map<number, string[]>();
+        for (const sc of sceneChars) {
+          const arr = sceneCharMap.get(sc.sceneId) ?? [];
+          const name = charMap.get(sc.characterId);
+          if (name) arr.push(name);
+          sceneCharMap.set(sc.sceneId, arr);
+        }
+
+        // Build CSV
+        const header = "Scène;INT/EXT;Lieu;Jour/Nuit;Description;Personnages";
+        const rows = scenesData.map((scene) => {
+          const chars = (sceneCharMap.get(scene.id) ?? []).join(", ");
+          const escapeCsv = (val: string | null) => {
+            if (!val) return "";
+            const escaped = val.replace(/"/g, '""');
+            return `"${escaped}"`;
+          };
+          return [
+            scene.sceneNumber,
+            escapeCsv(scene.intExt),
+            escapeCsv(scene.location),
+            escapeCsv(scene.dayNight),
+            escapeCsv(scene.description),
+            escapeCsv(chars),
+          ].join(";");
+        });
+
+        return { csv: [header, ...rows].join("\n"), fileName: `${scenario.title}-depouillement.csv` };
+      }),
+  }),
+
+  dashboard: router({
+    stats: protectedProcedure.query(async ({ ctx }) => {
+      return getDashboardStats(ctx.user.id);
+    }),
+  }),
 });
 
 export type AppRouter = typeof appRouter;
+
+// ─── Background processing ───────────────────────────────────────────────────
+
+async function processScenario(scenarioId: number, fileUrl: string, fileName: string) {
+  try {
+    await updateScenarioStatus(scenarioId, "processing");
+
+    const parsed = await parseScenarioWithLLM(fileUrl, fileName);
+
+    // Update scenario title if LLM found a better one
+    if (parsed.title) {
+      const { getDb } = await import("./db");
+      const db = await getDb();
+      if (db) {
+        const { scenarios } = await import("../drizzle/schema");
+        const { eq } = await import("drizzle-orm");
+        await db.update(scenarios).set({ title: parsed.title }).where(eq(scenarios.id, scenarioId));
+      }
+    }
+
+    // Insert characters
+    const charNameToId = new Map<string, number>();
+    if (parsed.characters.length > 0) {
+      const charIds = await insertCharacters(
+        parsed.characters.map((name) => ({ scenarioId, name }))
+      );
+      parsed.characters.forEach((name, i) => {
+        charNameToId.set(name.toUpperCase(), charIds[i]);
+      });
+    }
+
+    // Insert scenes, scene-characters, and dialogues
+    const uniqueLocations = new Set<string>();
+    for (const scene of parsed.scenes) {
+      const sceneIds = await insertScenes([
+        {
+          scenarioId,
+          sceneNumber: scene.sceneNumber,
+          intExt: scene.intExt,
+          location: scene.location,
+          dayNight: scene.dayNight,
+          description: scene.description,
+        },
+      ]);
+      const sceneId = sceneIds[0];
+
+      if (scene.location) uniqueLocations.add(scene.location);
+
+      // Link characters to scene
+      const scLinks: { sceneId: number; characterId: number }[] = [];
+      for (const charName of scene.characters) {
+        const charId = charNameToId.get(charName.toUpperCase());
+        if (charId) {
+          scLinks.push({ sceneId, characterId: charId });
+        }
+      }
+      if (scLinks.length > 0) {
+        await insertSceneCharacters(scLinks);
+      }
+
+      // Insert dialogues
+      if (scene.dialogues.length > 0) {
+        await insertDialogues(
+          scene.dialogues.map((d, idx) => ({
+            sceneId,
+            characterId: charNameToId.get(d.character.toUpperCase()) ?? null,
+            text: d.text,
+            orderIndex: idx,
+          }))
+        );
+      }
+    }
+
+    await updateScenarioStatus(scenarioId, "completed", {
+      sceneCount: parsed.scenes.length,
+      characterCount: parsed.characters.length,
+      locationCount: uniqueLocations.size,
+    });
+  } catch (err: any) {
+    console.error(`[Scenario] Processing failed for ${scenarioId}:`, err);
+    await updateScenarioStatus(scenarioId, "error", {
+      errorMessage: err?.message ?? "Erreur inconnue lors du traitement",
+    });
+  }
+}

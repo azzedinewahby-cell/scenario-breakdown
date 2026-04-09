@@ -1,11 +1,23 @@
-import { eq } from "drizzle-orm";
+import { eq, desc, and, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, users } from "../drizzle/schema";
-import { ENV } from './_core/env';
+import {
+  InsertUser,
+  users,
+  scenarios,
+  scenes,
+  characters,
+  sceneCharacters,
+  dialogues,
+  type InsertScenario,
+  type InsertScene,
+  type InsertCharacter,
+  type InsertSceneCharacter,
+  type InsertDialogue,
+} from "../drizzle/schema";
+import { ENV } from "./_core/env";
 
 let _db: ReturnType<typeof drizzle> | null = null;
 
-// Lazily create the drizzle instance so local tooling can run without a DB.
 export async function getDb() {
   if (!_db && process.env.DATABASE_URL) {
     try {
@@ -18,26 +30,22 @@ export async function getDb() {
   return _db;
 }
 
+// ─── Users ───────────────────────────────────────────────────────────────────
+
 export async function upsertUser(user: InsertUser): Promise<void> {
   if (!user.openId) {
     throw new Error("User openId is required for upsert");
   }
-
   const db = await getDb();
   if (!db) {
     console.warn("[Database] Cannot upsert user: database not available");
     return;
   }
-
   try {
-    const values: InsertUser = {
-      openId: user.openId,
-    };
+    const values: InsertUser = { openId: user.openId };
     const updateSet: Record<string, unknown> = {};
-
     const textFields = ["name", "email", "loginMethod"] as const;
     type TextField = (typeof textFields)[number];
-
     const assignNullable = (field: TextField) => {
       const value = user[field];
       if (value === undefined) return;
@@ -45,9 +53,7 @@ export async function upsertUser(user: InsertUser): Promise<void> {
       values[field] = normalized;
       updateSet[field] = normalized;
     };
-
     textFields.forEach(assignNullable);
-
     if (user.lastSignedIn !== undefined) {
       values.lastSignedIn = user.lastSignedIn;
       updateSet.lastSignedIn = user.lastSignedIn;
@@ -56,21 +62,16 @@ export async function upsertUser(user: InsertUser): Promise<void> {
       values.role = user.role;
       updateSet.role = user.role;
     } else if (user.openId === ENV.ownerOpenId) {
-      values.role = 'admin';
-      updateSet.role = 'admin';
+      values.role = "admin";
+      updateSet.role = "admin";
     }
-
     if (!values.lastSignedIn) {
       values.lastSignedIn = new Date();
     }
-
     if (Object.keys(updateSet).length === 0) {
       updateSet.lastSignedIn = new Date();
     }
-
-    await db.insert(users).values(values).onDuplicateKeyUpdate({
-      set: updateSet,
-    });
+    await db.insert(users).values(values).onDuplicateKeyUpdate({ set: updateSet });
   } catch (error) {
     console.error("[Database] Failed to upsert user:", error);
     throw error;
@@ -83,10 +84,178 @@ export async function getUserByOpenId(openId: string) {
     console.warn("[Database] Cannot get user: database not available");
     return undefined;
   }
-
   const result = await db.select().from(users).where(eq(users.openId, openId)).limit(1);
-
   return result.length > 0 ? result[0] : undefined;
 }
 
-// TODO: add feature queries here as your schema grows.
+// ─── Scenarios ───────────────────────────────────────────────────────────────
+
+export async function createScenario(data: InsertScenario) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const result = await db.insert(scenarios).values(data);
+  return result[0].insertId;
+}
+
+export async function getScenarioById(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const result = await db.select().from(scenarios).where(eq(scenarios.id, id)).limit(1);
+  return result[0] ?? null;
+}
+
+export async function getScenariosByUserId(userId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  return db
+    .select()
+    .from(scenarios)
+    .where(eq(scenarios.userId, userId))
+    .orderBy(desc(scenarios.createdAt));
+}
+
+export async function updateScenarioStatus(
+  id: number,
+  status: "uploading" | "processing" | "completed" | "error",
+  extra?: { errorMessage?: string; sceneCount?: number; characterCount?: number; locationCount?: number }
+) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const set: Record<string, unknown> = { status };
+  if (extra?.errorMessage !== undefined) set.errorMessage = extra.errorMessage;
+  if (extra?.sceneCount !== undefined) set.sceneCount = extra.sceneCount;
+  if (extra?.characterCount !== undefined) set.characterCount = extra.characterCount;
+  if (extra?.locationCount !== undefined) set.locationCount = extra.locationCount;
+  await db.update(scenarios).set(set).where(eq(scenarios.id, id));
+}
+
+export async function deleteScenario(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  // Delete in order: dialogues → scene_characters → scenes → characters → scenario
+  const sceneRows = await db.select({ id: scenes.id }).from(scenes).where(eq(scenes.scenarioId, id));
+  const sceneIds = sceneRows.map((s) => s.id);
+  if (sceneIds.length > 0) {
+    for (const sid of sceneIds) {
+      await db.delete(dialogues).where(eq(dialogues.sceneId, sid));
+      await db.delete(sceneCharacters).where(eq(sceneCharacters.sceneId, sid));
+    }
+  }
+  await db.delete(scenes).where(eq(scenes.scenarioId, id));
+  await db.delete(characters).where(eq(characters.scenarioId, id));
+  await db.delete(scenarios).where(eq(scenarios.id, id));
+}
+
+// ─── Scenes ──────────────────────────────────────────────────────────────────
+
+export async function insertScenes(data: InsertScene[]) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  if (data.length === 0) return [];
+  const ids: number[] = [];
+  for (const scene of data) {
+    const result = await db.insert(scenes).values(scene);
+    ids.push(result[0].insertId);
+  }
+  return ids;
+}
+
+export async function getScenesByScenarioId(scenarioId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  return db
+    .select()
+    .from(scenes)
+    .where(eq(scenes.scenarioId, scenarioId))
+    .orderBy(scenes.sceneNumber);
+}
+
+// ─── Characters ──────────────────────────────────────────────────────────────
+
+export async function insertCharacters(data: InsertCharacter[]) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  if (data.length === 0) return [];
+  const ids: number[] = [];
+  for (const char of data) {
+    const result = await db.insert(characters).values(char);
+    ids.push(result[0].insertId);
+  }
+  return ids;
+}
+
+export async function getCharactersByScenarioId(scenarioId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  return db.select().from(characters).where(eq(characters.scenarioId, scenarioId));
+}
+
+// ─── Scene–Characters ────────────────────────────────────────────────────────
+
+export async function insertSceneCharacters(data: InsertSceneCharacter[]) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  if (data.length === 0) return;
+  for (const sc of data) {
+    await db.insert(sceneCharacters).values(sc);
+  }
+}
+
+export async function getSceneCharactersBySceneIds(sceneIds: number[]) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  if (sceneIds.length === 0) return [];
+  const results = [];
+  for (const sid of sceneIds) {
+    const rows = await db.select().from(sceneCharacters).where(eq(sceneCharacters.sceneId, sid));
+    results.push(...rows);
+  }
+  return results;
+}
+
+// ─── Dialogues ───────────────────────────────────────────────────────────────
+
+export async function insertDialogues(data: InsertDialogue[]) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  if (data.length === 0) return;
+  for (const d of data) {
+    await db.insert(dialogues).values(d);
+  }
+}
+
+export async function getDialoguesBySceneId(sceneId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  return db
+    .select()
+    .from(dialogues)
+    .where(eq(dialogues.sceneId, sceneId))
+    .orderBy(dialogues.orderIndex);
+}
+
+// ─── Dashboard stats ─────────────────────────────────────────────────────────
+
+export async function getDashboardStats(userId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  const userScenarios = await db
+    .select()
+    .from(scenarios)
+    .where(eq(scenarios.userId, userId));
+
+  const totalScenarios = userScenarios.length;
+  const completedScenarios = userScenarios.filter((s) => s.status === "completed").length;
+  const totalScenes = userScenarios.reduce((sum, s) => sum + (s.sceneCount ?? 0), 0);
+  const totalCharacters = userScenarios.reduce((sum, s) => sum + (s.characterCount ?? 0), 0);
+  const totalLocations = userScenarios.reduce((sum, s) => sum + (s.locationCount ?? 0), 0);
+
+  return {
+    totalScenarios,
+    completedScenarios,
+    totalScenes,
+    totalCharacters,
+    totalLocations,
+  };
+}

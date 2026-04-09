@@ -1,0 +1,25 @@
+# Project TODO
+
+- [x] Database schema: scenarios table (userId, title, fileName, fileUrl, status, createdAt)
+- [x] Database schema: scenes table (scenarioId, sceneNumber, intExt, location, dayNight, description)
+- [x] Database schema: characters table (scenarioId, name)
+- [x] Database schema: scene_characters junction table (sceneId, characterId)
+- [x] Database schema: dialogues table (sceneId, characterId, text, orderIndex)
+- [x] Backend: file upload endpoint with S3 storage (PDF, FDX, DOCX)
+- [x] Backend: LLM-based scenario parsing and extraction
+- [x] Backend: tRPC routes for scenarios CRUD (list, get, delete)
+- [x] Backend: tRPC route for scenario breakdown data
+- [x] Backend: tRPC route for dashboard statistics
+- [x] Backend: CSV export endpoint
+- [x] Frontend: global design system (typography, colors, spacing)
+- [x] Frontend: DashboardLayout with sidebar navigation
+- [x] Frontend: upload page with drag-and-drop interface
+- [x] Frontend: scenario breakdown view (structured scene list)
+- [x] Frontend: dashboard with summary statistics
+- [x] Frontend: CSV export button
+- [x] Frontend: scenario history page with access to previous breakdowns
+- [x] Authentication: protect all routes with user authentication
+- [x] Vitest: unit tests for backend procedures
+- [x] Backend: implement real DOCX text extraction (mammoth)
+- [x] Backend: implement real FDX text extraction (fast-xml-parser)
+- [x] Backend: improve scenario parser to handle extracted text from DOCX/FDX

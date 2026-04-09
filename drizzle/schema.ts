@@ -1,17 +1,17 @@
-import { int, mysqlEnum, mysqlTable, text, timestamp, varchar } from "drizzle-orm/mysql-core";
+import {
+  int,
+  mysqlEnum,
+  mysqlTable,
+  text,
+  timestamp,
+  varchar,
+  bigint,
+} from "drizzle-orm/mysql-core";
 
-/**
- * Core user table backing auth flow.
- * Extend this file with additional tables as your product grows.
- * Columns use camelCase to match both database fields and generated types.
- */
+// ─── Users ───────────────────────────────────────────────────────────────────
+
 export const users = mysqlTable("users", {
-  /**
-   * Surrogate primary key. Auto-incremented numeric value managed by the database.
-   * Use this for relations between tables.
-   */
   id: int("id").autoincrement().primaryKey(),
-  /** Manus OAuth identifier (openId) returned from the OAuth callback. Unique per user. */
   openId: varchar("openId", { length: 64 }).notNull().unique(),
   name: text("name"),
   email: varchar("email", { length: 320 }),
@@ -25,4 +25,79 @@ export const users = mysqlTable("users", {
 export type User = typeof users.$inferSelect;
 export type InsertUser = typeof users.$inferInsert;
 
-// TODO: Add your tables here
+// ─── Scenarios ───────────────────────────────────────────────────────────────
+
+export const scenarios = mysqlTable("scenarios", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  title: varchar("title", { length: 512 }).notNull(),
+  fileName: varchar("fileName", { length: 512 }).notNull(),
+  fileUrl: text("fileUrl").notNull(),
+  fileKey: varchar("fileKey", { length: 512 }).notNull(),
+  fileSize: bigint("fileSize", { mode: "number" }).default(0),
+  status: mysqlEnum("status", ["uploading", "processing", "completed", "error"])
+    .default("uploading")
+    .notNull(),
+  errorMessage: text("errorMessage"),
+  sceneCount: int("sceneCount").default(0),
+  characterCount: int("characterCount").default(0),
+  locationCount: int("locationCount").default(0),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type Scenario = typeof scenarios.$inferSelect;
+export type InsertScenario = typeof scenarios.$inferInsert;
+
+// ─── Scenes ──────────────────────────────────────────────────────────────────
+
+export const scenes = mysqlTable("scenes", {
+  id: int("id").autoincrement().primaryKey(),
+  scenarioId: int("scenarioId").notNull(),
+  sceneNumber: int("sceneNumber").notNull(),
+  intExt: varchar("intExt", { length: 32 }),
+  location: varchar("location", { length: 512 }),
+  dayNight: varchar("dayNight", { length: 32 }),
+  description: text("description"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type Scene = typeof scenes.$inferSelect;
+export type InsertScene = typeof scenes.$inferInsert;
+
+// ─── Characters ──────────────────────────────────────────────────────────────
+
+export const characters = mysqlTable("characters", {
+  id: int("id").autoincrement().primaryKey(),
+  scenarioId: int("scenarioId").notNull(),
+  name: varchar("name", { length: 256 }).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type Character = typeof characters.$inferSelect;
+export type InsertCharacter = typeof characters.$inferInsert;
+
+// ─── Scene–Characters junction ───────────────────────────────────────────────
+
+export const sceneCharacters = mysqlTable("scene_characters", {
+  id: int("id").autoincrement().primaryKey(),
+  sceneId: int("sceneId").notNull(),
+  characterId: int("characterId").notNull(),
+});
+
+export type SceneCharacter = typeof sceneCharacters.$inferSelect;
+export type InsertSceneCharacter = typeof sceneCharacters.$inferInsert;
+
+// ─── Dialogues ───────────────────────────────────────────────────────────────
+
+export const dialogues = mysqlTable("dialogues", {
+  id: int("id").autoincrement().primaryKey(),
+  sceneId: int("sceneId").notNull(),
+  characterId: int("characterId"),
+  text: text("text"),
+  orderIndex: int("orderIndex").default(0),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type Dialogue = typeof dialogues.$inferSelect;
+export type InsertDialogue = typeof dialogues.$inferInsert;

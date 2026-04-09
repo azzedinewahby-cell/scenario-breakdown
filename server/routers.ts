@@ -23,6 +23,7 @@ import {
   getDashboardStats,
 } from "./db";
 import { parseScenarioWithLLM } from "./scenarioParser";
+import { generateBreakdownHtml } from "./pdfGenerator";
 
 export const appRouter = router({
   system: systemRouter,
@@ -203,6 +204,79 @@ export const appRouter = router({
         });
 
         return { csv: [header, ...rows].join("\n"), fileName: `${scenario.title}-depouillement.csv` };
+      }),
+
+    // Export breakdown as styled HTML for PDF generation (client-side print)
+    exportPdfHtml: protectedProcedure
+      .input(z.object({ scenarioId: z.number() }))
+      .query(async ({ ctx, input }) => {
+        const scenario = await getScenarioById(input.scenarioId);
+        if (!scenario || scenario.userId !== ctx.user.id) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Sc\u00e9nario introuvable" });
+        }
+
+        const scenesData = await getScenesByScenarioId(input.scenarioId);
+        const charactersData = await getCharactersByScenarioId(input.scenarioId);
+        const sceneIds = scenesData.map((s) => s.id);
+        const sceneChars = await getSceneCharactersBySceneIds(sceneIds);
+
+        const charMap = new Map(charactersData.map((c) => [c.id, c.name]));
+        const sceneCharMap = new Map<number, string[]>();
+        for (const sc of sceneChars) {
+          const arr = sceneCharMap.get(sc.sceneId) ?? [];
+          const name = charMap.get(sc.characterId);
+          if (name) arr.push(name);
+          sceneCharMap.set(sc.sceneId, arr);
+        }
+
+        const dialoguesMap = new Map<number, { character: string; text: string }[]>();
+        for (const scene of scenesData) {
+          const dials = await getDialoguesBySceneId(scene.id);
+          dialoguesMap.set(
+            scene.id,
+            dials.map((d) => ({
+              character: charMap.get(d.characterId ?? 0) ?? "Inconnu",
+              text: d.text ?? "",
+            }))
+          );
+        }
+
+        const pdfScenes = scenesData.map((scene) => ({
+          sceneNumber: scene.sceneNumber,
+          intExt: scene.intExt,
+          location: scene.location,
+          dayNight: scene.dayNight,
+          description: scene.description,
+          characters: sceneCharMap.get(scene.id) ?? [],
+          dialogues: dialoguesMap.get(scene.id) ?? [],
+        }));
+
+        const uniqueLocations = Array.from(
+          new Set(scenesData.map((s) => s.location).filter((l): l is string => l !== null))
+        );
+
+        const totalDialogues = pdfScenes.reduce((sum, s) => sum + s.dialogues.length, 0);
+
+        const html = generateBreakdownHtml({
+          title: scenario.title,
+          fileName: scenario.fileName,
+          date: new Date(scenario.createdAt).toLocaleDateString("fr-FR", {
+            day: "numeric",
+            month: "long",
+            year: "numeric",
+          }),
+          scenes: pdfScenes,
+          characters: charactersData.map((c) => c.name ?? ""),
+          uniqueLocations,
+          stats: {
+            totalScenes: pdfScenes.length,
+            totalCharacters: charactersData.length,
+            totalLocations: uniqueLocations.length,
+            totalDialogues,
+          },
+        });
+
+        return { html, fileName: `${scenario.title}-depouillement.pdf` };
       }),
   }),
 

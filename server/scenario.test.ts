@@ -166,6 +166,26 @@ describe("scenario.exportCsv", () => {
   });
 });
 
+describe("scenario.exportPdfHtml", () => {
+  it("rejects unauthenticated users", async () => {
+    const { ctx } = createUnauthContext();
+    const caller = appRouter.createCaller(ctx);
+
+    await expect(
+      caller.scenario.exportPdfHtml({ scenarioId: 1 })
+    ).rejects.toThrow();
+  });
+
+  it("returns NOT_FOUND for non-existent scenario", async () => {
+    const { ctx } = createAuthContext();
+    const caller = appRouter.createCaller(ctx);
+
+    await expect(
+      caller.scenario.exportPdfHtml({ scenarioId: 999999 })
+    ).rejects.toThrow(/introuvable/);
+  });
+});
+
 describe("dashboard.stats", () => {
   it("rejects unauthenticated users", async () => {
     const { ctx } = createUnauthContext();

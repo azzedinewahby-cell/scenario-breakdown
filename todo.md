@@ -25,3 +25,5 @@
 - [x] Backend: improve scenario parser to handle extracted text from DOCX/FDX
 - [x] Frontend: afficher les lieux sous forme de liste au lieu de badges en ligne dans ScenarioDetail
 - [x] Frontend: supprimer le sous-titre "Vue d'ensemble de vos dépouillements" du tableau de bord
+- [x] Backend: ajouter une route tRPC d'export PDF du dépouillement
+- [x] Frontend: ajouter un bouton d'export PDF dans la page de détail du scénario

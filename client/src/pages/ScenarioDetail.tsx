@@ -24,6 +24,7 @@ import {
   MessageSquare,
   AlertCircle,
   RefreshCw,
+  FileText,
 } from "lucide-react";
 import { useLocation, useParams } from "wouter";
 import { toast } from "sonner";
@@ -60,6 +61,11 @@ function ScenarioDetailContent() {
     { enabled: false }
   );
 
+  const exportPdfHtml = trpc.scenario.exportPdfHtml.useQuery(
+    { scenarioId },
+    { enabled: false }
+  );
+
   const handleExportCsv = async () => {
     try {
       const result = await exportCsv.refetch();
@@ -77,6 +83,30 @@ function ScenarioDetailContent() {
       }
     } catch {
       toast.error("Erreur lors de l'export CSV.");
+    }
+  };
+
+  const handleExportPdf = async () => {
+    try {
+      const result = await exportPdfHtml.refetch();
+      if (result.data) {
+        const printWindow = window.open("", "_blank");
+        if (printWindow) {
+          printWindow.document.write(result.data.html);
+          printWindow.document.close();
+          // Wait for fonts to load then trigger print
+          printWindow.onload = () => {
+            setTimeout(() => {
+              printWindow.print();
+            }, 500);
+          };
+          toast.success("Fenêtre d'impression ouverte. Choisissez \"Enregistrer en PDF\" pour exporter.");
+        } else {
+          toast.error("Impossible d'ouvrir la fenêtre d'impression. Vérifiez que les popups ne sont pas bloqués.");
+        }
+      }
+    } catch {
+      toast.error("Erreur lors de la génération du PDF.");
     }
   };
 
@@ -134,15 +164,26 @@ function ScenarioDetailContent() {
           </div>
         </div>
         {scenario.status === "completed" && (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleExportCsv}
-            className="gap-2 shrink-0"
-          >
-            <Download className="h-3.5 w-3.5" />
-            Exporter CSV
-          </Button>
+          <div className="flex items-center gap-2 shrink-0">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleExportCsv}
+              className="gap-2"
+            >
+              <Download className="h-3.5 w-3.5" />
+              CSV
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleExportPdf}
+              className="gap-2"
+            >
+              <FileText className="h-3.5 w-3.5" />
+              PDF
+            </Button>
+          </div>
         )}
       </div>
 

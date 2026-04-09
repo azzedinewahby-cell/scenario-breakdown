@@ -247,17 +247,17 @@ function ScenarioDetailContent() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="flex flex-wrap gap-2">
-                {breakdown.uniqueLocations.map((loc) => (
-                  <Badge
+              <ul className="space-y-1.5">
+                {breakdown.uniqueLocations.map((loc, index) => (
+                  <li
                     key={loc}
-                    variant="outline"
-                    className="text-xs font-normal py-1 px-2.5"
+                    className="flex items-center gap-2.5 py-1.5 px-2 rounded-md hover:bg-muted/50 transition-colors"
                   >
-                    {loc}
-                  </Badge>
+                    <MapPin className="h-3.5 w-3.5 text-muted-foreground/60 shrink-0" />
+                    <span className="text-sm text-foreground">{loc}</span>
+                  </li>
                 ))}
-              </div>
+              </ul>
             </CardContent>
           </Card>
 

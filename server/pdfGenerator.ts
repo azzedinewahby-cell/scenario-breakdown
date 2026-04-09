@@ -239,7 +239,7 @@ export function generateBreakdownHtml(data: PdfBreakdownData): string {
   </div>
 
   <div class="stats">
-    <div class="stat"><span class="val">${data.stats.totalScenes}</span><span class="lbl">Scènes</span></div>
+    <div class="stat"><span class="val">${data.stats.totalScenes}</span><span class="lbl">Séquences</span></div>
     <div class="stat"><span class="val">${data.stats.totalCharacters}</span><span class="lbl">Personnages</span></div>
     <div class="stat"><span class="val">${data.stats.totalLocations}</span><span class="lbl">Lieux</span></div>
     <div class="stat"><span class="val">${data.stats.totalDialogues}</span><span class="lbl">Dialogues</span></div>
@@ -255,7 +255,7 @@ export function generateBreakdownHtml(data: PdfBreakdownData): string {
     ${data.uniqueLocations.map((l) => `<li>${escapeHtml(l)}</li>`).join("")}
   </ul>
 
-  <div class="section-title">Dépouillement des scènes</div>
+  <div class="section-title">Dépouillement des séquences</div>
   ${scenesHtml}
 
   <div class="footer">

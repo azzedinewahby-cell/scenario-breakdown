@@ -233,7 +233,7 @@ function ScenarioDetailContent() {
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             <MiniStat
               icon={<Clapperboard className="h-4 w-4" />}
-              label="Scènes"
+              label="Séquences"
               value={breakdown.scenes.length}
             />
             <MiniStat
@@ -265,17 +265,17 @@ function ScenarioDetailContent() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="flex flex-wrap gap-2">
+              <ul className="space-y-1.5">
                 {breakdown.characters.map((c) => (
-                  <Badge
+                  <li
                     key={c.id}
-                    variant="secondary"
-                    className="text-xs font-normal py-1 px-2.5"
+                    className="flex items-center gap-2.5 py-1.5 px-2 rounded-md hover:bg-muted/50 transition-colors"
                   >
-                    {c.name}
-                  </Badge>
+                    <Users className="h-3.5 w-3.5 text-muted-foreground/60 shrink-0" />
+                    <span className="text-sm text-foreground">{c.name}</span>
+                  </li>
                 ))}
-              </div>
+              </ul>
             </CardContent>
           </Card>
 
@@ -307,7 +307,7 @@ function ScenarioDetailContent() {
             <CardHeader className="pb-3">
               <CardTitle className="text-base font-medium flex items-center gap-2">
                 <Clapperboard className="h-4 w-4 text-muted-foreground" />
-                Dépouillement des scènes
+                Dépouillement des séquences
               </CardTitle>
             </CardHeader>
             <CardContent className="pt-0">

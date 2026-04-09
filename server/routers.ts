@@ -185,7 +185,7 @@ export const appRouter = router({
         }
 
         // Build CSV
-        const header = "Scène;INT/EXT;Lieu;Jour/Nuit;Description;Personnages";
+        const header = "Séquence;INT/EXT;Lieu;Jour/Nuit;Description;Personnages";
         const rows = scenesData.map((scene) => {
           const chars = (sceneCharMap.get(scene.id) ?? []).join(", ");
           const escapeCsv = (val: string | null) => {

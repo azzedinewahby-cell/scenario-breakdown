@@ -121,7 +121,7 @@ function HistoryContent() {
                         <>
                           <span>&middot;</span>
                           <span>
-                            {s.sceneCount} scène{(s.sceneCount ?? 0) > 1 ? "s" : ""}
+                            {s.sceneCount} séquence{(s.sceneCount ?? 0) > 1 ? "s" : ""}
                           </span>
                         </>
                       )}

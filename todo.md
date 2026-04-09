@@ -27,3 +27,6 @@
 - [x] Frontend: supprimer le sous-titre "Vue d'ensemble de vos dépouillements" du tableau de bord
 - [x] Backend: ajouter une route tRPC d'export PDF du dépouillement
 - [x] Frontend: ajouter un bouton d'export PDF dans la page de détail du scénario
+- [x] Backend/Frontend: dédupliquer les décors identiques (même lieu = un seul décor) dans les stats et l'affichage (déjà fait via Set sur le nom du lieu)
+- [x] Frontend: renommer "Scènes" en "Séquences" partout dans l'interface
+- [x] Frontend: afficher les personnages sous forme de liste (comme les lieux) au lieu de badges

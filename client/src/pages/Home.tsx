@@ -49,7 +49,7 @@ function DashboardContent() {
         />
         <StatCard
           icon={<Clapperboard className="h-5 w-5" />}
-          label="Scènes"
+          label="Séquences"
           value={isLoading ? "—" : String(stats?.totalScenes ?? 0)}
           sublabel="Total analysé"
         />

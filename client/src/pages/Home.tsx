@@ -28,9 +28,7 @@ function DashboardContent() {
           <h1 className="text-2xl font-serif font-semibold tracking-tight text-foreground">
             Tableau de bord
           </h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            Vue d'ensemble de vos dépouillements
-          </p>
+
         </div>
         <Button
           onClick={() => setLocation("/upload")}

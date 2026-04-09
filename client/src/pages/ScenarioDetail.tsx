@@ -50,62 +50,63 @@ function ScenarioDetailContent() {
   const {
     data: breakdown,
     isLoading: breakdownLoading,
-    refetch: refetchBreakdown,
   } = trpc.scenario.breakdown.useQuery(
     { scenarioId },
-    { enabled: scenarioId > 0 && scenario?.status === "completed" }
+    { enabled: scenarioId > 0 }
   );
 
-  const exportCsv = trpc.scenario.exportCsv.useQuery(
+  const {
+    data: csvData,
+    refetch: refetchCsv,
+    isFetching: csvFetching,
+  } = trpc.scenario.exportCsv.useQuery(
     { scenarioId },
     { enabled: false }
   );
 
-  const exportPdfHtml = trpc.scenario.exportPdfHtml.useQuery(
+  const {
+    data: pdfData,
+    refetch: refetchPdf,
+    isFetching: pdfFetching,
+  } = trpc.scenario.exportPdfHtml.useQuery(
     { scenarioId },
     { enabled: false }
   );
 
   const handleExportCsv = async () => {
     try {
-      const result = await exportCsv.refetch();
-      if (result.data) {
-        const blob = new Blob(["\ufeff" + result.data.csv], {
-          type: "text/csv;charset=utf-8;",
-        });
+      const { data } = await refetchCsv();
+      if (data) {
+        const blob = new Blob([data.csv], { type: "text/csv;charset=utf-8;" });
+        const link = document.createElement("a");
         const url = URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = result.data.fileName;
-        a.click();
-        URL.revokeObjectURL(url);
-        toast.success("Export CSV téléchargé.");
+        link.setAttribute("href", url);
+        link.setAttribute("download", data.fileName);
+        link.style.visibility = "hidden";
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        toast.success("Dépouillement exporté en CSV.");
       }
-    } catch {
+    } catch (err) {
       toast.error("Erreur lors de l'export CSV.");
     }
   };
 
   const handleExportPdf = async () => {
     try {
-      const result = await exportPdfHtml.refetch();
-      if (result.data) {
-        const printWindow = window.open("", "_blank");
+      const { data } = await refetchPdf();
+      if (data) {
+        const printWindow = window.open("", "", "width=1200,height=800");
         if (printWindow) {
-          printWindow.document.write(result.data.html);
+          printWindow.document.write(data.html);
           printWindow.document.close();
-          // Wait for fonts to load then trigger print
-          printWindow.onload = () => {
-            setTimeout(() => {
-              printWindow.print();
-            }, 500);
-          };
-          toast.success("Fenêtre d'impression ouverte. Choisissez \"Enregistrer en PDF\" pour exporter.");
-        } else {
-          toast.error("Impossible d'ouvrir la fenêtre d'impression. Vérifiez que les popups ne sont pas bloqués.");
+          setTimeout(() => {
+            printWindow.print();
+          }, 250);
         }
       }
-    } catch {
+    } catch (err) {
       toast.error("Erreur lors de la génération du PDF.");
     }
   };
@@ -120,18 +121,8 @@ function ScenarioDetailContent() {
 
   if (!scenario) {
     return (
-      <div className="flex flex-col items-center justify-center py-24 text-center">
-        <AlertCircle className="h-8 w-8 text-muted-foreground mb-3" />
-        <p className="text-sm text-muted-foreground">Scénario introuvable.</p>
-        <Button
-          variant="ghost"
-          size="sm"
-          className="mt-4"
-          onClick={() => setLocation("/")}
-        >
-          <ArrowLeft className="h-4 w-4 mr-1" />
-          Retour
-        </Button>
+      <div className="text-center py-12">
+        <p className="text-muted-foreground">Scénario non trouvé.</p>
       </div>
     );
   }
@@ -139,12 +130,11 @@ function ScenarioDetailContent() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-start justify-between gap-4">
-        <div className="flex items-start gap-3">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
           <Button
             variant="ghost"
             size="icon"
-            className="shrink-0 mt-0.5"
             onClick={() => setLocation("/history")}
           >
             <ArrowLeft className="h-4 w-4" />
@@ -153,34 +143,31 @@ function ScenarioDetailContent() {
             <h1 className="text-2xl font-serif font-semibold tracking-tight text-foreground">
               {scenario.title}
             </h1>
-            <p className="text-sm text-muted-foreground mt-0.5">
-              {scenario.fileName} &middot;{" "}
-              {new Date(scenario.createdAt).toLocaleDateString("fr-FR", {
-                day: "numeric",
-                month: "long",
-                year: "numeric",
-              })}
+            <p className="text-xs text-muted-foreground mt-0.5">
+              {scenario.fileName} • {new Date(scenario.createdAt).toLocaleDateString("fr-FR")}
             </p>
           </div>
         </div>
         {scenario.status === "completed" && (
-          <div className="flex items-center gap-2 shrink-0">
+          <div className="flex gap-2">
             <Button
               variant="outline"
               size="sm"
               onClick={handleExportCsv}
+              disabled={csvFetching}
               className="gap-2"
             >
-              <Download className="h-3.5 w-3.5" />
+              <FileText className="h-4 w-4" />
               CSV
             </Button>
             <Button
               variant="outline"
               size="sm"
               onClick={handleExportPdf}
+              disabled={pdfFetching}
               className="gap-2"
             >
-              <FileText className="h-3.5 w-3.5" />
+              <Download className="h-4 w-4" />
               PDF
             </Button>
           </div>
@@ -271,7 +258,7 @@ function ScenarioDetailContent() {
                     key={c.id}
                     className="flex items-center gap-2.5 py-1.5 px-2 rounded-md hover:bg-muted/50 transition-colors"
                   >
-                    <Users className="h-3.5 w-3.5 text-muted-foreground/60 shrink-0" />
+                    <GenderEmoji gender={(c as any).gender} />
                     <span className="text-sm text-foreground">{c.name}</span>
                   </li>
                 ))}
@@ -425,6 +412,16 @@ function MiniStat({
       </CardContent>
     </Card>
   );
+}
+
+function GenderEmoji({ gender }: { gender?: string }) {
+  if (gender === "female") {
+    return <span style={{ fontSize: "1.25rem", color: "#E91E8C" }}>👩</span>;
+  }
+  if (gender === "male") {
+    return <span style={{ fontSize: "1.25rem", color: "#2196F3" }}>👨</span>;
+  }
+  return <Users className="h-3.5 w-3.5 text-muted-foreground/60 shrink-0" />;
 }
 
 function DayNightIcon({ value }: { value: string }) {

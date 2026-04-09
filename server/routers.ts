@@ -312,10 +312,10 @@ async function processScenario(scenarioId: number, fileUrl: string, fileName: st
     const charNameToId = new Map<string, number>();
     if (parsed.characters.length > 0) {
       const charIds = await insertCharacters(
-        parsed.characters.map((name) => ({ scenarioId, name }))
+        parsed.characters.map((c) => ({ scenarioId, name: c.name, gender: c.gender }))
       );
-      parsed.characters.forEach((name, i) => {
-        charNameToId.set(name.toUpperCase(), charIds[i]);
+      parsed.characters.forEach((c, i) => {
+        charNameToId.set(c.name.toUpperCase(), charIds[i]);
       });
     }
 

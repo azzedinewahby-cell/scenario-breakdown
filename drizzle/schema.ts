@@ -71,6 +71,7 @@ export const characters = mysqlTable("characters", {
   id: int("id").autoincrement().primaryKey(),
   scenarioId: int("scenarioId").notNull(),
   name: varchar("name", { length: 256 }).notNull(),
+  gender: mysqlEnum("gender", ["male", "female", "unknown"]).default("unknown").notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
 

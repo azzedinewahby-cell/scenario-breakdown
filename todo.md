@@ -30,3 +30,6 @@
 - [x] Backend/Frontend: dédupliquer les décors identiques (même lieu = un seul décor) dans les stats et l'affichage (déjà fait via Set sur le nom du lieu)
 - [x] Frontend: renommer "Scènes" en "Séquences" partout dans l'interface
 - [x] Frontend: afficher les personnages sous forme de liste (comme les lieux) au lieu de badges
+- [x] Backend: ajouter le champ "gender" (male/female/unknown) à la table characters
+- [x] Backend: modifier le parsing LLM pour extraire le genre des personnages
+- [x] Frontend: afficher emoji femme rose pour féminin et emoji homme bleu pour masculin dans les listes de personnages

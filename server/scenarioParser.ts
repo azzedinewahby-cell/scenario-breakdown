@@ -11,10 +11,15 @@ export interface ParsedScene {
   dialogues: { character: string; text: string }[];
 }
 
+export interface ParsedCharacter {
+  name: string;
+  gender: "male" | "female" | "unknown";
+}
+
 export interface ParsedScenario {
   title: string;
   scenes: ParsedScene[];
-  characters: string[];
+  characters: ParsedCharacter[];
 }
 
 /**
@@ -38,7 +43,7 @@ export async function parseScenarioWithLLM(
   - Une brève description de l'action
   - Les personnages présents dans la scène
   - Les dialogues avec le nom du personnage et le texte
-- La liste de tous les personnages uniques du scénario
+- La liste de tous les personnages uniques du scénario avec leur genre (male, female, ou unknown si incertain)
 
 Réponds UNIQUEMENT en JSON valide selon le schéma fourni. Ne fais aucun commentaire en dehors du JSON.
 Si une information n'est pas disponible, utilise null.
@@ -88,8 +93,20 @@ Numérote les scènes séquentiellement si elles ne sont pas numérotées dans l
             title: { type: "string", description: "Titre du scénario" },
             characters: {
               type: "array",
-              items: { type: "string" },
-              description: "Liste de tous les personnages uniques",
+              items: {
+                type: "object",
+                properties: {
+                  name: { type: "string", description: "Nom du personnage" },
+                  gender: {
+                    type: "string",
+                    enum: ["male", "female", "unknown"],
+                    description: "Genre du personnage : male, female, ou unknown si incertain",
+                  },
+                },
+                required: ["name", "gender"],
+                additionalProperties: false,
+              },
+              description: "Liste de tous les personnages uniques avec leur genre",
             },
             scenes: {
               type: "array",

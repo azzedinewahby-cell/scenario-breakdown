@@ -1,0 +1,1 @@
+ALTER TABLE `characters` ADD `gender` enum('male','female','unknown') DEFAULT 'unknown' NOT NULL;

@@ -154,7 +154,7 @@ function HistoryContent() {
                       <AlertDialogFooter>
                         <AlertDialogCancel>Annuler</AlertDialogCancel>
                         <AlertDialogAction
-                          onClick={() => deleteMutation.mutate({ id: s.id })}
+                          onClick={() => deleteMutation.mutate({ scenarioId: s.id })}
                           className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                         >
                           Supprimer

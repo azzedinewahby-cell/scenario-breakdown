@@ -71,3 +71,8 @@
 
 ## Nouvelles fonctionnalités (session actuelle)
 - [x] Frontend: ajouter un bouton "Télécharger" à côté du bouton "Lire" pour télécharger le scénario original - COMPLÉTÉ
+
+## Corrections et améliorations (session actuelle - suite)
+- [x] Backend: corriger le paramètre de la route delete (id -> scenarioId) pour la cohérence
+- [x] Frontend: corriger l'appel de la mutation delete pour utiliser scenarioId
+- Note: La suppression avec confirmation était déjà implémentée

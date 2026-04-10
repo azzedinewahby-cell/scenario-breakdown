@@ -159,13 +159,13 @@ export const appRouter = router({
 
     // Delete a scenario and all related data
     delete: protectedProcedure
-      .input(z.object({ id: z.number() }))
+      .input(z.object({ scenarioId: z.number() }))
       .mutation(async ({ ctx, input }) => {
-        const scenario = await getScenarioById(input.id);
+        const scenario = await getScenarioById(input.scenarioId);
         if (!scenario || scenario.userId !== ctx.user.id) {
           throw new TRPCError({ code: "NOT_FOUND", message: "Scénario introuvable" });
         }
-        await deleteScenario(input.id);
+        await deleteScenario(input.scenarioId);
         return { success: true };
       }),
 
@@ -286,6 +286,8 @@ export const appRouter = router({
 
         return { html, fileName: `${scenario.title}-depouillement.pdf` };
       }),
+
+
   }),
 
   dashboard: router({

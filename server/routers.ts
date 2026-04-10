@@ -422,6 +422,8 @@ export const appRouter = router({
     getSequencesForProp: protectedProcedure
       .input(z.object({ propId: z.number() }))
       .query(async ({ input }) => {
+        // Trigger automatic backfill if needed (non-blocking)
+        backfillScenePropsForProp(input.propId).catch(console.error);
         return getSequencesForProp(input.propId);
       }),
 
@@ -554,14 +556,67 @@ async function processScenario(scenarioId: number, fileUrl: string, fileName: st
     }
 
     // Insert props
+    const propNameToId = new Map<string, number>();
     if (parsed.props && parsed.props.length > 0) {
       const propIds = await insertProps(
         parsed.props.map((p) => ({ scenarioId, name: p }))
       );
+      parsed.props.forEach((p, i) => {
+        propNameToId.set(p.toUpperCase(), propIds[i]);
+      });
     }
 
     // Create sequences for each scene with LLM-generated summary
     const scenes = await getScenesByScenarioId(scenarioId);
+
+    // Associate props to scenes using LLM
+    if (parsed.props.length > 0 && scenes.length > 0) {
+      const { invokeLLM } = await import("./_core/llm");
+      const propsStr = parsed.props.join(", ");
+      
+      for (const scene of scenes) {
+        const sceneText = scene.description || "";
+        if (sceneText.trim().length > 10) {
+          try {
+            const resp = await invokeLLM({
+              messages: [
+                {
+                  role: "system",
+                  content: `Tu es un assistant de production cinéma. Analyse la description de scène et identifie quels accessoires de la liste fournie sont utilisés dans cette scène. Réponds UNIQUEMENT avec un JSON valide: {"props": ["accessoire1", "accessoire2"]}`
+                },
+                {
+                  role: "user",
+                  content: `Scène: ${sceneText.slice(0, 1000)}\n\nAccessoires disponibles: ${propsStr}`
+                }
+              ]
+            });
+            
+            const content = resp?.choices?.[0]?.message?.content;
+            if (content && typeof content === "string") {
+              try {
+                const parsed_props = JSON.parse(content);
+                if (parsed_props.props && Array.isArray(parsed_props.props)) {
+                  const sceneProps: { sceneId: number; propId: number }[] = [];
+                  for (const propName of parsed_props.props) {
+                    const propId = propNameToId.get(propName.toUpperCase());
+                    if (propId) {
+                      sceneProps.push({ sceneId: scene.id, propId });
+                    }
+                  }
+                  if (sceneProps.length > 0) {
+                    await insertSceneProps(sceneProps);
+                  }
+                }
+              } catch (e) {
+                // Non-blocking: skip if JSON parsing fails
+              }
+            }
+          } catch (e) {
+            // Non-blocking: skip if LLM fails
+          }
+        }
+      }
+    }
     for (let i = 0; i < scenes.length; i++) {
       const scene = scenes[i];
       const sequenceName = `${scene.intExt ? scene.intExt + ". " : ""}${scene.location || "Sc\u00e8ne " + scene.sceneNumber}`;
@@ -656,5 +711,81 @@ Le synopsis doit:
     }
   } catch (err) {
     console.error(`[Synopsis] Generation failed for scenario ${scenarioId}:`, err);
+  }
+}
+
+
+// Backfill scene_props for a prop if not already done
+async function backfillScenePropsForProp(propId: number) {
+  try {
+    const { getDb } = await import("./db");
+    const db = await getDb();
+    if (!db) return;
+
+    const schema = await import("../drizzle/schema");
+    const sceneProps = schema.sceneProps;
+    const props = schema.props;
+    const scenes = schema.scenes;
+    const { eq, count } = await import("drizzle-orm");
+
+    // Check if this prop already has scene associations
+    const existing = await db.select({ count: count() }).from(sceneProps).where(eq(sceneProps.propId, propId));
+    if (existing[0]?.count > 0) return; // Already backfilled
+
+    // Get the prop details
+    const prop = await db.select().from(props).where(eq(props.id, propId)).limit(1);
+    if (!prop || prop.length === 0) return;
+
+    const propName = prop[0].name;
+    const scenarioId = prop[0].scenarioId;
+
+    // Get all scenes for this scenario
+    const allScenes = await db.select().from(scenes).where(eq(scenes.scenarioId, scenarioId));
+    if (allScenes.length === 0) return;
+
+    // Use LLM to associate prop to scenes
+    const { invokeLLM } = await import("./_core/llm");
+    const scenePropsToInsert: { sceneId: number; propId: number }[] = [];
+
+    for (const scene of allScenes) {
+      const sceneText = scene.description || "";
+      if (sceneText.trim().length > 10) {
+        try {
+          const resp = await invokeLLM({
+            messages: [
+              {
+                role: "system",
+                content: `Tu es un assistant de production cinéma. Analyse la description de scène et détermine si l'accessoire "${propName}" est utilisé dans cette scène. Réponds UNIQUEMENT avec un JSON valide: {"used": true} ou {"used": false}`
+              },
+              {
+                role: "user",
+                content: `Accessoire: ${propName}\n\nDescription de scène: ${sceneText.slice(0, 1000)}`
+              }
+            ]
+          });
+
+          const content = resp?.choices?.[0]?.message?.content;
+          if (content && typeof content === "string") {
+            try {
+              const result = JSON.parse(content);
+              if (result.used === true) {
+                scenePropsToInsert.push({ sceneId: scene.id, propId });
+              }
+            } catch (e) {
+              // Skip if JSON parsing fails
+            }
+          }
+        } catch (e) {
+          // Skip if LLM fails
+        }
+      }
+    }
+
+    // Insert all scene_props at once
+    if (scenePropsToInsert.length > 0) {
+      await db.insert(sceneProps).values(scenePropsToInsert);
+    }
+  } catch (e) {
+    console.error("[Backfill scene_props failed]", e);
   }
 }

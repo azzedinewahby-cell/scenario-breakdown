@@ -93,3 +93,10 @@
 - [x] Frontend: créer l'onglet Storyboard avec synopsis généré par LLM
 - [x] Frontend: réorganiser les onglets (Storyboard, Séquences, Personnages, Lieux, Accessoires)
 - [x] Frontend: enrichir l'onglet Séquences avec personnages et accessoires par séquence
+
+## Bugs résolus (session actuelle - suite 2)
+- [x] Bug: onglet Accessoires n'affiche pas les séquences où l'accessoire est utilisé - RÉSOLU (association automatique des props aux scènes via LLM)
+
+## Tâches restantes pour compléter la correction
+- [ ] Backend: ajouter une migration/backfill pour créer `scene_props` pour les scénarios existants (pas seulement au nouvel upload)
+- [ ] Frontend: valider et afficher correctement les séquences par accessoire avec états loading/error/empty explicites

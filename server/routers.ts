@@ -533,6 +533,110 @@ export const appRouter = router({
         await insertSequences([{ scenarioId: input.scenarioId, name: input.name, orderIndex }]);
         return { success: true };
       }),
+    // Generate technical breakdown (découpage technique) for a scenario
+    generateTechnicalBreakdown: protectedProcedure
+      .input(z.object({ scenarioId: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        const scenario = await getScenarioById(input.scenarioId);
+        if (!scenario || scenario.userId !== ctx.user.id) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Scénario introuvable" });
+        }
+        const scenes = await getScenesByScenarioId(input.scenarioId);
+        const characters = await getCharactersByScenarioId(input.scenarioId);
+        if (scenes.length === 0) {
+          throw new TRPCError({ code: "BAD_REQUEST", message: "Aucune scène trouvée pour ce scénario" });
+        }
+        const scenesText = scenes
+          .map((s, i) => {
+            const dialogues = (s as any).dialogueCount || 0;
+            return `SCÈNE ${i + 1}: ${s.intExt || "?"} ${s.location || "lieu inconnu"} - ${s.dayNight || "JOUR"}
+Description: ${s.description?.substring(0, 300) || ""}
+Personnages: ${(s as any).characters?.join(", ") || ""}`;
+          })
+          .join("\n\n");
+        const prompt = `Tu es un expert en direction de production cinéma en France. Analyse ce découpage scène par scène et propose un découpage technique professionnel.
+
+TITRE: ${scenario.title}
+NOMBRE DE SCÈNES: ${scenes.length}
+NOMBRE DE PERSONNAGES: ${characters.length}
+NOMBRE DE DÉCORS: ${scenario.locationCount || 0}
+
+SCÈNES:
+${scenesText}
+
+Génère un découpage technique complet en JSON avec cette structure:
+{
+  "summary": {
+    "totalShootingDays": <nombre total de jours>,
+    "averagePagesPerDay": <moyenne pages/jour>,
+    "heavyDays": <journées lourdes>,
+    "lightDays": <journées légères>,
+    "totalScenes": ${scenes.length},
+    "intScenes": <nombre INT>,
+    "extScenes": <nombre EXT>,
+    "dayScenes": <nombre JOUR>,
+    "nightScenes": <nombre NUIT>,
+    "complexScenes": <nombre scènes complexes>,
+    "simpleScenes": <nombre scènes simples>
+  },
+  "scenes": [
+    {
+      "sceneNumber": <numéro>,
+      "intExt": "INT" ou "EXT",
+      "location": "<lieu>",
+      "dayNight": "JOUR" ou "NUIT",
+      "complexity": "simple" ou "moyenne" ou "lourde",
+      "estimatedPlans": <nombre de plans estimé>,
+      "estimatedHours": <heures de tournage estimées>,
+      "hasDialogue": true/false,
+      "hasAction": true/false,
+      "hasFX": true/false,
+      "hasCascade": true/false,
+      "hasFiguration": true/false,
+      "notes": "<notes de production>"
+    }
+  ],
+  "shootingDays": [
+    {
+      "dayNumber": <numéro du jour>,
+      "type": "légère" ou "standard" ou "lourde",
+      "scenes": [<numéros de scènes>],
+      "location": "<décor principal>",
+      "estimatedPages": <pages estimées>,
+      "notes": "<notes>"
+    }
+  ],
+  "productionNotes": {
+    "feasibility": "<analyse de faisabilité>",
+    "mainRisks": ["<risque 1>", "<risque 2>"],
+    "optimizations": ["<optimisation 1>", "<optimisation 2>"],
+    "specialRequirements": ["<besoin spécial 1>"]
+  }
+}
+Règles:
+- 5-8 pages/jour pour dialogues simples
+- 2-4 pages/jour pour mise en scène complexe
+- 1-2 pages/jour pour action/nuit/FX
+- Ajuste selon nombre de décors, déplacements, nuit vs jour
+- Réponds UNIQUEMENT avec le JSON valide`;
+        const response = await invokeLLM({
+          messages: [
+            { role: "system", content: "Tu es un expert en production cinématographique française. Réponds uniquement en JSON valide." },
+            { role: "user", content: prompt },
+          ],
+          response_format: { type: "json_object" },
+        });
+        const rawContent = response?.choices?.[0]?.message?.content;
+        const raw = typeof rawContent === "string" ? rawContent : null;
+        if (!raw) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Erreur LLM" });
+        let parsedBreakdown: any;
+        try {
+          parsedBreakdown = JSON.parse(raw);
+        } catch {
+          throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Réponse LLM invalide" });
+        }
+        return { success: true, data: parsedBreakdown };
+      }),
   }),
   budget: router({
     // Get existing budget for a scenario

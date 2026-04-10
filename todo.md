@@ -226,3 +226,7 @@
 - [x] Vérifier si screenwriterName est bien extrait par le LLM lors du parsing (le champ était absent du schéma JSON)
 - [x] Vérifier si screenwriterName est bien sauvegardé en base de données
 - [x] Corriger l'extraction et backfiller les scénarios existants (GRELLOU: Azzedine Wahbi, Le Stagiaire: Eli Bourdon, CE QUE TU N'AS PAS DIT: Lola MARCIANO)
+
+## Bug : Proposition de découpage technique ne se génère pas
+- [x] Diagnostiquer la route tRPC et le frontend pour le découpage technique (bouton désactivé, route inexistante)
+- [x] Corriger la génération du découpage technique (route tRPC generateTechnicalBreakdown + interface complète)

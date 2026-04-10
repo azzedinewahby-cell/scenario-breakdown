@@ -187,3 +187,9 @@
 - [x] Feature: Ajouter des boutons de téléchargement pour chaque document
 - [x] Feature: Intégrer la route /rapports dans App.tsx
 - [x] Feature: Afficher le module Rapports avec icône FileText et couleur violet
+
+
+## Nouvelles demandes (session actuelle)
+- [x] Feature: Ajouter un onglet "Proposition découpage technique" à côté de l'onglet Accessoires
+- [ ] Frontend: renommer l'onglet "Découpage" en "Proposition découpage technique" (label complet)
+- [ ] Frontend: vérifier l'affichage responsive du libellé long sans troncature critique

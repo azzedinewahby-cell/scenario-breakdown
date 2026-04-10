@@ -43,6 +43,13 @@
       "when": 1775824154743,
       "tag": "0005_zippy_galactus",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "5",
+      "when": 1775831833914,
+      "tag": "0006_abandoned_wrecking_crew",
+      "breakpoints": true
     }
   ]
 }

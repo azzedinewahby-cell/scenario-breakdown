@@ -29,6 +29,11 @@ import {
   insertSequenceScenes,
   getSequenceScenes,
   updateSequenceSummary,
+  getSequencesForProp,
+  getSequencesForCharacter,
+  updateScenarioSynopsis,
+  getCharactersForSequence,
+  getPropsForSequence,
 } from "./db";
 import { parseScenarioWithLLM } from "./scenarioParser";
 import { generateBreakdownHtml } from "./pdfGenerator";
@@ -413,6 +418,51 @@ export const appRouter = router({
         return existing;
       }),
 
+    // Get sequences for a specific prop
+    getSequencesForProp: protectedProcedure
+      .input(z.object({ propId: z.number() }))
+      .query(async ({ input }) => {
+        return getSequencesForProp(input.propId);
+      }),
+
+    // Get sequences for a specific character
+    getSequencesForCharacter: protectedProcedure
+      .input(z.object({ characterId: z.number() }))
+      .query(async ({ input }) => {
+        return getSequencesForCharacter(input.characterId);
+      }),
+
+    // Get characters for a specific sequence
+    getCharactersForSequence: protectedProcedure
+      .input(z.object({ sequenceId: z.number() }))
+      .query(async ({ input }) => {
+        return getCharactersForSequence(input.sequenceId);
+      }),
+
+    // Get props for a specific sequence
+    getPropsForSequence: protectedProcedure
+      .input(z.object({ sequenceId: z.number() }))
+      .query(async ({ input }) => {
+        return getPropsForSequence(input.sequenceId);
+      }),
+
+    // Generate or get synopsis for a scenario
+    getSynopsis: protectedProcedure
+      .input(z.object({ scenarioId: z.number() }))
+      .query(async ({ ctx, input }) => {
+        const scenario = await getScenarioById(input.scenarioId);
+        if (!scenario || scenario.userId !== ctx.user.id) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Scénario introuvable" });
+        }
+        // Return cached synopsis if available
+        if (scenario.synopsis) {
+          return { synopsis: scenario.synopsis, generating: false };
+        }
+        // Trigger async generation
+        generateSynopsis(input.scenarioId).catch(console.error);
+        return { synopsis: null, generating: true };
+      }),
+
     // Create a new sequence
     createSequence: protectedProcedure
       .input(z.object({ scenarioId: z.number(), name: z.string() }))
@@ -560,5 +610,51 @@ async function processScenario(scenarioId: number, fileUrl: string, fileName: st
     await updateScenarioStatus(scenarioId, "error", {
       errorMessage: err?.message ?? "Erreur inconnue lors du traitement",
     });
+  }
+}
+
+// ─── Synopsis generation ─────────────────────────────────────────────────────
+
+async function generateSynopsis(scenarioId: number) {
+  try {
+    const scenario = await getScenarioById(scenarioId);
+    if (!scenario) return;
+
+    // Get all scenes to build a full picture
+    const scenes = await getScenesByScenarioId(scenarioId);
+    if (scenes.length === 0) return;
+
+    // Build a text summary of all scenes
+    const scenesText = scenes
+      .map((s, i) => `Scène ${i + 1} (${s.intExt || ""} ${s.location || ""} - ${s.dayNight || ""}): ${s.description || ""}`)
+      .join("\n\n");
+
+    const { invokeLLM } = await import("./_core/llm");
+    const resp = await invokeLLM({
+      messages: [
+        {
+          role: "system",
+          content: `Tu es un assistant de production cinéma. À partir de la liste des scènes d'un scénario, rédige un synopsis complet et détaillé en français. 
+Le synopsis doit:
+- Présenter les personnages principaux et leurs enjeux
+- Raconter l'histoire de manière chronologique
+- Mettre en valeur les moments clés et les retournements de situation
+- Être rédigé dans un style narratif fluide et professionnel
+- Faire entre 300 et 600 mots`,
+        },
+        {
+          role: "user",
+          content: `Titre: ${scenario.title}\n\nScènes du scénario:\n\n${scenesText.slice(0, 8000)}`,
+        },
+      ],
+    });
+
+    const rawContent = resp?.choices?.[0]?.message?.content;
+    const synopsis = typeof rawContent === "string" ? rawContent.trim() : "";
+    if (synopsis) {
+      await updateScenarioSynopsis(scenarioId, synopsis);
+    }
+  } catch (err) {
+    console.error(`[Synopsis] Generation failed for scenario ${scenarioId}:`, err);
   }
 }

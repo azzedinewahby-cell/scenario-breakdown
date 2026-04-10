@@ -1,4 +1,4 @@
-import { eq, desc, and, sql } from "drizzle-orm";
+import { eq, desc, and, sql, inArray } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import {
   InsertUser,
@@ -343,4 +343,130 @@ export async function getDashboardStats(userId: number) {
     totalCharacters,
     totalLocations,
   };
+}
+
+
+// ─── Props Sequences (Accessoires par séquence) ──────────────────────────────
+export async function getSequencesForProp(propId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  // Get scenes for this prop
+  const sceneIds = await db
+    .select({ sceneId: sceneProps.sceneId })
+    .from(sceneProps)
+    .where(eq(sceneProps.propId, propId));
+  
+  if (sceneIds.length === 0) return [];
+  
+  // Get unique sequences for these scenes
+  const result = await db
+    .selectDistinct({
+      sequenceId: sequenceScenes.sequenceId,
+      sequenceName: sequences.name,
+      sequenceSummary: sequences.summary,
+      orderIndex: sequenceScenes.orderIndex,
+    })
+    .from(sequenceScenes)
+    .innerJoin(sequences, eq(sequenceScenes.sequenceId, sequences.id))
+    .where(inArray(sequenceScenes.sceneId, sceneIds.map(s => s.sceneId)))
+    .orderBy(sequenceScenes.orderIndex);
+  
+  return result;
+}
+
+// ─── Character Sequences (Personnages par séquence) ────────────────────────
+export async function getSequencesForCharacter(characterId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  // Get scenes for this character
+  const sceneIds = await db
+    .select({ sceneId: sceneCharacters.sceneId })
+    .from(sceneCharacters)
+    .where(eq(sceneCharacters.characterId, characterId));
+  
+  if (sceneIds.length === 0) return [];
+  
+  // Get unique sequences for these scenes
+  const result = await db
+    .selectDistinct({
+      sequenceId: sequenceScenes.sequenceId,
+      sequenceName: sequences.name,
+      sequenceSummary: sequences.summary,
+      orderIndex: sequenceScenes.orderIndex,
+    })
+    .from(sequenceScenes)
+    .innerJoin(sequences, eq(sequenceScenes.sequenceId, sequences.id))
+    .where(inArray(sequenceScenes.sceneId, sceneIds.map(s => s.sceneId)))
+    .orderBy(sequenceScenes.orderIndex);
+  
+  return result;
+}
+
+// ─── Synopsis ─────────────────────────────────────────────────────────────────
+export async function updateScenarioSynopsis(scenarioId: number, synopsis: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.update(scenarios).set({ synopsis }).where(eq(scenarios.id, scenarioId));
+}
+
+// ─── Characters for a Sequence ────────────────────────────────────────────────
+export async function getCharactersForSequence(sequenceId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  // Get scene IDs for this sequence
+  const sceneLinks = await db
+    .select({ sceneId: sequenceScenes.sceneId })
+    .from(sequenceScenes)
+    .where(eq(sequenceScenes.sequenceId, sequenceId));
+
+  if (sceneLinks.length === 0) return [];
+
+  const sceneIds = sceneLinks.map((s) => s.sceneId);
+
+  // Get distinct characters for these scenes
+  const result = await db
+    .selectDistinct({
+      characterId: characters.id,
+      characterName: characters.name,
+      gender: characters.gender,
+      age: characters.age,
+    })
+    .from(sceneCharacters)
+    .innerJoin(characters, eq(sceneCharacters.characterId, characters.id))
+    .where(inArray(sceneCharacters.sceneId, sceneIds))
+    .orderBy(characters.name);
+
+  return result;
+}
+
+// ─── Props for a Sequence ─────────────────────────────────────────────────────
+export async function getPropsForSequence(sequenceId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  // Get scene IDs for this sequence
+  const sceneLinks = await db
+    .select({ sceneId: sequenceScenes.sceneId })
+    .from(sequenceScenes)
+    .where(eq(sequenceScenes.sequenceId, sequenceId));
+
+  if (sceneLinks.length === 0) return [];
+
+  const sceneIds = sceneLinks.map((s) => s.sceneId);
+
+  // Get distinct props for these scenes via scene_props
+  const result = await db
+    .selectDistinct({
+      propId: props.id,
+      propName: props.name,
+    })
+    .from(sceneProps)
+    .innerJoin(props, eq(sceneProps.propId, props.id))
+    .where(inArray(sceneProps.sceneId, sceneIds))
+    .orderBy(props.name);
+
+  return result;
 }

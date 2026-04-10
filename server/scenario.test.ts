@@ -113,14 +113,14 @@ describe("scenario.delete", () => {
     const { ctx } = createUnauthContext();
     const caller = appRouter.createCaller(ctx);
 
-    await expect(caller.scenario.delete({ id: 1 })).rejects.toThrow();
+    await expect(caller.scenario.delete({ scenarioId: 1 })).rejects.toThrow();
   });
 
   it("returns NOT_FOUND for non-existent scenario", async () => {
     const { ctx } = createAuthContext();
     const caller = appRouter.createCaller(ctx);
 
-    await expect(caller.scenario.delete({ id: 999999 })).rejects.toThrow(
+    await expect(caller.scenario.delete({ scenarioId: 999999 })).rejects.toThrow(
       /introuvable/
     );
   });

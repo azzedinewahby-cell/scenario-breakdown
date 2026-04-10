@@ -76,3 +76,20 @@
 - [x] Backend: corriger le paramètre de la route delete (id -> scenarioId) pour la cohérence
 - [x] Frontend: corriger l'appel de la mutation delete pour utiliser scenarioId
 - Note: La suppression avec confirmation était déjà implémentée
+
+## Nouvelles fonctionnalités (session actuelle - traçabilité)
+- [ ] Backend: créer les relations accessoires-séquences (table props_scenes)
+- [ ] Backend: créer les relations personnages-séquences (table characters_scenes) - probablement déjà existante
+- [ ] Backend: créer une route tRPC pour récupérer les séquences par accessoire
+- [ ] Backend: créer une route tRPC pour récupérer les séquences par personnage
+- [ ] Frontend: afficher les séquences pour chaque accessoire dans l'onglet Accessoires
+- [ ] Frontend: afficher les séquences pour chaque personnage dans l'onglet Personnages
+
+## Nouvelles fonctionnalités (session Storyboard)
+- [x] Backend: ajouter une route tRPC pour générer un synopsis complet via LLM
+- [x] Backend: stocker le synopsis dans la table scenarios (champ synopsis)
+- [x] Backend: ajouter une route pour récupérer les personnages par séquence
+- [x] Backend: ajouter une route pour récupérer les accessoires par séquence
+- [x] Frontend: créer l'onglet Storyboard avec synopsis généré par LLM
+- [x] Frontend: réorganiser les onglets (Storyboard, Séquences, Personnages, Lieux, Accessoires)
+- [x] Frontend: enrichir l'onglet Séquences avec personnages et accessoires par séquence

@@ -39,6 +39,7 @@ export const scenarios = mysqlTable("scenarios", {
     .default("uploading")
     .notNull(),
   errorMessage: text("errorMessage"),
+  synopsis: text("synopsis"),
   sceneCount: int("sceneCount").default(0),
   characterCount: int("characterCount").default(0),
   locationCount: int("locationCount").default(0),

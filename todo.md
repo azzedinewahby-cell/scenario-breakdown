@@ -230,3 +230,12 @@
 ## Bug : Proposition de découpage technique ne se génère pas
 - [x] Diagnostiquer la route tRPC et le frontend pour le découpage technique (bouton désactivé, route inexistante)
 - [x] Corriger la génération du découpage technique (route tRPC generateTechnicalBreakdown + interface complète)
+
+## Amélioration export PDF dépouillement
+- [x] Ajouter nom du film en titre principal dans le PDF (page de couverture)
+- [x] Ajouter nom/prénom du scénariste dans le PDF
+- [x] Ajouter durée estimée dans le PDF
+- [x] Ajouter section Personnages dans le PDF
+- [x] Ajouter section Lieux/Décors dans le PDF
+- [x] Ajouter nombre total de séquences dans le PDF
+- [x] Ajouter liste des séquences avec résumé dans le PDF

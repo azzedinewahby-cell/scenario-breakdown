@@ -296,6 +296,10 @@ export const appRouter = router({
 
         const totalDialogues = pdfScenes.reduce((sum, s) => sum + s.dialogues.length, 0);
 
+        const durationSec = scenario.durationSeconds ?? 0;
+        const durationLabel = durationSec > 0
+          ? `${Math.floor(durationSec / 60)}min ${durationSec % 60 > 0 ? `${durationSec % 60}s` : ""}`.trim()
+          : null;
         const html = generateBreakdownHtml({
           title: scenario.title,
           fileName: scenario.fileName,
@@ -304,6 +308,8 @@ export const appRouter = router({
             month: "long",
             year: "numeric",
           }),
+          screenwriterName: scenario.screenwriterName ?? null,
+          durationLabel,
           scenes: pdfScenes,
           characters: charactersData.map((c) => c.name ?? ""),
           uniqueLocations,

@@ -479,16 +479,50 @@ export async function getPropsForSequence(sequenceId: number) {
 
   const sceneIds = sceneLinks.map((s) => s.sceneId);
 
-  // Get distinct props for these scenes via scene_props
-  const result = await db
-    .selectDistinct({
-      propId: props.id,
-      propName: props.name,
-    })
-    .from(sceneProps)
-    .innerJoin(props, eq(sceneProps.propId, props.id))
-    .where(inArray(sceneProps.sceneId, sceneIds))
-    .orderBy(props.name);
+  // Get all scenes for this sequence
+  const sequenceSceneList = await db
+    .select({ description: scenes.description })
+    .from(scenes)
+    .where(inArray(scenes.id, sceneIds));
+
+  // Get all props
+  const allProps = await db.select().from(props);
+
+  // Find props that appear in any scene description
+  // Use propName as key to deduplicate by name (not by ID)
+  const matchingProps = new Map<string, { propId: number; propName: string }>();
+  
+  allProps.forEach(prop => {
+    const propName = prop.name.toLowerCase();
+    const keywords = propName
+      .split(/[\s\-,()]+/)
+      .filter(word => word.length > 2)
+      .map(word => word.toLowerCase());
+
+    // Check if prop appears in any scene description
+    const isInSequence = sequenceSceneList.some(scene => {
+      if (!scene.description) return false;
+      const desc = scene.description.toLowerCase();
+      
+      // First try exact match
+      if (desc.includes(propName)) return true;
+      
+      // Then try matching at least 2 keywords
+      const matchedKeywords = keywords.filter(kw => desc.includes(kw));
+      return matchedKeywords.length >= 2;
+    });
+
+    if (isInSequence) {
+      // Deduplicate by propName: only keep the first occurrence
+      if (!matchingProps.has(prop.name)) {
+        matchingProps.set(prop.name, { propId: prop.id, propName: prop.name });
+      }
+    }
+  });
+
+  // Convert to array and sort by name
+  const result = Array.from(matchingProps.values())
+    .sort((a, b) => a.propName.localeCompare(b.propName));
 
   return result;
 }

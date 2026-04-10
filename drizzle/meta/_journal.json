@@ -50,6 +50,13 @@
       "when": 1775831833914,
       "tag": "0006_abandoned_wrecking_crew",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "5",
+      "when": 1775836206920,
+      "tag": "0007_real_earthquake",
+      "breakpoints": true
     }
   ]
 }

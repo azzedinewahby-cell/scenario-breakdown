@@ -107,3 +107,20 @@
 - [ ] Frontend: permettre le renommage de séquences - OPTIONNEL
 - [ ] Frontend: scroll vers scène avec highlight - OPTIONNEL
 - [ ] Frontend: permettre le regroupement/fusion de séquences - OPTIONNEL
+
+
+## Bugs résolus (session actuelle - suite 4 - FINAL)
+-- [x] Backend: ajouter les champs screenwriterName, screenwriterEmail, screenwriterPhone au schema scenarios
+- [x] Backend: generer et executer la migration SQL (colonnes verifiees dans la DB)
+- [x] Frontend: modifier la page Historique pour afficher les informations du scenariste
+- [x] Frontend: accessoires dans l'onglet Sequences fonctionne correctement (teste avec LABORATOIRE)
+- [x] Backend: corriger la deduplication des accessoires (par nom au lieu de par ID)
+- [x] Frontend: affichage correct des accessoires sans doublons
+
+## Implementations completes
+- [x] Recherche par mots-cles pour trouver les accessoires dans les descriptions des scenes
+- [x] Affichage des informations du scenariste dans la page Historique (nom, email, telephone)
+- [x] Migration de base de donnees pour ajouter les champs du scenariste
+- [x] Deduplication des accessoires par nom (evite les doublons dus aux IDs multiples)
+- [x] Tous les tests passent (17/17)
+- [x] Application completement fonctionnelle et stable

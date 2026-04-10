@@ -43,6 +43,9 @@ export const scenarios = mysqlTable("scenarios", {
   sceneCount: int("sceneCount").default(0),
   characterCount: int("characterCount").default(0),
   locationCount: int("locationCount").default(0),
+  screenwriterName: varchar("screenwriterName", { length: 256 }),
+  screenwriterEmail: varchar("screenwriterEmail", { length: 256 }),
+  screenwriterPhone: varchar("screenwriterPhone", { length: 20 }),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });

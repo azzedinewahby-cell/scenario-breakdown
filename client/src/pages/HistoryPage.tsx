@@ -126,6 +126,30 @@ function HistoryContent() {
                         </>
                       )}
                     </div>
+                    {/* Screenwriter info */}
+                    {(s.screenwriterName || s.screenwriterEmail || s.screenwriterPhone) && (
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1.5 pt-1.5 border-t border-border">
+                        {s.screenwriterName && (
+                          <span className="font-medium text-foreground">{s.screenwriterName}</span>
+                        )}
+                        {s.screenwriterEmail && (
+                          <>
+                            {s.screenwriterName && <span>&middot;</span>}
+                            <a href={`mailto:${s.screenwriterEmail}`} className="hover:text-foreground transition-colors">
+                              {s.screenwriterEmail}
+                            </a>
+                          </>
+                        )}
+                        {s.screenwriterPhone && (
+                          <>
+                            <span>&middot;</span>
+                            <a href={`tel:${s.screenwriterPhone}`} className="hover:text-foreground transition-colors">
+                              {s.screenwriterPhone}
+                            </a>
+                          </>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">

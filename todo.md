@@ -140,9 +140,9 @@
 - [x] Frontend: ajouter les routes dans App.tsx
 
 ### Phase 3 : Développer le module Budget
-- [ ] Backend: créer le schéma de base de données pour Budget
-- [ ] Backend: créer les routes tRPC pour Budget
-- [ ] Frontend: implémenter l'interface Budget
+- [x] Backend: créer le schéma de base de données pour Budget
+- [x] Backend: créer les routes tRPC pour Budget
+- [x] Frontend: implémenter l'interface Budget
 
 ### Phase 4 : Développer le module Distribution
 - [ ] Backend: créer le schéma de base de données pour Distribution
@@ -150,9 +150,9 @@
 - [ ] Frontend: implémenter l'interface Distribution
 
 ### Phase 5 : Développer le module Financement
-- [ ] Backend: créer le schéma de base de données pour Financement
-- [ ] Backend: créer les routes tRPC pour Financement
-- [ ] Frontend: implémenter l'interface Financement
+- [x] Backend: créer le schéma de base de données pour Financement (aides statiques)
+- [x] Backend: créer les routes tRPC pour Financement
+- [x] Frontend: implémenter l'interface Financement (style CinéFund)
 
 
 ## Bugs résolus (session actuelle - suite 5)
@@ -176,3 +176,43 @@
 - [x] Feature: Changer le titre "Dépouillement" en "Production" en haut à gauche
 - [x] Feature: Améliorer la gestion d'erreur du bouton Télécharger
 - [x] Feature: Ajouter iframe FestCalendar dans le module Distribution
+- [x] Feature: Créer le module Rapports avec 28 documents téléchargeables
+- [x] Feature: Ajouter l'onglet "Proposition découpage technique" dans BreakdownTabs
+- [x] Feature: Étendre la grille des onglets à 6 colonnes
+
+
+## Nouvelles demandes (session actuelle - suite)
+- [ ] Feature: Ajouter le prénom/nom du scénariste à côté de chaque scénario
+- [ ] Feature: Calculer et afficher la durée du scénario
+- [ ] Backend: créer la fonction de calcul de durée basée sur l'analyse des scènes
+- [ ] Backend: ajouter le champ duration au schéma scenarios
+- [ ] Backend: créer la route tRPC pour calculer la durée
+- [ ] Frontend: modifier l'affichage des scénarios pour montrer prénom/nom et durée
+
+
+## Module Budget - Implémentation complète (par scénario)
+- [x] DB: Corriger la migration durationSeconds (colonne manquante en prod)
+- [x] DB: Créer la table budgets (scenarioId, version, content JSON, createdAt)
+- [x] Backend: Créer la route tRPC generateBudget (appel LLM avec prompt expert)
+- [x] Backend: Créer la route tRPC getBudget (récupérer le budget généré)
+- [x] Frontend: Créer la page BudgetPage avec liste des scénarios
+- [x] Frontend: Afficher le plan de tournage (jours, pages/jour)
+- [x] Frontend: Afficher l'équipe complète par département
+- [x] Frontend: Afficher le tableau budget détaillé (version éco et confort)
+- [x] Frontend: Afficher l'analyse de production (faisabilité, risques)
+- [x] Frontend: Bouton "Générer le budget" avec état loading
+
+
+## Corrections DB urgentes (session actuelle)
+- [x] DB: Appliquer les migrations manquantes (screenwriterName, screenwriterEmail, screenwriterPhone, durationSeconds)
+- [x] DB: Créer la table budgets
+- [x] Bug: Erreurs DB lors de l'upload et de la liste des scénarios - CORRIGÉ
+
+## Module Financement inspiré de CinéFund
+- [x] Frontend: Créer l'interface Financement style CinéFund (liste des aides, filtres, plan de financement)
+- [x] Frontend: Aides avec matching par projet, montants, échéances, progression
+- [x] Frontend: Plan de financement avec budget total, obtenu, en cours, reste à financer
+
+## Durée et infos scénariste
+- [x] Frontend: Afficher la durée du scénario dans l'historique (⏱ Xmin Ys)
+- [x] Frontend: Afficher les infos scénariste dans l'historique (nom, email, téléphone)

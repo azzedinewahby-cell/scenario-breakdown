@@ -126,8 +126,8 @@ function HistoryContent() {
                         </>
                       )}
                     </div>
-                    {/* Screenwriter info */}
-                    {(s.screenwriterName || s.screenwriterEmail || s.screenwriterPhone) && (
+                    {/* Screenwriter info + Duration */}
+                    {(s.screenwriterName || s.screenwriterEmail || s.screenwriterPhone || (s.durationSeconds && s.durationSeconds > 0)) && (
                       <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1.5 pt-1.5 border-t border-border">
                         {s.screenwriterName && (
                           <span className="font-medium text-foreground">{s.screenwriterName}</span>
@@ -148,6 +148,15 @@ function HistoryContent() {
                             </a>
                           </>
                         )}
+                        {s.durationSeconds && s.durationSeconds > 0 ? (
+                          <>
+                            {(s.screenwriterName || s.screenwriterEmail || s.screenwriterPhone) && <span>&middot;</span>}
+                            <span className="flex items-center gap-1">
+                              <span>⏱</span>
+                              {Math.floor(s.durationSeconds / 60)}min {s.durationSeconds % 60}s
+                            </span>
+                          </>
+                        ) : null}
                       </div>
                     )}
                   </div>

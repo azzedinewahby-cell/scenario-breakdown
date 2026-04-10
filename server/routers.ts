@@ -34,9 +34,35 @@ import {
   updateScenarioSynopsis,
   getCharactersForSequence,
   getPropsForSequence,
+  calculateAndSaveScenarioDuration,
+  getScenarioDuration,
 } from "./db";
 import { parseScenarioWithLLM } from "./scenarioParser";
 import { generateBreakdownHtml } from "./pdfGenerator";
+import { invokeLLM } from "./_core/llm";
+import { getDb } from "./db";
+import { budgets } from "../drizzle/schema";
+import { eq } from "drizzle-orm";
+// ─── Budget helpers ───────────────────────────────────────────────────────────
+async function getBudgetForScenario(scenarioId: number) {
+  const db = await getDb();
+  if (!db) return null;
+  const rows = await db.select().from(budgets).where(eq(budgets.scenarioId, scenarioId)).limit(1);
+  return rows[0] ?? null;
+}
+
+async function saveBudget(scenarioId: number, content: string, shootingDays: number, pagesPerDay: number, totalEco: number, totalConfort: number) {
+  const db = await getDb();
+  if (!db) return null;
+  const existing = await getBudgetForScenario(scenarioId);
+  if (existing) {
+    await db.update(budgets).set({ content, shootingDays, pagesPerDay, totalBudgetEco: totalEco, totalBudgetConfort: totalConfort }).where(eq(budgets.id, existing.id));
+    return existing.id;
+  } else {
+    const [result] = await db.insert(budgets).values({ scenarioId, content, shootingDays, pagesPerDay, totalBudgetEco: totalEco, totalBudgetConfort: totalConfort });
+    return (result as any).insertId;
+  }
+}
 
 export const appRouter = router({
   system: systemRouter,
@@ -449,6 +475,34 @@ export const appRouter = router({
         return getPropsForSequence(input.sequenceId);
       }),
 
+    // Calculate and save scenario duration
+    calculateDuration: protectedProcedure
+      .input(z.object({ scenarioId: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        const scenario = await getScenarioById(input.scenarioId);
+        if (!scenario || scenario.userId !== ctx.user.id) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Scenario not found" });
+        }
+        const durationSeconds = await calculateAndSaveScenarioDuration(input.scenarioId);
+        return {
+          durationSeconds,
+          totalMinutes: Math.floor(durationSeconds / 60),
+          totalSeconds_remainder: durationSeconds % 60,
+        };
+      }),
+
+    // Get scenario duration
+    getDuration: protectedProcedure
+      .input(z.object({ scenarioId: z.number() }))
+      .query(async ({ ctx, input }) => {
+        const scenario = await getScenarioById(input.scenarioId);
+        if (!scenario || scenario.userId !== ctx.user.id) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Scenario not found" });
+        }
+        const duration = await getScenarioDuration(input.scenarioId);
+        return duration || { totalSeconds: 0, totalMinutes: 0, totalSeconds_remainder: 0 };
+      }),
+
     // Generate or get synopsis for a scenario
     getSynopsis: protectedProcedure
       .input(z.object({ scenarioId: z.number() }))
@@ -480,12 +534,125 @@ export const appRouter = router({
         return { success: true };
       }),
   }),
+  budget: router({
+    // Get existing budget for a scenario
+    get: protectedProcedure
+      .input(z.object({ scenarioId: z.number() }))
+      .query(async ({ ctx, input }) => {
+        const scenario = await getScenarioById(input.scenarioId);
+        if (!scenario || scenario.userId !== ctx.user.id) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Scénario introuvable" });
+        }
+        return getBudgetForScenario(input.scenarioId);
+      }),
+    // Generate budget using LLM
+    generate: protectedProcedure
+      .input(z.object({ scenarioId: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        const scenario = await getScenarioById(input.scenarioId);
+        if (!scenario || scenario.userId !== ctx.user.id) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Scénario introuvable" });
+        }
+        const scenes = await getScenesByScenarioId(input.scenarioId);
+        const characters = await getCharactersByScenarioId(input.scenarioId);
+        const sequences = await getSequences(input.scenarioId);
+
+        const scenesText = scenes
+          .map((s, i) => `Séquence ${i + 1}: ${s.intExt || ""} ${s.location || ""} - ${s.dayNight || ""} | ${s.description?.substring(0, 200) || ""}`)
+          .join("\n");
+
+        const prompt = `Tu es un expert en direction de production cinéma en France. Analyse ce scénario et génère un plan de production complet.
+
+TITRE DU SCÉNARIO: ${scenario.title}
+NOMBRE DE SÉQUENCES: ${scenes.length}
+NOMBRE DE PERSONNAGES: ${characters.length}
+NOMBRE DE DÉCORS: ${scenario.locationCount || 0}
+
+LISTE DES SÉQUENCES:
+${scenesText}
+
+Génère une analyse complète au format JSON avec cette structure exacte:
+{
+  "shootingDays": <nombre total de jours de tournage>,
+  "pagesPerDay": <moyenne pages par jour>,
+  "heavyDays": <nombre de journées lourdes>,
+  "lightDays": <nombre de journées légères>,
+  "analysis": "<analyse narrative de la faisabilité>",
+  "risks": ["<risque 1>", "<risque 2>"],
+  "optimizations": ["<optimisation 1>", "<optimisation 2>"],
+  "team": [
+    { "department": "Réalisation", "role": "Réalisateur", "daysEco": <jours>, "rateEco": <tarif/j>, "daysConfort": <jours>, "rateConfort": <tarif/j> },
+    { "department": "Réalisation", "role": "1er assistant réal", "daysEco": <jours>, "rateEco": <tarif/j>, "daysConfort": <jours>, "rateConfort": <tarif/j> },
+    { "department": "Réalisation", "role": "2e assistant réal", "daysEco": <jours>, "rateEco": <tarif/j>, "daysConfort": <jours>, "rateConfort": <tarif/j> },
+    { "department": "Réalisation", "role": "Scripte", "daysEco": <jours>, "rateEco": <tarif/j>, "daysConfort": <jours>, "rateConfort": <tarif/j> },
+    { "department": "Image", "role": "Chef opérateur (DP)", "daysEco": <jours>, "rateEco": <tarif/j>, "daysConfort": <jours>, "rateConfort": <tarif/j> },
+    { "department": "Image", "role": "Cadreur", "daysEco": <jours>, "rateEco": <tarif/j>, "daysConfort": <jours>, "rateConfort": <tarif/j> },
+    { "department": "Image", "role": "1er assistant caméra", "daysEco": <jours>, "rateEco": <tarif/j>, "daysConfort": <jours>, "rateConfort": <tarif/j> },
+    { "department": "Image", "role": "2e assistant caméra", "daysEco": <jours>, "rateEco": <tarif/j>, "daysConfort": <jours>, "rateConfort": <tarif/j> },
+    { "department": "Électricité", "role": "Chef électricien", "daysEco": <jours>, "rateEco": <tarif/j>, "daysConfort": <jours>, "rateConfort": <tarif/j> },
+    { "department": "Électricité", "role": "Électricien", "daysEco": <jours>, "rateEco": <tarif/j>, "daysConfort": <jours>, "rateConfort": <tarif/j> },
+    { "department": "Machinerie", "role": "Chef machiniste", "daysEco": <jours>, "rateEco": <tarif/j>, "daysConfort": <jours>, "rateConfort": <tarif/j> },
+    { "department": "Machinerie", "role": "Machiniste", "daysEco": <jours>, "rateEco": <tarif/j>, "daysConfort": <jours>, "rateConfort": <tarif/j> },
+    { "department": "Son", "role": "Chef opérateur son", "daysEco": <jours>, "rateEco": <tarif/j>, "daysConfort": <jours>, "rateConfort": <tarif/j> },
+    { "department": "Son", "role": "Perchman", "daysEco": <jours>, "rateEco": <tarif/j>, "daysConfort": <jours>, "rateConfort": <tarif/j> },
+    { "department": "Artistique", "role": "Chef déco", "daysEco": <jours>, "rateEco": <tarif/j>, "daysConfort": <jours>, "rateConfort": <tarif/j> },
+    { "department": "Artistique", "role": "Accessoiriste", "daysEco": <jours>, "rateEco": <tarif/j>, "daysConfort": <jours>, "rateConfort": <tarif/j> },
+    { "department": "Artistique", "role": "Costumière", "daysEco": <jours>, "rateEco": <tarif/j>, "daysConfort": <jours>, "rateConfort": <tarif/j> },
+    { "department": "Artistique", "role": "Maquilleuse", "daysEco": <jours>, "rateEco": <tarif/j>, "daysConfort": <jours>, "rateConfort": <tarif/j> },
+    { "department": "Production", "role": "Directeur de production", "daysEco": <jours>, "rateEco": <tarif/j>, "daysConfort": <jours>, "rateConfort": <tarif/j> },
+    { "department": "Production", "role": "Régisseur général", "daysEco": <jours>, "rateEco": <tarif/j>, "daysConfort": <jours>, "rateConfort": <tarif/j> },
+    { "department": "Production", "role": "Assistant régie", "daysEco": <jours>, "rateEco": <tarif/j>, "daysConfort": <jours>, "rateConfort": <tarif/j> }
+  ]
+}
+
+Règles importantes:
+- Utilise les minimas syndicaux français (convention collective cinéma)
+- Version éco: tarifs minimums (250-350€/j technicien, 400-500€/j chef de poste)
+- Version confort: tarifs standard marché (350-450€/j technicien, 500-700€/j chef de poste)
+- Adapte le nombre de jours selon la complexité du scénario
+- Base-toi sur 5-8 pages/jour pour dialogue simple, 2-4 pages/jour pour scènes complexes
+- Réponds UNIQUEMENT avec le JSON, sans texte avant ou après`;
+
+        const response = await invokeLLM({
+          messages: [
+            { role: "system", content: "Tu es un expert en production cinématographique française. Réponds uniquement en JSON valide." },
+            { role: "user", content: prompt },
+          ],
+          response_format: { type: "json_object" },
+        });
+
+        const rawContent = response?.choices?.[0]?.message?.content;
+        const raw = typeof rawContent === "string" ? rawContent : null;
+        if (!raw) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Erreur LLM" });
+        let parsed: any;
+        try {
+          parsed = JSON.parse(raw);;
+        } catch {
+          throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Réponse LLM invalide" });
+        }
+
+        // Calculate totals
+        const team = parsed.team || [];
+        const totalEco = team.reduce((sum: number, m: any) => sum + (m.daysEco || 0) * (m.rateEco || 0), 0);
+        const totalConfort = team.reduce((sum: number, m: any) => sum + (m.daysConfort || 0) * (m.rateConfort || 0), 0);
+
+        await saveBudget(
+          input.scenarioId,
+          JSON.stringify(parsed),
+          parsed.shootingDays || 0,
+          parsed.pagesPerDay || 0,
+          totalEco,
+          totalConfort
+        );
+
+        return { success: true, data: parsed, totalEco, totalConfort };
+      }),
+  }),
 });
 
 export type AppRouter = typeof appRouter;
 
 // ─── Background processing ───────────────────────────────────────────────────
-
 async function processScenario(scenarioId: number, fileUrl: string, fileName: string) {
   try {
     await updateScenarioStatus(scenarioId, "processing");

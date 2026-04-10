@@ -46,6 +46,7 @@ export const scenarios = mysqlTable("scenarios", {
   screenwriterName: varchar("screenwriterName", { length: 256 }),
   screenwriterEmail: varchar("screenwriterEmail", { length: 256 }),
   screenwriterPhone: varchar("screenwriterPhone", { length: 20 }),
+  durationSeconds: int("durationSeconds").default(0),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
@@ -156,3 +157,22 @@ export const sequenceScenes = mysqlTable("sequence_scenes", {
 
 export type SequenceScene = typeof sequenceScenes.$inferSelect;
 export type InsertSequenceScene = typeof sequenceScenes.$inferInsert;
+
+
+// ─── Budgets ─────────────────────────────────────────────────────────────────
+
+export const budgets = mysqlTable("budgets", {
+  id: int("id").autoincrement().primaryKey(),
+  scenarioId: int("scenarioId").notNull(),
+  version: mysqlEnum("version", ["eco", "confort"]).default("eco").notNull(),
+  shootingDays: int("shootingDays").default(0),
+  pagesPerDay: int("pagesPerDay").default(0),
+  totalBudgetEco: int("totalBudgetEco").default(0),
+  totalBudgetConfort: int("totalBudgetConfort").default(0),
+  content: text("content"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type Budget = typeof budgets.$inferSelect;
+export type InsertBudget = typeof budgets.$inferInsert;

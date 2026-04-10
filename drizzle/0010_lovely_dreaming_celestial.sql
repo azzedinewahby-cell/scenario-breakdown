@@ -1,0 +1,1 @@
+ALTER TABLE `scenarios` ADD `durationSeconds` int DEFAULT 0;

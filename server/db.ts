@@ -526,3 +526,110 @@ export async function getPropsForSequence(sequenceId: number) {
 
   return result;
 }
+
+
+// ─── Duration Calculation ─────────────────────────────────────────────────────
+
+export async function calculateAndSaveScenarioDuration(scenarioId: number): Promise<number> {
+  const db = await getDb();
+  if (!db) {
+    console.warn("[Database] Cannot calculate duration: database not available");
+    return 0;
+  }
+
+  // Get all scenes for this scenario
+  const scenarioScenes = await db
+    .select()
+    .from(scenes)
+    .where(eq(scenes.scenarioId, scenarioId));
+
+  if (scenarioScenes.length === 0) {
+    return 0;
+  }
+
+  // Calculate duration based on scenes
+  let totalSeconds = 0;
+
+  for (const scene of scenarioScenes) {
+    if (!scene.description) continue;
+
+    const lines = scene.description.split('\n').length;
+    const words = scene.description.split(/\s+/).length;
+
+    // Estimation de pages (250 mots ≈ 1 page)
+    const estimatedPages = Math.max(1, Math.round(words / 250));
+
+    // Durée de base : 1 page = 60 secondes
+    let duration = estimatedPages * 60;
+
+    // Ajustement selon le type de scène
+    const description = scene.description.toLowerCase();
+
+    // Détecter les mots-clés d'action
+    const actionKeywords = ['court', 'saute', 'tire', 'explose', 'crash', 'poursuit', 'combat', 'chute', 'fuit', 'attaque', 'frappe', 'course', 'explosion', 'poursuite'];
+    const hasActionKeywords = actionKeywords.some(keyword => description.includes(keyword));
+
+    // Détecter les scènes contemplatives
+    const contemplativeKeywords = ['silence', 'contemple', 'regarde', 'pense', 'rêve', 'souvenir', 'flashback', 'montage', 'musique', 'poétique', 'lent'];
+    const hasContemplativeKeywords = contemplativeKeywords.some(keyword => description.includes(keyword));
+
+    // Compter les lignes de dialogue
+    const dialogueMatches = scene.description.match(/^[A-Z\s]+:/gm) || [];
+    const dialogueRatio = dialogueMatches.length / (lines || 1);
+
+    if (hasContemplativeKeywords && !hasActionKeywords) {
+      // Scènes contemplatives : plus longues
+      duration = Math.round(duration * 1.4);
+    } else if (hasActionKeywords) {
+      // Scènes d'action : plus lentes
+      duration = Math.round(duration * 1.2);
+    } else if (dialogueRatio > 0.4) {
+      // Scènes dialoguées : plus rapides
+      duration = Math.round(duration * 0.8);
+    }
+
+    // Durée minimale : 3 secondes
+    totalSeconds += Math.max(3, duration);
+  }
+
+  // Sauvegarder la durée en base de données
+  await db
+    .update(scenarios)
+    .set({ durationSeconds: totalSeconds })
+    .where(eq(scenarios.id, scenarioId));
+
+  return totalSeconds;
+}
+
+export async function getScenarioDuration(scenarioId: number): Promise<{
+  totalSeconds: number;
+  totalMinutes: number;
+  totalSeconds_remainder: number;
+} | null> {
+  const db = await getDb();
+  if (!db) {
+    console.warn("[Database] Cannot get duration: database not available");
+    return null;
+  }
+
+  const scenario = await db
+    .select({ durationSeconds: scenarios.durationSeconds })
+    .from(scenarios)
+    .where(eq(scenarios.id, scenarioId))
+    .limit(1);
+
+  if (scenario.length === 0) {
+    return null;
+  }
+
+  const totalSeconds = scenario[0].durationSeconds || 0;
+  const totalMinutes = Math.floor(totalSeconds / 60);
+  const totalSeconds_remainder = totalSeconds % 60;
+
+  return {
+    totalSeconds,
+    totalMinutes,
+    totalSeconds_remainder,
+  };
+}
+

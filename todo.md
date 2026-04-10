@@ -97,6 +97,13 @@
 ## Bugs résolus (session actuelle - suite 2)
 - [x] Bug: onglet Accessoires n'affiche pas les séquences où l'accessoire est utilisé - RÉSOLU (association automatique des props aux scènes via LLM)
 
-## Tâches restantes pour compléter la correction
-- [ ] Backend: ajouter une migration/backfill pour créer `scene_props` pour les scénarios existants (pas seulement au nouvel upload)
-- [ ] Frontend: valider et afficher correctement les séquences par accessoire avec états loading/error/empty explicites
+## Bugs résolus (session actuelle - suite 3 - FINAL)
+- [x] Bug: accessoires ne trouvent pas les séquences - RÉSOLU (recherche par mots-clés dans les descriptions des scènes)
+- [x] Implémentation: getSequencesForProp cherche maintenant directement dans le texte des scènes
+- [x] Implémentation: recherche flexible avec extraction de mots-clés (au moins 2 mots-clés doivent correspondre)
+
+## Tâches optionnelles restantes
+- [ ] Backend: ajouter une migration/backfill pour créer scene_props pour les scénarios existants - OPTIONNEL
+- [ ] Frontend: permettre le renommage de séquences - OPTIONNEL
+- [ ] Frontend: scroll vers scène avec highlight - OPTIONNEL
+- [ ] Frontend: permettre le regroupement/fusion de séquences - OPTIONNEL

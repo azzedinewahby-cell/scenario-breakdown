@@ -351,13 +351,35 @@ export async function getSequencesForProp(propId: number) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   
-  // Get scenes for this prop
-  const sceneIds = await db
-    .select({ sceneId: sceneProps.sceneId })
-    .from(sceneProps)
-    .where(eq(sceneProps.propId, propId));
+  // Get the prop
+  const prop = await db.select().from(props).where(eq(props.id, propId)).limit(1);
+  if (prop.length === 0) return [];
   
-  if (sceneIds.length === 0) return [];
+  const propName = prop[0].name.toLowerCase();
+  
+  // Extract key words from prop name (split by spaces and filter short words)
+  const keywords = propName
+    .split(/[\s\-,()]+/)
+    .filter(word => word.length > 2)
+    .map(word => word.toLowerCase());
+  
+  // Search for prop name or keywords in scene descriptions
+  const allScenes = await db.select().from(scenes);
+  const matchingSceneIds = allScenes
+    .filter(scene => {
+      if (!scene.description) return false;
+      const desc = scene.description.toLowerCase();
+      
+      // First try exact match
+      if (desc.includes(propName)) return true;
+      
+      // Then try matching at least 2 keywords
+      const matchedKeywords = keywords.filter(kw => desc.includes(kw));
+      return matchedKeywords.length >= 2;
+    })
+    .map(scene => scene.id);
+  
+  if (matchingSceneIds.length === 0) return [];
   
   // Get unique sequences for these scenes
   const result = await db
@@ -369,7 +391,7 @@ export async function getSequencesForProp(propId: number) {
     })
     .from(sequenceScenes)
     .innerJoin(sequences, eq(sequenceScenes.sequenceId, sequences.id))
-    .where(inArray(sequenceScenes.sceneId, sceneIds.map(s => s.sceneId)))
+    .where(inArray(sequenceScenes.sceneId, matchingSceneIds))
     .orderBy(sequenceScenes.orderIndex);
   
   return result;

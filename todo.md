@@ -221,3 +221,8 @@
 - [x] Diagnostiquer pourquoi durationSeconds est null/0 pour les scénarios existants (colonne ajoutée après l'upload, jamais calculée)
 - [x] Corriger le calcul et l'affichage de la durée dans l'historique (backfill + calcul automatique à l'analyse)
 - [x] Afficher la durée dans le tableau de bord (scénarios récents)
+
+## Bug : Prénom/nom scénariste manquant dans l'historique
+- [x] Vérifier si screenwriterName est bien extrait par le LLM lors du parsing (le champ était absent du schéma JSON)
+- [x] Vérifier si screenwriterName est bien sauvegardé en base de données
+- [x] Corriger l'extraction et backfiller les scénarios existants (GRELLOU: Azzedine Wahbi, Le Stagiaire: Eli Bourdon, CE QUE TU N'AS PAS DIT: Lola MARCIANO)

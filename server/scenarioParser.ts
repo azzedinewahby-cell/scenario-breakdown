@@ -19,6 +19,9 @@ export interface ParsedCharacter {
 
 export interface ParsedScenario {
   title: string;
+  screenwriterName: string | null;
+  screenwriterEmail: string | null;
+  screenwriterPhone: string | null;
   scenes: ParsedScene[];
   characters: ParsedCharacter[];
   props: string[];
@@ -37,6 +40,9 @@ export async function parseScenarioWithLLM(
   const systemPrompt = `Tu es un assistant spécialisé dans le dépouillement de scénarios de cinéma et audiovisuel.
 À partir du contenu d'un scénario, tu dois extraire de manière structurée :
 - Le titre du scénario (déduit du contenu ou du nom de fichier)
+- Le nom complet du scénariste/auteur (prénom et nom, souvent sur la page de titre, après "Écrit par", "Written by", "De", ou en bas de la page de titre). Si plusieurs auteurs, les séparer par " & ".
+- L'email du scénariste si mentionné dans le document (sinon null)
+- Le téléphone du scénariste si mentionné dans le document (sinon null)
 - La liste complète des scènes avec pour chacune :
   - Le numéro de scène
   - INT. ou EXT. (intérieur/extérieur)
@@ -94,6 +100,18 @@ Numérote les scènes séquentiellement si elles ne sont pas numérotées dans l
           type: "object",
           properties: {
             title: { type: "string", description: "Titre du scénario" },
+            screenwriterName: {
+              type: ["string", "null"],
+              description: "Nom complet du scénariste/auteur (prénom et nom). Si plusieurs auteurs, les séparer par ' & '. null si non trouvé.",
+            },
+            screenwriterEmail: {
+              type: ["string", "null"],
+              description: "Email du scénariste si mentionné dans le document, sinon null.",
+            },
+            screenwriterPhone: {
+              type: ["string", "null"],
+              description: "Téléphone du scénariste si mentionné dans le document, sinon null.",
+            },
             characters: {
               type: "array",
               items: {
@@ -175,7 +193,7 @@ Numérote les scènes séquentiellement si elles ne sont pas numérotées dans l
               description: "Liste de tous les accessoires/props du scénario (objets, armes, véhicules, etc.)",
             },
           },
-          required: ["title", "characters", "scenes", "props"],
+          required: ["title", "screenwriterName", "screenwriterEmail", "screenwriterPhone", "characters", "scenes", "props"],
           additionalProperties: false,
         },
       },

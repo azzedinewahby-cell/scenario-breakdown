@@ -659,14 +659,19 @@ async function processScenario(scenarioId: number, fileUrl: string, fileName: st
 
     const parsed = await parseScenarioWithLLM(fileUrl, fileName);
 
-    // Update scenario title if LLM found a better one
-    if (parsed.title) {
+    // Update scenario title and screenwriter info if LLM found them
+    if (parsed.title || parsed.screenwriterName || parsed.screenwriterEmail || parsed.screenwriterPhone) {
       const { getDb } = await import("./db");
       const db = await getDb();
       if (db) {
         const { scenarios } = await import("../drizzle/schema");
         const { eq } = await import("drizzle-orm");
-        await db.update(scenarios).set({ title: parsed.title }).where(eq(scenarios.id, scenarioId));
+        const updateData: Record<string, string | null> = {};
+        if (parsed.title) updateData.title = parsed.title;
+        if (parsed.screenwriterName !== undefined) updateData.screenwriterName = parsed.screenwriterName;
+        if (parsed.screenwriterEmail !== undefined) updateData.screenwriterEmail = parsed.screenwriterEmail;
+        if (parsed.screenwriterPhone !== undefined) updateData.screenwriterPhone = parsed.screenwriterPhone;
+        await db.update(scenarios).set(updateData).where(eq(scenarios.id, scenarioId));
       }
     }
 

@@ -72,7 +72,7 @@ export default function DashboardLayout({
             <div className="flex items-center gap-2.5 mb-4">
               <Film className="h-8 w-8 text-primary" />
               <span className="text-2xl font-serif font-semibold tracking-tight">
-                Dépouillement
+                Production
               </span>
             </div>
             <h1 className="text-xl font-medium tracking-tight text-center text-foreground">
@@ -183,7 +183,7 @@ function DashboardLayoutContent({
                 <div className="flex items-center gap-2 min-w-0">
                   <Film className="h-5 w-5 text-primary shrink-0" />
                   <span className="font-serif font-semibold tracking-tight truncate text-sm">
-                    Dépouillement
+                    Production
                   </span>
                 </div>
               ) : null}

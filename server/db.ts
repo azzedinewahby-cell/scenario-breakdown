@@ -387,12 +387,12 @@ export async function getSequencesForProp(propId: number) {
       sequenceId: sequenceScenes.sequenceId,
       sequenceName: sequences.name,
       sequenceSummary: sequences.summary,
-      orderIndex: sequenceScenes.orderIndex,
+      orderIndex: sequences.orderIndex,
     })
     .from(sequenceScenes)
     .innerJoin(sequences, eq(sequenceScenes.sequenceId, sequences.id))
     .where(inArray(sequenceScenes.sceneId, matchingSceneIds))
-    .orderBy(sequenceScenes.orderIndex);
+    .orderBy(sequences.orderIndex);
   
   return result;
 }
@@ -416,12 +416,12 @@ export async function getSequencesForCharacter(characterId: number) {
       sequenceId: sequenceScenes.sequenceId,
       sequenceName: sequences.name,
       sequenceSummary: sequences.summary,
-      orderIndex: sequenceScenes.orderIndex,
+      orderIndex: sequences.orderIndex,
     })
     .from(sequenceScenes)
     .innerJoin(sequences, eq(sequenceScenes.sequenceId, sequences.id))
     .where(inArray(sequenceScenes.sceneId, sceneIds.map(s => s.sceneId)))
-    .orderBy(sequenceScenes.orderIndex);
+    .orderBy(sequences.orderIndex);
   
   return result;
 }

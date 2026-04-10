@@ -170,3 +170,7 @@
 
 ## Demandes urgentes (session actuelle)
 - [x] Feature: Afficher le nom et prénom du scénariste à côté du scénario dans "Scénarios récents"
+
+## Bugs critiques (session actuelle)
+- [x] Bug: Dans la liste des accessoires, le numéro de la séquence n'est pas correct - CORRIGÉ (orderIndex fixé)
+- [x] Feature: Changer le titre "Dépouillement" en "Production" en haut à gauche

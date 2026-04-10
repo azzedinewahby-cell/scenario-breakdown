@@ -33,3 +33,4 @@
 - [x] Backend: ajouter le champ "gender" (male/female/unknown) à la table characters
 - [x] Backend: modifier le parsing LLM pour extraire le genre des personnages
 - [x] Frontend: afficher emoji femme rose pour féminin et emoji homme bleu pour masculin dans les listes de personnages
+- [x] Frontend: corriger l'affichage des emojis de genre (👨 pour homme, 👩 pour femme) dans toutes les listes de personnages

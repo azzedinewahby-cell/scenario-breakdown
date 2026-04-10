@@ -416,10 +416,10 @@ function MiniStat({
 
 function GenderEmoji({ gender }: { gender?: string }) {
   if (gender === "female") {
-    return <span style={{ fontSize: "1.25rem", color: "#E91E8C" }}>👩</span>;
+    return <span style={{ fontSize: "1.25rem" }} title="Personnage féminin">👩</span>;
   }
   if (gender === "male") {
-    return <span style={{ fontSize: "1.25rem", color: "#2196F3" }}>👨</span>;
+    return <span style={{ fontSize: "1.25rem" }} title="Personnage masculin">👨</span>;
   }
   return <Users className="h-3.5 w-3.5 text-muted-foreground/60 shrink-0" />;
 }

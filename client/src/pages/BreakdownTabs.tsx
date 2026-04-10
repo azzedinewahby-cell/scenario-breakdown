@@ -3,7 +3,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Users, MapPin, Package, Film, Search, Plus, BookOpen, ChevronDown, ChevronUp, Loader2, Layers } from "lucide-react";
+import { Users, MapPin, Package, Film, Search, Plus, BookOpen, ChevronDown, ChevronUp, Loader2 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { CharacterIcon } from "@/components/CharacterIcon";
 
@@ -222,7 +222,7 @@ export function BreakdownTabs({ scenarioId, onSceneSelect }: BreakdownTabsProps)
   return (
     <div className="w-full">
       <Tabs defaultValue="storyboard" className="w-full">
-        <TabsList className="grid w-full grid-cols-6 mb-6">
+        <TabsList className="grid w-full grid-cols-5 mb-6">
           <TabsTrigger value="storyboard" className="flex items-center gap-1.5">
             <BookOpen className="w-4 h-4" />
             <span className="hidden sm:inline text-xs">Storyboard</span>
@@ -242,10 +242,6 @@ export function BreakdownTabs({ scenarioId, onSceneSelect }: BreakdownTabsProps)
           <TabsTrigger value="props" className="flex items-center gap-1.5">
             <Package className="w-4 h-4" />
             <span className="hidden sm:inline text-xs">Accessoires</span>
-          </TabsTrigger>
-          <TabsTrigger value="technical-breakdown" className="flex items-center gap-1.5">
-            <Layers className="w-4 h-4" />
-            <span className="hidden sm:inline text-xs">Découpage</span>
           </TabsTrigger>
         </TabsList>
 
@@ -469,19 +465,6 @@ export function BreakdownTabs({ scenarioId, onSceneSelect }: BreakdownTabsProps)
               ))}
             </div>
           )}
-        </TabsContent>
-
-        {/* PROPOSITION DÉCOUPAGE TECHNIQUE */}
-        <TabsContent value="technical-breakdown" className="space-y-4">
-          <Card className="p-8 flex flex-col items-center justify-center gap-4 min-h-[300px]">
-            <Layers className="w-10 h-10 text-gray-300" />
-            <div className="text-gray-500 text-sm text-center max-w-sm">
-              Proposition de découpage technique en développement. Cette section affichera une analyse détaillée des plans et des mouvements de caméra.
-            </div>
-            <Button variant="outline" size="sm" disabled>
-              Générer le découpage
-            </Button>
-          </Card>
         </TabsContent>
       </Tabs>
     </div>

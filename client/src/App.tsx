@@ -12,7 +12,6 @@ import DepouillementPage from "./pages/DepouillementPage";
 import BudgetPage from "./pages/BudgetPage";
 import DistributionPage from "./pages/DistributionPage";
 import FinancementPage from "./pages/FinancementPage";
-import RapportPage from "./pages/RapportPage";
 
 function Router() {
   return (
@@ -25,7 +24,6 @@ function Router() {
       <Route path="/budget" component={BudgetPage} />
       <Route path="/distribution" component={DistributionPage} />
       <Route path="/financement" component={FinancementPage} />
-      <Route path="/rapports" component={RapportPage} />
       <Route path="/404" component={NotFound} />
       <Route component={NotFound} />
     </Switch>

@@ -9,7 +9,6 @@ import {
   Euro,
   Users2,
   Banknote,
-  FileText,
 } from "lucide-react";
 import { useLocation } from "wouter";
 import DashboardLayout from "@/components/DashboardLayout";
@@ -39,7 +38,7 @@ function DashboardContent() {
       </div>
 
       {/* Main modules grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <ModuleCard
           title="Dépouillement"
           description="Analysez et structurez vos scénarios"
@@ -71,14 +70,6 @@ function DashboardContent() {
           color="bg-red-900"
           textColor="text-red-900"
           onClick={() => setLocation("/financement")}
-        />
-        <ModuleCard
-          title="Rapports"
-          description="Téléchargez les modèles de documents"
-          icon={<FileText className="h-6 w-6" />}
-          color="bg-purple-900"
-          textColor="text-purple-900"
-          onClick={() => setLocation("/rapports")}
         />
       </div>
 

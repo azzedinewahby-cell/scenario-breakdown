@@ -464,6 +464,28 @@ async function processScenario(scenarioId: number, fileUrl: string, fileName: st
       );
     }
 
+    // Create sequences for each scene
+    const scenes = await getScenesByScenarioId(scenarioId);
+    for (let i = 0; i < scenes.length; i++) {
+      const scene = scenes[i];
+      const sequenceName = `${scene.intExt ? scene.intExt + ". " : ""}${scene.location || "Scène " + scene.sceneNumber}`;
+      await insertSequences([{
+        scenarioId,
+        name: sequenceName,
+        orderIndex: i,
+      }]);
+    }
+    
+    // Link scenes to sequences
+    const updatedSequences = await getSequences(scenarioId);
+    for (let i = 0; i < scenes.length && i < updatedSequences.length; i++) {
+      const scene = scenes[i];
+      const sequence = updatedSequences[i];
+      if (sequence && sequence.id) {
+        await insertSequenceScenes([{ sequenceId: sequence.id, sceneId: scene.id }]);
+      }
+    }
+
     await updateScenarioStatus(scenarioId, "completed", {
       sceneCount: parsed.scenes.length,
       characterCount: parsed.characters.length,

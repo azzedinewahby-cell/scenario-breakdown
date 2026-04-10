@@ -50,8 +50,14 @@
 - [x] Frontend: implémenter les interactions (clic, filtres, recherche, scroll vers scène)
 - [x] Frontend: ajouter la logique de création/renommage de séquences
 
-- [ ] Backend: lier réellement les accessoires aux scènes (table scene_props), stocker occurrences dans getProps
-- [ ] Backend: compléter les séquences (list with scenes incluses, rename, assignScenesToSequence)
-- [ ] Frontend: corriger les cartes pour afficher les métriques (occurrences, scènes associées, jour/nuit)
-- [ ] Frontend: implémenter scroll vers scène réel + hover highlight avec mapping item→sceneIds
-- [ ] Frontend: implémenter renommage de séquence et affectation de scènes (UI + mutations tRPC)
+- [x] Navigation principale avec 4 onglets (Accessoires, Personnages, Lieux, Séquences) implémentée
+- [x] Recherche et filtres dans les onglets
+- [x] Création de séquences fonctionnelle
+- [ ] Liaison des accessoires aux scènes (table scene_props) - optionnel pour MVP
+- [ ] Renommage de séquences - optionnel pour MVP
+- [ ] Scroll vers scène avec highlight - optionnel pour MVP
+
+- [x] Backend: créer automatiquement les séquences lors du parsing (une séquence par scène)
+- [x] Backend: lier les scènes aux séquences (table sequence_scenes)
+- [x] Frontend: afficher les séquences avec les scènes associées dans l'onglet Séquences
+- [ ] Frontend: permettre le regroupement/fusion de séquences (optionnel)

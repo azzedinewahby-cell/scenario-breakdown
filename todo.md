@@ -239,3 +239,7 @@
 - [x] Ajouter section Lieux/Décors dans le PDF
 - [x] Ajouter nombre total de séquences dans le PDF
 - [x] Ajouter liste des séquences avec résumé dans le PDF
+
+## Corrections PDF dépouillement (v2)
+- [x] Réduire les espaces dans le PDF (mise en page condensée avec tableau)
+- [x] Nom du scénariste visible en haut du PDF (header + footer)

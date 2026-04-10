@@ -422,8 +422,9 @@ export const appRouter = router({
     getSequencesForProp: protectedProcedure
       .input(z.object({ propId: z.number() }))
       .query(async ({ input }) => {
-        // Trigger automatic backfill if needed (non-blocking)
-        backfillScenePropsForProp(input.propId).catch(console.error);
+        // Trigger automatic backfill if needed (non-blocking, in background)
+        backfillScenePropsForProp(input.propId).catch(e => console.error("[Backfill failed]", e));
+        // Return immediately with whatever sequences are already in the database
         return getSequencesForProp(input.propId);
       }),
 

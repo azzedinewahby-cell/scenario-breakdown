@@ -187,7 +187,7 @@ export function BreakdownTabs({ scenarioId, onSceneSelect }: BreakdownTabsProps)
   const { data: locations = [] } = trpc.breakdown.getLocations.useQuery({ scenarioId });
   const { data: props = [] } = trpc.breakdown.getProps.useQuery({ scenarioId });
   const { data: sequences = [] } = trpc.breakdown.getSequences.useQuery({ scenarioId });
-  const { data: propSequences = [] } = trpc.breakdown.getSequencesForProp.useQuery(
+  const { data: propSequences = [], isLoading: loadingPropSequences } = trpc.breakdown.getSequencesForProp.useQuery(
     { propId: selectedPropId! },
     { enabled: selectedPropId !== null }
   );
@@ -440,7 +440,12 @@ export function BreakdownTabs({ scenarioId, onSceneSelect }: BreakdownTabsProps)
                   {selectedPropId === prop.id && (
                     <div className="mt-3 pt-3 border-t">
                       <div className="text-xs text-gray-600 font-semibold mb-2">Utilisé dans:</div>
-                      {propSequences.length === 0 ? (
+                      {loadingPropSequences ? (
+                        <div className="flex items-center gap-2 text-xs text-gray-500">
+                          <Loader2 className="w-3 h-3 animate-spin" />
+                          Chargement des séquences...
+                        </div>
+                      ) : propSequences.length === 0 ? (
                         <div className="text-xs text-gray-400 italic">Aucune séquence associée</div>
                       ) : (
                         <div className="space-y-1">

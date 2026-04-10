@@ -42,3 +42,4 @@
 - [x] Frontend: ajouter un lecteur DOCX et FDX
 - [x] Frontend: intégrer le lecteur dans la page de détail du scénario avec un modal
 - [x] Frontend: corriger le worker PDF.js pour fonctionner localement
+- [x] Frontend: corriger et améliorer l'extraction DOCX dans le lecteur

@@ -63,9 +63,6 @@ export function ScenarioReader({ fileUrl, fileName, onClose }: ScenarioReaderPro
 
   const loadDOCX = async (response: Response) => {
     const arrayBuffer = await response.arrayBuffer();
-    const { Document } = await import("docx");
-
-    // Parse DOCX using docx library
     const text = await extractDOCXText(arrayBuffer);
     setContent(text);
     setTotalPages(1);
@@ -89,27 +86,47 @@ export function ScenarioReader({ fileUrl, fileName, onClose }: ScenarioReaderPro
       await zip.loadAsync(arrayBuffer);
 
       const documentXml = await zip.file("word/document.xml")?.async("string");
-      if (!documentXml) throw new Error("Invalid DOCX file");
+      if (!documentXml) throw new Error("Fichier DOCX invalide");
 
       const { parseStringPromise } = await import("xml2js");
       const parsed = await parseStringPromise(documentXml);
 
-      const paragraphs = parsed["w:document"]["w:body"][0]["w:p"] || [];
-      const text = paragraphs
-        .map((p: any) => {
-          const runs = p["w:r"] || [];
-          return runs
-            .map((r: any) => {
-              const textElements = r["w:t"] || [];
-              return textElements.map((t: any) => t._).join("");
-            })
-            .join("");
-        })
-        .join("\n");
+      // Navigate through the XML structure safely
+      const body = parsed?.["w:document"]?.["w:body"]?.[0];
+      if (!body) throw new Error("Structure DOCX invalide");
 
-      return text;
+      const paragraphs = body["w:p"] || [];
+      const textLines: string[] = [];
+
+      for (const p of paragraphs) {
+        const runs = p["w:r"] || [];
+        let paragraphText = "";
+
+        for (const r of runs) {
+          const textElements = r["w:t"] || [];
+          for (const t of textElements) {
+            // Handle different formats of text content
+            if (typeof t === "string") {
+              paragraphText += t;
+            } else if (typeof t === "object" && t._) {
+              paragraphText += t._;
+            }
+          }
+        }
+
+        if (paragraphText.trim()) {
+          textLines.push(paragraphText);
+        }
+      }
+
+      if (textLines.length === 0) {
+        throw new Error("Aucun contenu texte trouvé dans le fichier DOCX");
+      }
+
+      return textLines.join("\n");
     } catch (err) {
-      throw new Error("Impossible de lire le fichier DOCX");
+      const message = err instanceof Error ? err.message : "Impossible de lire le fichier DOCX";
+      throw new Error(message);
     }
   };
 
@@ -126,7 +143,7 @@ export function ScenarioReader({ fileUrl, fileName, onClose }: ScenarioReaderPro
         })
         .join("\n");
 
-      return text;
+      return text || "Aucun contenu trouvé";
     } catch (err) {
       return "Impossible de lire le fichier FDX";
     }
@@ -135,22 +152,13 @@ export function ScenarioReader({ fileUrl, fileName, onClose }: ScenarioReaderPro
   const handleNextPage = async () => {
     if (currentPage < totalPages) {
       setCurrentPage(currentPage + 1);
-      // Load next page content
-      await loadPageContent(currentPage + 1);
     }
   };
 
   const handlePrevPage = async () => {
     if (currentPage > 1) {
       setCurrentPage(currentPage - 1);
-      // Load previous page content
-      await loadPageContent(currentPage - 1);
     }
-  };
-
-  const loadPageContent = async (pageNum: number) => {
-    // This would load specific page content for PDFs
-    // For now, we'll keep it simple
   };
 
   return (
@@ -184,7 +192,7 @@ export function ScenarioReader({ fileUrl, fileName, onClose }: ScenarioReaderPro
             </div>
           ) : error ? (
             <div className="flex items-center justify-center h-full">
-              <p className="text-sm text-destructive">{error}</p>
+              <p className="text-sm text-destructive text-center">{error}</p>
             </div>
           ) : (
             <div className="prose prose-sm dark:prose-invert max-w-none">

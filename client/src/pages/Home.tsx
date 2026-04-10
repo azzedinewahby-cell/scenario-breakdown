@@ -3,9 +3,6 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
   Film,
-  MapPin,
-  Users,
-  Clapperboard,
   Upload,
   ArrowRight,
   CheckCircle2,
@@ -18,7 +15,6 @@ import DashboardLayout from "@/components/DashboardLayout";
 
 function DashboardContent() {
   const [, setLocation] = useLocation();
-  const { data: stats, isLoading } = trpc.dashboard.stats.useQuery();
   const { data: scenarios } = trpc.scenario.list.useQuery();
 
   const recentScenarios = scenarios?.slice(0, 5) ?? [];
@@ -77,38 +73,7 @@ function DashboardContent() {
         />
       </div>
 
-      {/* Stats cards */}
-      <div>
-        <h2 className="text-lg font-medium tracking-tight mb-4">
-          Statistiques globales
-        </h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <StatCard
-            icon={<Film className="h-5 w-5" />}
-            label="Scénarios"
-            value={isLoading ? "—" : String(stats?.totalScenarios ?? 0)}
-            sublabel={`${stats?.completedScenarios ?? 0} terminé(s)`}
-          />
-          <StatCard
-            icon={<Clapperboard className="h-5 w-5" />}
-            label="Séquences"
-            value={isLoading ? "—" : String(stats?.totalScenes ?? 0)}
-            sublabel="Total analysé"
-          />
-          <StatCard
-            icon={<Users className="h-5 w-5" />}
-            label="Personnages"
-            value={isLoading ? "—" : String(stats?.totalCharacters ?? 0)}
-            sublabel="Personnages uniques"
-          />
-          <StatCard
-            icon={<MapPin className="h-5 w-5" />}
-            label="Lieux"
-            value={isLoading ? "—" : String(stats?.totalLocations ?? 0)}
-            sublabel="Lieux distincts"
-          />
-        </div>
-      </div>
+
 
       {/* Recent scenarios */}
       <div>
@@ -226,34 +191,6 @@ function ModuleCard({
   );
 }
 
-function StatCard({
-  icon,
-  label,
-  value,
-  sublabel,
-}: {
-  icon: React.ReactNode;
-  label: string;
-  value: string;
-  sublabel: string;
-}) {
-  return (
-    <Card>
-      <CardContent className="pt-5 pb-4 px-5">
-        <div className="flex items-center justify-between mb-3">
-          <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-            {label}
-          </span>
-          <div className="text-muted-foreground/60">{icon}</div>
-        </div>
-        <p className="text-3xl font-semibold tracking-tight text-foreground">
-          {value}
-        </p>
-        <p className="text-xs text-muted-foreground mt-1">{sublabel}</p>
-      </CardContent>
-    </Card>
-  );
-}
 
 function StatusBadge({ status }: { status: string }) {
   const config: Record<string, { label: string; className: string }> = {

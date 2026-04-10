@@ -153,3 +153,15 @@
 - [ ] Backend: créer le schéma de base de données pour Financement
 - [ ] Backend: créer les routes tRPC pour Financement
 - [ ] Frontend: implémenter l'interface Financement
+
+
+## Bugs résolus (session actuelle - suite 5)
+- [x] Feature: Supprimer la section Statistiques globales du tableau de bord
+
+## Bugs rapportés (session actuelle - à corriger)
+- [ ] Bug: Bouton de téléchargement du scénario ne fonctionne pas
+- [ ] Bug: Page du scénario reste bloquée sur le spinner de chargement
+
+## Nouvelles demandes (session actuelle - à implémenter)
+- [ ] Feature: Module Distribution doit afficher les Festivals (pas les rôles et acteurs)
+- [ ] Feature: Implémenter la gestion des Festivals dans le module Distribution

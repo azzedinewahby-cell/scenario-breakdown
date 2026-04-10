@@ -57,3 +57,7 @@
 - [ ] Renommage de séquences - optionnel pour MVP
 - [ ] Scroll vers scène avec highlight - optionnel pour MVP
 - [ ] Frontend: permettre le regroupement/fusion de séquences - optionnel pour MVP
+
+## Bugs résolus (session actuelle)
+- [x] Bug: résumés des séquences ne s'affichent pas dans l'onglet Séquences - RÉSOLU (les résumés générés par LLM s'affichent correctement)
+- [x] Bug: accessoires ne s'affichent pas dans l'onglet Accessoires - RÉSOLU (42 accessoires extraits et affichés correctement)

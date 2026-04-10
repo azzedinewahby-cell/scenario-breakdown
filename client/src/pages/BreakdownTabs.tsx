@@ -30,7 +30,7 @@ export function BreakdownTabs({ scenarioId, onSceneSelect }: BreakdownTabsProps)
   const filteredLocations = locations.filter((l) =>
     l.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
-  const filteredProps = props.filter((p) =>
+  const filteredProps = props.filter((p: any) =>
     p.name?.toLowerCase().includes(searchTerm.toLowerCase())
   );
   const filteredSequences = sequences.filter((s) =>
@@ -90,7 +90,7 @@ export function BreakdownTabs({ scenarioId, onSceneSelect }: BreakdownTabsProps)
             </Card>
           ) : (
             <div className="grid gap-3">
-              {filteredProps.map((prop) => (
+              {filteredProps.map((prop: any) => (
                 <Card key={prop.id} className="p-4 hover:bg-gray-50 transition-colors cursor-pointer">
                   <div className="flex items-center justify-between">
                     <span className="font-medium">{prop.name}</span>

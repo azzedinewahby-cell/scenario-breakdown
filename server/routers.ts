@@ -354,6 +354,8 @@ export const appRouter = router({
         if (!scenario || scenario.userId !== ctx.user.id) {
           throw new TRPCError({ code: "NOT_FOUND", message: "Scénario introuvable" });
         }
+        
+        // Return existing props (migration happens during initial parsing)
         return getProps(input.scenarioId);
       }),
 

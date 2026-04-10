@@ -249,10 +249,17 @@ export async function getDialoguesBySceneId(sceneId: number) {
 export async function insertProps(data: InsertProp[]) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  if (data.length === 0) return;
+  if (data.length === 0) return [];
+  const propIds: number[] = [];
   for (const p of data) {
-    await db.insert(props).values(p);
+    const result = await db.insert(props).values(p);
+    // Get the inserted prop by querying back
+    const inserted = await db.select().from(props).where(eq(props.scenarioId, p.scenarioId)).orderBy(desc(props.id)).limit(1);
+    if (inserted.length > 0) {
+      propIds.push(inserted[0].id);
+    }
   }
+  return propIds;
 }
 
 export async function getProps(scenarioId: number) {

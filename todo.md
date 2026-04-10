@@ -167,3 +167,6 @@
 ## Nouvelles demandes (session actuelle - à implémenter)
 - [ ] Feature: Module Distribution doit afficher les Festivals (pas les rôles et acteurs)
 - [ ] Feature: Implémenter la gestion des Festivals dans le module Distribution
+
+## Demandes urgentes (session actuelle)
+- [x] Feature: Afficher le nom et prénom du scénariste à côté du scénario dans "Scénarios récents"

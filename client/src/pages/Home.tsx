@@ -143,6 +143,11 @@ function DashboardContent() {
                           year: "numeric",
                         })}
                       </p>
+                      {s.screenwriterName && (
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Scénariste: {s.screenwriterName}
+                        </p>
+                      )}
                     </div>
                   </div>
                   <div className="flex items-center gap-3">

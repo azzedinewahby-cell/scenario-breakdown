@@ -174,3 +174,5 @@
 ## Bugs critiques (session actuelle)
 - [x] Bug: Dans la liste des accessoires, le numéro de la séquence n'est pas correct - CORRIGÉ (orderIndex fixé)
 - [x] Feature: Changer le titre "Dépouillement" en "Production" en haut à gauche
+- [x] Feature: Améliorer la gestion d'erreur du bouton Télécharger
+- [x] Feature: Ajouter iframe FestCalendar dans le module Distribution

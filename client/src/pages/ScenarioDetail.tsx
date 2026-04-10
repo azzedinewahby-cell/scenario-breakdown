@@ -139,11 +139,22 @@ function ScenarioDetailContent() {
             variant="outline"
             size="sm"
             onClick={() => {
-              if (scenario.fileUrl) {
-                const link = document.createElement("a");
-                link.href = scenario.fileUrl;
-                link.download = scenario.fileName;
-                link.click();
+              if (scenario?.fileUrl) {
+                try {
+                  const link = document.createElement("a");
+                  link.href = scenario.fileUrl;
+                  link.download = scenario.fileName || "scenario.pdf";
+                  link.target = "_blank";
+                  document.body.appendChild(link);
+                  link.click();
+                  document.body.removeChild(link);
+                  toast.success("Téléchargement lancé");
+                } catch (error) {
+                  console.error("Erreur de téléchargement:", error);
+                  toast.error("Erreur lors du téléchargement");
+                }
+              } else {
+                toast.error("Fichier non disponible");
               }
             }}
             className="gap-2"

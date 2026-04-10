@@ -64,3 +64,9 @@
 
 - [x] Bug: corriger l'import useState manquant dans BreakdownTabs
 - [x] Bug: les séquences ne s'affichent pas - corrigé par migration automatique depuis les scènes existantes
+- [ ] Backend: ajouter le champ summary à la table sequences (migration DB)
+- [ ] Backend: générer un résumé automatique via LLM pour chaque séquence lors du parsing
+- [ ] Backend: générer le résumé pour les séquences existantes (migration automatique)
+- [ ] Frontend: afficher le résumé dans l'onglet Séquences
+- [x] Backend: ajouter le champ summary à la table sequences et générer le résumé via LLM
+- [x] Frontend: afficher le résumé dans l'onglet Séquences

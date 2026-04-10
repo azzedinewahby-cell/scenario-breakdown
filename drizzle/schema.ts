@@ -133,6 +133,7 @@ export const sequences = mysqlTable("sequences", {
   id: int("id").autoincrement().primaryKey(),
   scenarioId: int("scenarioId").notNull(),
   name: varchar("name", { length: 256 }).notNull(),
+  summary: text("summary"),
   orderIndex: int("orderIndex").default(0),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });

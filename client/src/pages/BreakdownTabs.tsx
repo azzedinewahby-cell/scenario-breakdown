@@ -209,9 +209,12 @@ export function BreakdownTabs({ scenarioId, onSceneSelect }: BreakdownTabsProps)
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      <Film className="w-5 h-5 text-purple-600" />
+                      <Film className="w-5 h-5 text-purple-600 shrink-0" />
                       <div>
                         <div className="font-medium">{seq.name}</div>
+                        {(seq as any).summary && (
+                          <div className="text-sm text-gray-500 mt-1 leading-snug">{(seq as any).summary}</div>
+                        )}
                       </div>
                     </div>
                   </div>

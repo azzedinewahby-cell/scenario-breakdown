@@ -28,6 +28,7 @@ import {
   getSequences,
   insertSequenceScenes,
   getSequenceScenes,
+  updateSequenceSummary,
 } from "./db";
 import { parseScenarioWithLLM } from "./scenarioParser";
 import { generateBreakdownHtml } from "./pdfGenerator";
@@ -380,6 +381,24 @@ export const appRouter = router({
             const scene = scenes[i];
             if (seq && scene) {
               await insertSequenceScenes([{ sequenceId: seq.id, sceneId: scene.id }]);
+              // Generate summary for this scene
+              try {
+                const sceneText = scene.description || "";
+                if (sceneText.trim().length > 10) {
+                  const { invokeLLM } = await import("./_core/llm");
+                  const summaryResp = await invokeLLM({
+                    messages: [
+                      { role: "system", content: "Tu es un assistant de production cin\u00e9ma. R\u00e9sume la sc\u00e8ne suivante en 1 ou 2 phrases courtes et pr\u00e9cises, en fran\u00e7ais, de mani\u00e8re factuelle (qui fait quoi, o\u00f9)." },
+                      { role: "user", content: sceneText.slice(0, 1500) },
+                    ],
+                  });
+                  const rawContent = summaryResp?.choices?.[0]?.message?.content;
+                  const summary = typeof rawContent === "string" ? rawContent.trim() : "";
+                  if (summary) await updateSequenceSummary(seq.id, summary);
+                }
+              } catch (e) {
+                // Non-blocking
+              }
             }
           }
           return getSequences(input.scenarioId);
@@ -485,11 +504,11 @@ async function processScenario(scenarioId: number, fileUrl: string, fileName: st
       );
     }
 
-    // Create sequences for each scene
+    // Create sequences for each scene with LLM-generated summary
     const scenes = await getScenesByScenarioId(scenarioId);
     for (let i = 0; i < scenes.length; i++) {
       const scene = scenes[i];
-      const sequenceName = `${scene.intExt ? scene.intExt + ". " : ""}${scene.location || "Scène " + scene.sceneNumber}`;
+      const sequenceName = `${scene.intExt ? scene.intExt + ". " : ""}${scene.location || "Sc\u00e8ne " + scene.sceneNumber}`;
       await insertSequences([{
         scenarioId,
         name: sequenceName,
@@ -497,13 +516,31 @@ async function processScenario(scenarioId: number, fileUrl: string, fileName: st
       }]);
     }
     
-    // Link scenes to sequences
+    // Link scenes to sequences and generate summaries
     const updatedSequences = await getSequences(scenarioId);
     for (let i = 0; i < scenes.length && i < updatedSequences.length; i++) {
       const scene = scenes[i];
       const sequence = updatedSequences[i];
       if (sequence && sequence.id) {
         await insertSequenceScenes([{ sequenceId: sequence.id, sceneId: scene.id }]);
+        // Generate a short summary for this scene/sequence
+        try {
+          const sceneText = scene.description || "";
+          if (sceneText.trim().length > 10) {
+            const { invokeLLM } = await import("./_core/llm");
+            const summaryResp = await invokeLLM({
+              messages: [
+                { role: "system", content: "Tu es un assistant de production cin\u00e9ma. R\u00e9sume la sc\u00e8ne suivante en 1 ou 2 phrases courtes et pr\u00e9cises, en fran\u00e7ais, de mani\u00e8re factuelle (qui fait quoi, o\u00f9)." },
+                { role: "user", content: sceneText.slice(0, 1500) },
+              ],
+            });
+            const rawContent = summaryResp?.choices?.[0]?.message?.content;
+            const summary = typeof rawContent === "string" ? rawContent.trim() : "";
+            if (summary) await updateSequenceSummary(sequence.id, summary);
+          }
+        } catch (e) {
+          // Non-blocking: skip summary if LLM fails
+        }
       }
     }
 

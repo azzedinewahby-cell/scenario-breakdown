@@ -300,6 +300,12 @@ export async function insertSequenceScenes(data: InsertSequenceScene[]) {
   }
 }
 
+export async function updateSequenceSummary(sequenceId: number, summary: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.update(sequences).set({ summary }).where(eq(sequences.id, sequenceId));
+}
+
 export async function getSequenceScenes(sequenceId: number) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");

@@ -176,3 +176,14 @@
 - [x] Feature: Changer le titre "Dépouillement" en "Production" en haut à gauche
 - [x] Feature: Améliorer la gestion d'erreur du bouton Télécharger
 - [x] Feature: Ajouter iframe FestCalendar dans le module Distribution
+
+
+## Session actuelle - Module Rapports
+- [x] Feature: Créer un nouveau module "Rapport" dans le tableau de bord
+- [x] Feature: Ajouter une page RapportPage avec tous les documents
+- [x] Feature: Extraire les 28 documents du site ARA Associates
+- [x] Feature: Organiser les documents par catégories (Contacts, Préparation, Dépouillement, etc.)
+- [x] Feature: Ajouter des badges de couleur pour les formats (PDF, DOC, XLS, ZIP)
+- [x] Feature: Ajouter des boutons de téléchargement pour chaque document
+- [x] Feature: Intégrer la route /rapports dans App.tsx
+- [x] Feature: Afficher le module Rapports avec icône FileText et couleur violet

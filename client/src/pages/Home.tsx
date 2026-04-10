@@ -9,6 +9,9 @@ import {
   Upload,
   ArrowRight,
   CheckCircle2,
+  DollarSign,
+  Users2,
+  Banknote,
 } from "lucide-react";
 import { useLocation } from "wouter";
 import DashboardLayout from "@/components/DashboardLayout";
@@ -28,7 +31,6 @@ function DashboardContent() {
           <h1 className="text-2xl font-serif font-semibold tracking-tight text-foreground">
             Tableau de bord
           </h1>
-
         </div>
         <Button
           onClick={() => setLocation("/upload")}
@@ -39,32 +41,73 @@ function DashboardContent() {
         </Button>
       </div>
 
+      {/* Main modules grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <ModuleCard
+          title="Dépouillement"
+          description="Analysez et structurez vos scénarios"
+          icon={<Film className="h-6 w-6" />}
+          color="bg-blue-900"
+          textColor="text-blue-900"
+          onClick={() => setLocation("/depouillement")}
+        />
+        <ModuleCard
+          title="Budget"
+          description="Gérez les budgets de production"
+          icon={<DollarSign className="h-6 w-6" />}
+          color="bg-green-900"
+          textColor="text-green-900"
+          onClick={() => setLocation("/budget")}
+        />
+        <ModuleCard
+          title="Distribution"
+          description="Gérez les rôles et les acteurs"
+          icon={<Users2 className="h-6 w-6" />}
+          color="bg-amber-700"
+          textColor="text-amber-700"
+          onClick={() => setLocation("/distribution")}
+        />
+        <ModuleCard
+          title="Financement"
+          description="Gérez les sources de financement"
+          icon={<Banknote className="h-6 w-6" />}
+          color="bg-red-900"
+          textColor="text-red-900"
+          onClick={() => setLocation("/financement")}
+        />
+      </div>
+
       {/* Stats cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard
-          icon={<Film className="h-5 w-5" />}
-          label="Scénarios"
-          value={isLoading ? "—" : String(stats?.totalScenarios ?? 0)}
-          sublabel={`${stats?.completedScenarios ?? 0} terminé(s)`}
-        />
-        <StatCard
-          icon={<Clapperboard className="h-5 w-5" />}
-          label="Séquences"
-          value={isLoading ? "—" : String(stats?.totalScenes ?? 0)}
-          sublabel="Total analysé"
-        />
-        <StatCard
-          icon={<Users className="h-5 w-5" />}
-          label="Personnages"
-          value={isLoading ? "—" : String(stats?.totalCharacters ?? 0)}
-          sublabel="Personnages uniques"
-        />
-        <StatCard
-          icon={<MapPin className="h-5 w-5" />}
-          label="Lieux"
-          value={isLoading ? "—" : String(stats?.totalLocations ?? 0)}
-          sublabel="Lieux distincts"
-        />
+      <div>
+        <h2 className="text-lg font-medium tracking-tight mb-4">
+          Statistiques globales
+        </h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <StatCard
+            icon={<Film className="h-5 w-5" />}
+            label="Scénarios"
+            value={isLoading ? "—" : String(stats?.totalScenarios ?? 0)}
+            sublabel={`${stats?.completedScenarios ?? 0} terminé(s)`}
+          />
+          <StatCard
+            icon={<Clapperboard className="h-5 w-5" />}
+            label="Séquences"
+            value={isLoading ? "—" : String(stats?.totalScenes ?? 0)}
+            sublabel="Total analysé"
+          />
+          <StatCard
+            icon={<Users className="h-5 w-5" />}
+            label="Personnages"
+            value={isLoading ? "—" : String(stats?.totalCharacters ?? 0)}
+            sublabel="Personnages uniques"
+          />
+          <StatCard
+            icon={<MapPin className="h-5 w-5" />}
+            label="Lieux"
+            value={isLoading ? "—" : String(stats?.totalLocations ?? 0)}
+            sublabel="Lieux distincts"
+          />
+        </div>
       </div>
 
       {/* Recent scenarios */}
@@ -148,6 +191,38 @@ function DashboardContent() {
         )}
       </div>
     </div>
+  );
+}
+
+function ModuleCard({
+  title,
+  description,
+  icon,
+  color,
+  textColor,
+  onClick,
+}: {
+  title: string;
+  description: string;
+  icon: React.ReactNode;
+  color: string;
+  textColor: string;
+  onClick: () => void;
+}) {
+  return (
+    <Card
+      className={`${color} cursor-pointer hover:shadow-lg transition-all transform hover:scale-105`}
+      onClick={onClick}
+    >
+      <CardContent className="p-6">
+        <div className="flex items-start justify-between mb-4">
+          <div className={`${textColor} text-white opacity-90`}>{icon}</div>
+          <ArrowRight className="h-5 w-5 text-white opacity-60" />
+        </div>
+        <h3 className="text-lg font-semibold text-white mb-2">{title}</h3>
+        <p className="text-sm text-white opacity-80">{description}</p>
+      </CardContent>
+    </Card>
   );
 }
 

@@ -8,6 +8,10 @@ import Home from "./pages/Home";
 import UploadPage from "./pages/UploadPage";
 import HistoryPage from "./pages/HistoryPage";
 import ScenarioDetail from "./pages/ScenarioDetail";
+import DepouillementPage from "./pages/DepouillementPage";
+import BudgetPage from "./pages/BudgetPage";
+import DistributionPage from "./pages/DistributionPage";
+import FinancementPage from "./pages/FinancementPage";
 
 function Router() {
   return (
@@ -16,6 +20,10 @@ function Router() {
       <Route path="/upload" component={UploadPage} />
       <Route path="/history" component={HistoryPage} />
       <Route path="/scenario/:id" component={ScenarioDetail} />
+      <Route path="/depouillement" component={DepouillementPage} />
+      <Route path="/budget" component={BudgetPage} />
+      <Route path="/distribution" component={DistributionPage} />
+      <Route path="/financement" component={FinancementPage} />
       <Route path="/404" component={NotFound} />
       <Route component={NotFound} />
     </Switch>

@@ -124,3 +124,32 @@
 - [x] Deduplication des accessoires par nom (evite les doublons dus aux IDs multiples)
 - [x] Tous les tests passent (17/17)
 - [x] Application completement fonctionnelle et stable
+
+
+## Nouvelle session - Restructuration du tableau de bord (4 modules)
+
+### Phase 1 : Restructurer le tableau de bord
+- [x] Frontend: créer la nouvelle structure du tableau de bord avec 4 boutons/cartes
+- [x] Frontend: implémenter les couleurs professionnelles (Bleu marine, Vert foncé, Ambre, Rouge brique)
+- [x] Frontend: créer les routes de navigation pour chaque module
+
+### Phase 2 : Créer les pages de chaque module (stubs)
+- [x] Frontend: créer la page BudgetPage (stub)
+- [x] Frontend: créer la page DistributionPage (stub)
+- [x] Frontend: créer la page FinancementPage (stub)
+- [x] Frontend: ajouter les routes dans App.tsx
+
+### Phase 3 : Développer le module Budget
+- [ ] Backend: créer le schéma de base de données pour Budget
+- [ ] Backend: créer les routes tRPC pour Budget
+- [ ] Frontend: implémenter l'interface Budget
+
+### Phase 4 : Développer le module Distribution
+- [ ] Backend: créer le schéma de base de données pour Distribution
+- [ ] Backend: créer les routes tRPC pour Distribution
+- [ ] Frontend: implémenter l'interface Distribution
+
+### Phase 5 : Développer le module Financement
+- [ ] Backend: créer le schéma de base de données pour Financement
+- [ ] Backend: créer les routes tRPC pour Financement
+- [ ] Frontend: implémenter l'interface Financement

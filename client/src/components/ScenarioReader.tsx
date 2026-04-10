@@ -3,8 +3,9 @@ import { ChevronLeft, ChevronRight, X, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import * as pdfjsLib from "pdfjs-dist";
 
-// Set up PDF.js worker
-pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
+// Set up PDF.js worker - use local worker from node_modules
+import pdfWorker from "pdfjs-dist/build/pdf.worker.mjs?url";
+pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorker;
 
 interface ScenarioReaderProps {
   fileUrl: string;

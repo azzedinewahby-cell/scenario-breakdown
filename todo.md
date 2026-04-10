@@ -61,3 +61,5 @@
 - [x] Backend: lier les scènes aux séquences (table sequence_scenes)
 - [x] Frontend: afficher les séquences avec les scènes associées dans l'onglet Séquences
 - [ ] Frontend: permettre le regroupement/fusion de séquences (optionnel)
+
+- [x] Bug: corriger l'import useState manquant dans BreakdownTabs

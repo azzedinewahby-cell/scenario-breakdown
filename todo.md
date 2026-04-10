@@ -216,3 +216,8 @@
 ## Durée et infos scénariste
 - [x] Frontend: Afficher la durée du scénario dans l'historique (⏱ Xmin Ys)
 - [x] Frontend: Afficher les infos scénariste dans l'historique (nom, email, téléphone)
+
+## Bug : Durée manquante dans l'historique
+- [x] Diagnostiquer pourquoi durationSeconds est null/0 pour les scénarios existants (colonne ajoutée après l'upload, jamais calculée)
+- [x] Corriger le calcul et l'affichage de la durée dans l'historique (backfill + calcul automatique à l'analyse)
+- [x] Afficher la durée dans le tableau de bord (scénarios récents)

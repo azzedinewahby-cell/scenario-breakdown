@@ -152,9 +152,17 @@ function DashboardContent() {
                           year: "numeric",
                         })}
                       </p>
-                      {s.screenwriterName && (
-                        <p className="text-xs text-muted-foreground mt-1">
-                          Scénariste: {s.screenwriterName}
+                      {(s.screenwriterName || (s.durationSeconds && s.durationSeconds > 0)) && (
+                        <p className="text-xs text-muted-foreground mt-1 flex items-center gap-2">
+                          {s.screenwriterName && (
+                            <span>Scénariste : {s.screenwriterName}</span>
+                          )}
+                          {s.durationSeconds && s.durationSeconds > 0 ? (
+                            <>
+                              {s.screenwriterName && <span>&middot;</span>}
+                              <span>⏱ {Math.floor(s.durationSeconds / 60)}min {s.durationSeconds % 60}s</span>
+                            </>
+                          ) : null}
                         </p>
                       )}
                     </div>

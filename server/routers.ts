@@ -828,6 +828,13 @@ async function processScenario(scenarioId: number, fileUrl: string, fileName: st
       characterCount: parsed.characters.length,
       locationCount: uniqueLocations.size,
     });
+    // Calculate and save duration automatically after processing
+    try {
+      await calculateAndSaveScenarioDuration(scenarioId);
+    } catch (e) {
+      // Non-blocking: skip duration calculation if it fails
+      console.warn(`[Scenario] Duration calculation failed for ${scenarioId}:`, e);
+    }
   } catch (err: any) {
     console.error(`[Scenario] Processing failed for ${scenarioId}:`, err);
     await updateScenarioStatus(scenarioId, "error", {

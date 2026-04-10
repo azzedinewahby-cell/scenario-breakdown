@@ -8,11 +8,19 @@ import {
   characters,
   sceneCharacters,
   dialogues,
+  props,
+  sceneProps,
+  sequences,
+  sequenceScenes,
   type InsertScenario,
   type InsertScene,
   type InsertCharacter,
   type InsertSceneCharacter,
   type InsertDialogue,
+  type InsertProp,
+  type InsertSceneProp,
+  type InsertSequence,
+  type InsertSequenceScene,
 } from "../drizzle/schema";
 import { ENV } from "./_core/env";
 
@@ -235,6 +243,70 @@ export async function getDialoguesBySceneId(sceneId: number) {
 }
 
 // ─── Dashboard stats ─────────────────────────────────────────────────────────
+
+// ─── Props (Accessoires) ─────────────────────────────────────────────────────
+
+export async function insertProps(data: InsertProp[]) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  if (data.length === 0) return;
+  for (const p of data) {
+    await db.insert(props).values(p);
+  }
+}
+
+export async function getProps(scenarioId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  return db.select().from(props).where(eq(props.scenarioId, scenarioId));
+}
+
+// ─── Scene Props ───────────────────────────────────────────────────────────────
+
+export async function insertSceneProps(data: InsertSceneProp[]) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  if (data.length === 0) return;
+  for (const sp of data) {
+    await db.insert(sceneProps).values(sp);
+  }
+}
+
+// ─── Sequences ────────────────────────────────────────────────────────────────
+
+export async function insertSequences(data: InsertSequence[]) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  if (data.length === 0) return;
+  for (const seq of data) {
+    await db.insert(sequences).values(seq);
+  }
+}
+
+export async function getSequences(scenarioId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  return db.select().from(sequences).where(eq(sequences.scenarioId, scenarioId)).orderBy(sequences.orderIndex);
+}
+
+// ─── Sequence Scenes ────────────────────────────────────────────────────────
+
+export async function insertSequenceScenes(data: InsertSequenceScene[]) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  if (data.length === 0) return;
+  for (const ss of data) {
+    await db.insert(sequenceScenes).values(ss);
+  }
+}
+
+export async function getSequenceScenes(sequenceId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  return db.select().from(sequenceScenes).where(eq(sequenceScenes.sequenceId, sequenceId)).orderBy(sequenceScenes.orderIndex);
+}
+
+// ─── Dashboard stats ───────────────────────────────────────────────────────────────
 
 export async function getDashboardStats(userId: number) {
   const db = await getDb();

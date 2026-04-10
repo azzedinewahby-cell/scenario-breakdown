@@ -21,6 +21,7 @@ export interface ParsedScenario {
   title: string;
   scenes: ParsedScene[];
   characters: ParsedCharacter[];
+  props: string[];
 }
 
 /**
@@ -45,6 +46,7 @@ export async function parseScenarioWithLLM(
   - Les personnages présents dans la scène
   - Les dialogues avec le nom du personnage et le texte
 - La liste de tous les personnages uniques du scénario avec leur genre (male, female, ou unknown si incertain) et leur âge (adult, child, ou unknown si incertain)
+- La liste de tous les accessoires/props mentionnés dans le scénario (objets, armes, véhicules, etc.)
 
 Réponds UNIQUEMENT en JSON valide selon le schéma fourni. Ne fais aucun commentaire en dehors du JSON.
 Si une information n'est pas disponible, utilise null.
@@ -167,8 +169,13 @@ Numérote les scènes séquentiellement si elles ne sont pas numérotées dans l
                 additionalProperties: false,
               },
             },
+            props: {
+              type: "array",
+              items: { type: "string" },
+              description: "Liste de tous les accessoires/props du scénario (objets, armes, véhicules, etc.)",
+            },
           },
-          required: ["title", "characters", "scenes"],
+          required: ["title", "characters", "scenes", "props"],
           additionalProperties: false,
         },
       },

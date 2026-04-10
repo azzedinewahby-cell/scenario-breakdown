@@ -44,3 +44,14 @@
 - [x] Frontend: corriger le worker PDF.js pour fonctionner localement
 - [x] Frontend: corriger et améliorer l'extraction DOCX dans le lecteur
 - [x] Frontend: simplifier le lecteur PDF pour afficher directement le fichier avec iframe
+- [x] Backend: ajouter le champ props (accessoires) au schéma DB et au parsing LLM
+- [x] Backend: créer les routes tRPC d'agrégation (getAllCharacters, getAllLocations, getAllProps, getAllSequences)
+- [x] Frontend: créer les 4 onglets dans ScenarioDetail (Accessoires, Personnages, Lieux, Séquences)
+- [x] Frontend: implémenter les interactions (clic, filtres, recherche, scroll vers scène)
+- [x] Frontend: ajouter la logique de création/renommage de séquences
+
+- [ ] Backend: lier réellement les accessoires aux scènes (table scene_props), stocker occurrences dans getProps
+- [ ] Backend: compléter les séquences (list with scenes incluses, rename, assignScenesToSequence)
+- [ ] Frontend: corriger les cartes pour afficher les métriques (occurrences, scènes associées, jour/nuit)
+- [ ] Frontend: implémenter scroll vers scène réel + hover highlight avec mapping item→sceneIds
+- [ ] Frontend: implémenter renommage de séquence et affectation de scènes (UI + mutations tRPC)

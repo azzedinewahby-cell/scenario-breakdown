@@ -21,6 +21,13 @@ import {
   getSceneCharactersBySceneIds,
   getDialoguesBySceneId,
   getDashboardStats,
+  insertProps,
+  getProps,
+  insertSceneProps,
+  insertSequences,
+  getSequences,
+  insertSequenceScenes,
+  getSequenceScenes,
 } from "./db";
 import { parseScenarioWithLLM } from "./scenarioParser";
 import { generateBreakdownHtml } from "./pdfGenerator";
@@ -285,6 +292,95 @@ export const appRouter = router({
       return getDashboardStats(ctx.user.id);
     }),
   }),
+
+  breakdown: router({
+    // Get all characters with scene counts
+    getCharacters: protectedProcedure
+      .input(z.object({ scenarioId: z.number() }))
+      .query(async ({ ctx, input }) => {
+        const scenario = await getScenarioById(input.scenarioId);
+        if (!scenario || scenario.userId !== ctx.user.id) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Scénario introuvable" });
+        }
+        const characters = await getCharactersByScenarioId(input.scenarioId);
+        const scenes = await getScenesByScenarioId(input.scenarioId);
+        const sceneIds = scenes.map((s) => s.id);
+        const sceneChars = await getSceneCharactersBySceneIds(sceneIds);
+        
+        const charSceneCount = new Map<number, number>();
+        for (const sc of sceneChars) {
+          charSceneCount.set(sc.characterId, (charSceneCount.get(sc.characterId) ?? 0) + 1);
+        }
+        
+        return characters.map((c) => ({
+          ...c,
+          sceneCount: charSceneCount.get(c.id) ?? 0,
+        }));
+      }),
+
+    // Get all locations with scene counts
+    getLocations: protectedProcedure
+      .input(z.object({ scenarioId: z.number() }))
+      .query(async ({ ctx, input }) => {
+        const scenario = await getScenarioById(input.scenarioId);
+        if (!scenario || scenario.userId !== ctx.user.id) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Scénario introuvable" });
+        }
+        const scenes = await getScenesByScenarioId(input.scenarioId);
+        
+        const locationMap = new Map<string, { count: number; dayNight: Set<string> }>();
+        for (const scene of scenes) {
+          if (scene.location) {
+            const entry = locationMap.get(scene.location) ?? { count: 0, dayNight: new Set() };
+            entry.count++;
+            if (scene.dayNight) entry.dayNight.add(scene.dayNight);
+            locationMap.set(scene.location, entry);
+          }
+        }
+        
+        return Array.from(locationMap.entries()).map(([name, data]) => ({
+          name,
+          sceneCount: data.count,
+          dayNightOptions: Array.from(data.dayNight),
+        }));
+      }),
+
+    // Get all props
+    getProps: protectedProcedure
+      .input(z.object({ scenarioId: z.number() }))
+      .query(async ({ ctx, input }) => {
+        const scenario = await getScenarioById(input.scenarioId);
+        if (!scenario || scenario.userId !== ctx.user.id) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Scénario introuvable" });
+        }
+        return getProps(input.scenarioId);
+      }),
+
+    // Get all sequences
+    getSequences: protectedProcedure
+      .input(z.object({ scenarioId: z.number() }))
+      .query(async ({ ctx, input }) => {
+        const scenario = await getScenarioById(input.scenarioId);
+        if (!scenario || scenario.userId !== ctx.user.id) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Scénario introuvable" });
+        }
+        return getSequences(input.scenarioId);
+      }),
+
+    // Create a new sequence
+    createSequence: protectedProcedure
+      .input(z.object({ scenarioId: z.number(), name: z.string() }))
+      .mutation(async ({ ctx, input }) => {
+        const scenario = await getScenarioById(input.scenarioId);
+        if (!scenario || scenario.userId !== ctx.user.id) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Scénario introuvable" });
+        }
+        const sequences = await getSequences(input.scenarioId);
+        const orderIndex = sequences.length;
+        await insertSequences([{ scenarioId: input.scenarioId, name: input.name, orderIndex }]);
+        return { success: true };
+      }),
+  }),
 });
 
 export type AppRouter = typeof appRouter;
@@ -359,6 +455,13 @@ async function processScenario(scenarioId: number, fileUrl: string, fileName: st
           }))
         );
       }
+    }
+
+    // Insert props
+    if (parsed.props && parsed.props.length > 0) {
+      const propIds = await insertProps(
+        parsed.props.map((p) => ({ scenarioId, name: p }))
+      );
     }
 
     await updateScenarioStatus(scenarioId, "completed", {

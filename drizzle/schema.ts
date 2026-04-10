@@ -103,3 +103,51 @@ export const dialogues = mysqlTable("dialogues", {
 
 export type Dialogue = typeof dialogues.$inferSelect;
 export type InsertDialogue = typeof dialogues.$inferInsert;
+
+// ─── Props (Accessoires) ─────────────────────────────────────────────────────
+
+export const props = mysqlTable("props", {
+  id: int("id").autoincrement().primaryKey(),
+  scenarioId: int("scenarioId").notNull(),
+  name: varchar("name", { length: 256 }).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type Prop = typeof props.$inferSelect;
+export type InsertProp = typeof props.$inferInsert;
+
+// ─── Scene–Props junction ────────────────────────────────────────────────────
+
+export const sceneProps = mysqlTable("scene_props", {
+  id: int("id").autoincrement().primaryKey(),
+  sceneId: int("sceneId").notNull(),
+  propId: int("propId").notNull(),
+});
+
+export type SceneProp = typeof sceneProps.$inferSelect;
+export type InsertSceneProp = typeof sceneProps.$inferInsert;
+
+// ─── Sequences ───────────────────────────────────────────────────────────────
+
+export const sequences = mysqlTable("sequences", {
+  id: int("id").autoincrement().primaryKey(),
+  scenarioId: int("scenarioId").notNull(),
+  name: varchar("name", { length: 256 }).notNull(),
+  orderIndex: int("orderIndex").default(0),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type Sequence = typeof sequences.$inferSelect;
+export type InsertSequence = typeof sequences.$inferInsert;
+
+// ─── Sequence–Scenes junction ────────────────────────────────────────────────
+
+export const sequenceScenes = mysqlTable("sequence_scenes", {
+  id: int("id").autoincrement().primaryKey(),
+  sequenceId: int("sequenceId").notNull(),
+  sceneId: int("sceneId").notNull(),
+  orderIndex: int("orderIndex").default(0),
+});
+
+export type SequenceScene = typeof sequenceScenes.$inferSelect;
+export type InsertSequenceScene = typeof sequenceScenes.$inferInsert;

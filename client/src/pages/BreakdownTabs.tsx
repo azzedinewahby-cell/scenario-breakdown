@@ -3,7 +3,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Users, MapPin, Package, Film, Search, Plus, BookOpen, ChevronDown, ChevronUp, Loader2 } from "lucide-react";
+import { Users, MapPin, Package, Film, Search, Plus, BookOpen, ChevronDown, ChevronUp, Loader2, Layers } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { CharacterIcon } from "@/components/CharacterIcon";
 
@@ -222,7 +222,7 @@ export function BreakdownTabs({ scenarioId, onSceneSelect }: BreakdownTabsProps)
   return (
     <div className="w-full">
       <Tabs defaultValue="storyboard" className="w-full">
-        <TabsList className="grid w-full grid-cols-5 mb-6">
+        <TabsList className="grid w-full grid-cols-6 mb-6">
           <TabsTrigger value="storyboard" className="flex items-center gap-1.5">
             <BookOpen className="w-4 h-4" />
             <span className="hidden sm:inline text-xs">Storyboard</span>
@@ -242,6 +242,10 @@ export function BreakdownTabs({ scenarioId, onSceneSelect }: BreakdownTabsProps)
           <TabsTrigger value="props" className="flex items-center gap-1.5">
             <Package className="w-4 h-4" />
             <span className="hidden sm:inline text-xs">Accessoires</span>
+          </TabsTrigger>
+          <TabsTrigger value="breakdown" className="flex items-center gap-1.5">
+            <Layers className="w-4 h-4" />
+            <span className="hidden sm:inline text-xs">Découpage</span>
           </TabsTrigger>
         </TabsList>
 
@@ -465,6 +469,23 @@ export function BreakdownTabs({ scenarioId, onSceneSelect }: BreakdownTabsProps)
               ))}
             </div>
           )}
+        </TabsContent>
+
+        {/* DÉCOUPAGE */}
+        <TabsContent value="breakdown" className="space-y-4">
+          <Card className="p-8 text-center">
+            <div className="flex flex-col items-center justify-center gap-4">
+              <Layers className="w-12 h-12 text-gray-300" />
+              <div>
+                <h3 className="font-semibold text-gray-700 mb-1">Proposition de découpage technique</h3>
+                <p className="text-sm text-gray-500">En développement</p>
+              </div>
+              <Button disabled className="mt-2 gap-2">
+                <Layers className="w-4 h-4" />
+                Générer le découpage
+              </Button>
+            </div>
+          </Card>
         </TabsContent>
       </Tabs>
     </div>

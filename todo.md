@@ -72,3 +72,4 @@
 - [x] Frontend: afficher le résumé dans l'onglet Séquences
 - [x] Bug: ajouter le numéro de séquence dans l'onglet Séquences
 - [x] Bug: le résumé ne s'affiche pas dans l'onglet Séquences
+- [x] Bug: le resume n'apparait pas quand on clique sur une sequence (generation en arriere-plan)

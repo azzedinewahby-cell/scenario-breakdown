@@ -381,24 +381,26 @@ export const appRouter = router({
             const scene = scenes[i];
             if (seq && scene) {
               await insertSequenceScenes([{ sequenceId: seq.id, sceneId: scene.id }]);
-              // Generate summary for this scene
-              try {
-                const sceneText = scene.description || "";
-                if (sceneText.trim().length > 10) {
-                  const { invokeLLM } = await import("./_core/llm");
-                  const summaryResp = await invokeLLM({
-                    messages: [
-                      { role: "system", content: "Tu es un assistant de production cin\u00e9ma. R\u00e9sume la sc\u00e8ne suivante en 1 ou 2 phrases courtes et pr\u00e9cises, en fran\u00e7ais, de mani\u00e8re factuelle (qui fait quoi, o\u00f9)." },
-                      { role: "user", content: sceneText.slice(0, 1500) },
-                    ],
-                  });
-                  const rawContent = summaryResp?.choices?.[0]?.message?.content;
-                  const summary = typeof rawContent === "string" ? rawContent.trim() : "";
-                  if (summary) await updateSequenceSummary(seq.id, summary);
+              // Generate summary in background (non-blocking)
+              (async () => {
+                try {
+                  const sceneText = scene.description || "";
+                  if (sceneText.trim().length > 10) {
+                    const { invokeLLM } = await import("./_core/llm");
+                    const summaryResp = await invokeLLM({
+                      messages: [
+                        { role: "system", content: "Tu es un assistant de production cinema. Resume la scene suivante en 1 ou 2 phrases courtes et precises, en francais, de maniere factuelle (qui fait quoi, ou)." },
+                        { role: "user", content: sceneText.slice(0, 1500) },
+                      ],
+                    });
+                    const rawContent = summaryResp?.choices?.[0]?.message?.content;
+                    const summary = typeof rawContent === "string" ? rawContent.trim() : "";
+                    if (summary) await updateSequenceSummary(seq.id, summary);
+                  }
+                } catch (e) {
+                  console.error("[Summary generation failed]", e);
                 }
-              } catch (e) {
-                // Non-blocking
-              }
+              })().catch(() => {})
             }
           }
           return getSequences(input.scenarioId);

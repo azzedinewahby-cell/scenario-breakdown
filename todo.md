@@ -63,3 +63,4 @@
 - [ ] Frontend: permettre le regroupement/fusion de séquences (optionnel)
 
 - [x] Bug: corriger l'import useState manquant dans BreakdownTabs
+- [x] Bug: les séquences ne s'affichent pas - corrigé par migration automatique depuis les scènes existantes

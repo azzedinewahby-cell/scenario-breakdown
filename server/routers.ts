@@ -356,7 +356,7 @@ export const appRouter = router({
         return getProps(input.scenarioId);
       }),
 
-    // Get all sequences
+    // Get all sequences (auto-create from scenes if none exist yet)
     getSequences: protectedProcedure
       .input(z.object({ scenarioId: z.number() }))
       .query(async ({ ctx, input }) => {
@@ -364,7 +364,28 @@ export const appRouter = router({
         if (!scenario || scenario.userId !== ctx.user.id) {
           throw new TRPCError({ code: "NOT_FOUND", message: "Scénario introuvable" });
         }
-        return getSequences(input.scenarioId);
+        
+        // Auto-create sequences from scenes if none exist yet (migration for old scenarios)
+        const existing = await getSequences(input.scenarioId);
+        if (existing.length === 0 && scenario.status === "completed") {
+          const scenes = await getScenesByScenarioId(input.scenarioId);
+          for (let i = 0; i < scenes.length; i++) {
+            const scene = scenes[i];
+            const sequenceName = `${scene.intExt ? scene.intExt + ". " : ""}${scene.location || "Scène " + scene.sceneNumber}`;
+            await insertSequences([{ scenarioId: input.scenarioId, name: sequenceName, orderIndex: i }]);
+          }
+          const created = await getSequences(input.scenarioId);
+          for (let i = 0; i < scenes.length && i < created.length; i++) {
+            const seq = created[i];
+            const scene = scenes[i];
+            if (seq && scene) {
+              await insertSequenceScenes([{ sequenceId: seq.id, sceneId: scene.id }]);
+            }
+          }
+          return getSequences(input.scenarioId);
+        }
+        
+        return existing;
       }),
 
     // Create a new sequence

@@ -27,6 +27,7 @@ import {
   FileText,
 } from "lucide-react";
 import { CharacterIcon } from "@/components/CharacterIcon";
+import { ScenarioReader } from "@/components/ScenarioReader";
 import { useLocation, useParams } from "wouter";
 import { toast } from "sonner";
 import { useState, useEffect } from "react";
@@ -35,6 +36,7 @@ function ScenarioDetailContent() {
   const params = useParams<{ id: string }>();
   const scenarioId = parseInt(params.id ?? "0");
   const [, setLocation] = useLocation();
+  const [showReader, setShowReader] = useState(false);
 
   const {
     data: scenario,
@@ -149,30 +151,41 @@ function ScenarioDetailContent() {
             </p>
           </div>
         </div>
-        {scenario.status === "completed" && (
-          <div className="flex gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleExportCsv}
-              disabled={csvFetching}
-              className="gap-2"
-            >
-              <FileText className="h-4 w-4" />
-              CSV
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleExportPdf}
-              disabled={pdfFetching}
-              className="gap-2"
-            >
-              <Download className="h-4 w-4" />
-              PDF
-            </Button>
-          </div>
-        )}
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowReader(true)}
+            className="gap-2"
+          >
+            <FileText className="h-4 w-4" />
+            Lire
+          </Button>
+          {scenario.status === "completed" && (
+            <>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleExportCsv}
+                disabled={csvFetching}
+                className="gap-2"
+              >
+                <FileText className="h-4 w-4" />
+                CSV
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleExportPdf}
+                disabled={pdfFetching}
+                className="gap-2"
+              >
+                <Download className="h-4 w-4" />
+                PDF
+              </Button>
+            </>
+          )}
+        </div>
       </div>
 
       {/* Processing state */}
@@ -392,6 +405,13 @@ function ScenarioDetailContent() {
             </CardContent>
           </Card>
         </>
+      )}
+      {showReader && scenario && (
+        <ScenarioReader
+          fileUrl={scenario.fileUrl}
+          fileName={scenario.fileName}
+          onClose={() => setShowReader(false)}
+        />
       )}
     </div>
   );

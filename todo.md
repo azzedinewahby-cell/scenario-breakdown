@@ -38,3 +38,6 @@
 - [x] Backend: ajouter le champ age (adult/child/unknown) au schéma DB et au parsing LLM
 - [x] Frontend: remplacer les emojis par les icônes SVG dans toutes les listes de personnages
 - [x] Frontend: corriger le composant CharacterIcon pour que la distinction adulte/enfant soit bien visible
+- [x] Frontend: ajouter un lecteur PDF avec pdfjs
+- [x] Frontend: ajouter un lecteur DOCX et FDX
+- [x] Frontend: intégrer le lecteur dans la page de détail du scénario avec un modal

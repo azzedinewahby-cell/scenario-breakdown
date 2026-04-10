@@ -176,16 +176,16 @@ function ModuleCard({
 }) {
   return (
     <Card
-      className={`${color} cursor-pointer hover:shadow-lg transition-all transform hover:scale-105`}
+      className="bg-white cursor-pointer hover:shadow-lg transition-all transform hover:scale-105 border border-gray-200"
       onClick={onClick}
     >
       <CardContent className="p-6">
         <div className="flex items-start justify-between mb-4">
-          <div className={`${textColor} text-white opacity-90`}>{icon}</div>
-          <ArrowRight className="h-5 w-5 text-white opacity-60" />
+          <div className={`${textColor} opacity-90`}>{icon}</div>
+          <ArrowRight className={`h-5 w-5 ${textColor} opacity-60`} />
         </div>
-        <h3 className="text-lg font-semibold text-white mb-2">{title}</h3>
-        <p className="text-sm text-white opacity-80">{description}</p>
+        <h3 className={`text-lg font-semibold ${textColor} mb-2`}>{title}</h3>
+        <p className="text-sm text-muted-foreground opacity-80">{description}</p>
       </CardContent>
     </Card>
   );

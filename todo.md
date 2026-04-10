@@ -61,3 +61,13 @@
 ## Bugs résolus (session actuelle)
 - [x] Bug: résumés des séquences ne s'affichent pas dans l'onglet Séquences - RÉSOLU (les résumés générés par LLM s'affichent correctement)
 - [x] Bug: accessoires ne s'affichent pas dans l'onglet Accessoires - RÉSOLU (42 accessoires extraits et affichés correctement)
+
+## Bugs identifiés (session actuelle - suite)
+- [ ] Bug: accessoires manquants pour les autres scénarios (GRELLOU, LA PORTE, etc.)
+  * Cause: Les accessoires ne sont extraits que lors du parsing initial lors de l'upload
+  * Les scénarios uploadés avant l'implémentation de la feature n'ont pas d'accessoires
+  * Solution: Re-parser les scénarios existants via une migration manuelle
+  * Note: LES DISPARUES a 42 accessoires car il a été uploadé/parsé après l'implémentation
+
+## Nouvelles fonctionnalités (session actuelle)
+- [x] Frontend: ajouter un bouton "Télécharger" à côté du bouton "Lire" pour télécharger le scénario original - COMPLÉTÉ

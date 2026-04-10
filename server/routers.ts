@@ -355,7 +355,7 @@ export const appRouter = router({
           throw new TRPCError({ code: "NOT_FOUND", message: "Scénario introuvable" });
         }
         
-        // Return existing props (migration happens during initial parsing)
+        // Return existing props
         return getProps(input.scenarioId);
       }),
 

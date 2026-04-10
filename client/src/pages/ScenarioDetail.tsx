@@ -135,6 +135,22 @@ function ScenarioDetailContent() {
             <FileText className="h-4 w-4" />
             Lire
           </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              if (scenario.fileUrl) {
+                const link = document.createElement("a");
+                link.href = scenario.fileUrl;
+                link.download = scenario.fileName;
+                link.click();
+              }
+            }}
+            className="gap-2"
+          >
+            <Download className="h-4 w-4" />
+            Télécharger
+          </Button>
           {scenario.status === "completed" && (
             <>
               <Button

@@ -34,3 +34,6 @@
 - [x] Backend: modifier le parsing LLM pour extraire le genre des personnages
 - [x] Frontend: afficher emoji femme rose pour féminin et emoji homme bleu pour masculin dans les listes de personnages
 - [x] Frontend: corriger l'affichage des emojis de genre (👨 pour homme, 👩 pour femme) dans toutes les listes de personnages
+- [x] Frontend: créer les icônes SVG pour homme/femme adulte et enfant (bleu/rose)
+- [x] Backend: ajouter le champ age (adult/child/unknown) au schéma DB et au parsing LLM
+- [x] Frontend: remplacer les emojis par les icônes SVG dans toutes les listes de personnages

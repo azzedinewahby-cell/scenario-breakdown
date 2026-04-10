@@ -1,0 +1,1 @@
+ALTER TABLE `characters` ADD `age` enum('adult','child','unknown') DEFAULT 'unknown' NOT NULL;

@@ -26,6 +26,7 @@ import {
   RefreshCw,
   FileText,
 } from "lucide-react";
+import { CharacterIcon } from "@/components/CharacterIcon";
 import { useLocation, useParams } from "wouter";
 import { toast } from "sonner";
 import { useState, useEffect } from "react";
@@ -258,7 +259,11 @@ function ScenarioDetailContent() {
                     key={c.id}
                     className="flex items-center gap-2.5 py-1.5 px-2 rounded-md hover:bg-muted/50 transition-colors"
                   >
-                    <GenderEmoji gender={(c as any).gender} />
+                    <CharacterIcon
+                      gender={(c as any).gender}
+                      age={(c as any).age}
+                      className="h-5 w-5"
+                    />
                     <span className="text-sm text-foreground">{c.name}</span>
                   </li>
                 ))}
@@ -414,15 +419,7 @@ function MiniStat({
   );
 }
 
-function GenderEmoji({ gender }: { gender?: string }) {
-  if (gender === "female") {
-    return <span style={{ fontSize: "1.25rem" }} title="Personnage féminin">👩</span>;
-  }
-  if (gender === "male") {
-    return <span style={{ fontSize: "1.25rem" }} title="Personnage masculin">👨</span>;
-  }
-  return <Users className="h-3.5 w-3.5 text-muted-foreground/60 shrink-0" />;
-}
+
 
 function DayNightIcon({ value }: { value: string }) {
   const lower = value.toLowerCase();

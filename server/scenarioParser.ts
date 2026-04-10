@@ -14,6 +14,7 @@ export interface ParsedScene {
 export interface ParsedCharacter {
   name: string;
   gender: "male" | "female" | "unknown";
+  age: "adult" | "child" | "unknown";
 }
 
 export interface ParsedScenario {
@@ -43,7 +44,7 @@ export async function parseScenarioWithLLM(
   - Une brève description de l'action
   - Les personnages présents dans la scène
   - Les dialogues avec le nom du personnage et le texte
-- La liste de tous les personnages uniques du scénario avec leur genre (male, female, ou unknown si incertain)
+- La liste de tous les personnages uniques du scénario avec leur genre (male, female, ou unknown si incertain) et leur âge (adult, child, ou unknown si incertain)
 
 Réponds UNIQUEMENT en JSON valide selon le schéma fourni. Ne fais aucun commentaire en dehors du JSON.
 Si une information n'est pas disponible, utilise null.
@@ -102,11 +103,16 @@ Numérote les scènes séquentiellement si elles ne sont pas numérotées dans l
                     enum: ["male", "female", "unknown"],
                     description: "Genre du personnage : male, female, ou unknown si incertain",
                   },
+                  age: {
+                    type: "string",
+                    enum: ["adult", "child", "unknown"],
+                    description: "Age du personnage : adult, child, ou unknown si incertain",
+                  },
                 },
-                required: ["name", "gender"],
+                required: ["name", "gender", "age"],
                 additionalProperties: false,
               },
-              description: "Liste de tous les personnages uniques avec leur genre",
+              description: "Liste de tous les personnages uniques avec leur genre et age",
             },
             scenes: {
               type: "array",

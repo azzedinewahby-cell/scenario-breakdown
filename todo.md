@@ -70,3 +70,5 @@
 - [ ] Frontend: afficher le résumé dans l'onglet Séquences
 - [x] Backend: ajouter le champ summary à la table sequences et générer le résumé via LLM
 - [x] Frontend: afficher le résumé dans l'onglet Séquences
+- [x] Bug: ajouter le numéro de séquence dans l'onglet Séquences
+- [x] Bug: le résumé ne s'affiche pas dans l'onglet Séquences

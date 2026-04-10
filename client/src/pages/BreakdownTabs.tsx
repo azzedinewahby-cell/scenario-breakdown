@@ -202,18 +202,21 @@ export function BreakdownTabs({ scenarioId, onSceneSelect }: BreakdownTabsProps)
             </Card>
           ) : (
             <div className="grid gap-3">
-              {filteredSequences.map((seq) => (
+              {filteredSequences.map((seq, idx) => (
                 <Card
                   key={seq.id}
                   className="p-4 hover:bg-gray-50 transition-colors cursor-pointer"
                 >
                   <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <Film className="w-5 h-5 text-purple-600 shrink-0" />
-                      <div>
+                    <div className="flex items-start gap-3 w-full">
+                      <div className="flex items-center gap-2 min-w-fit">
+                        <Film className="w-5 h-5 text-purple-600 shrink-0" />
+                        <span className="text-sm font-semibold text-gray-600 bg-gray-100 px-2 py-1 rounded">{idx + 1}</span>
+                      </div>
+                      <div className="flex-1">
                         <div className="font-medium">{seq.name}</div>
                         {(seq as any).summary && (
-                          <div className="text-sm text-gray-500 mt-1 leading-snug">{(seq as any).summary}</div>
+                          <div className="text-sm text-gray-600 mt-2 leading-relaxed">{(seq as any).summary}</div>
                         )}
                       </div>
                     </div>

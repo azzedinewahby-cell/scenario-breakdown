@@ -37,3 +37,4 @@
 - [x] Frontend: créer les icônes SVG pour homme/femme adulte et enfant (bleu/rose)
 - [x] Backend: ajouter le champ age (adult/child/unknown) au schéma DB et au parsing LLM
 - [x] Frontend: remplacer les emojis par les icônes SVG dans toutes les listes de personnages
+- [x] Frontend: corriger le composant CharacterIcon pour que la distinction adulte/enfant soit bien visible

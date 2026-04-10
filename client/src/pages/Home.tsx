@@ -6,7 +6,7 @@ import {
   Upload,
   ArrowRight,
   CheckCircle2,
-  DollarSign,
+  Euro,
   Users2,
   Banknote,
 } from "lucide-react";
@@ -50,7 +50,7 @@ function DashboardContent() {
         <ModuleCard
           title="Budget"
           description="Gérez les budgets de production"
-          icon={<DollarSign className="h-6 w-6" />}
+          icon={<Euro className="h-6 w-6" />}
           color="bg-green-900"
           textColor="text-green-900"
           onClick={() => setLocation("/budget")}

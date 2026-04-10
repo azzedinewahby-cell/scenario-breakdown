@@ -158,6 +158,7 @@
 ## Bugs résolus (session actuelle - suite 5)
 - [x] Feature: Supprimer la section Statistiques globales du tableau de bord
 - [x] Feature: Modifier le design des modules (fond blanc, texte coloré)
+- [x] Feature: Remplacer l'icône dollar par euros pour le module Budget
 
 ## Bugs rapportés (session actuelle - à corriger)
 - [ ] Bug: Bouton de téléchargement du scénario ne fonctionne pas

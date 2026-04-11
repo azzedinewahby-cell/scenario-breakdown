@@ -22,12 +22,10 @@ interface PdfBreakdownData {
   scenes: PdfScene[];
   characters: string[];
   uniqueLocations: string[];
-  props: string[];
   stats: {
     totalScenes: number;
     totalCharacters: number;
     totalLocations: number;
-    totalProps: number;
     totalDialogues: number;
   };
 }
@@ -61,10 +59,6 @@ export function generateBreakdownHtml(data: PdfBreakdownData): string {
   const locationsHtml = data.uniqueLocations.length > 0
     ? data.uniqueLocations.map((l) => `<span class="badge loc">${escapeHtml(l)}</span>`).join("")
     : "<span class='empty'>Aucun lieu</span>";
-
-  const propsHtml = data.props.length > 0
-    ? data.props.map((p) => `<span class="badge prop">${escapeHtml(p)}</span>`).join("")
-    : "<span class='empty'>Aucun accessoire</span>";
 
   return `<!DOCTYPE html>
 <html lang="fr">
@@ -150,7 +144,6 @@ export function generateBreakdownHtml(data: PdfBreakdownData): string {
       border: 1px solid #e0e0e0;
     }
     .badge.loc { background: #f0f4ff; border-color: #c8d8f0; color: #2a4a80; }
-    .badge.prop { background: #fff8f0; border-color: #f0d8b0; color: #7a4a10; }
 
     /* Sequences table */
     .seq-table {
@@ -233,11 +226,11 @@ export function generateBreakdownHtml(data: PdfBreakdownData): string {
   </div>
 
   <!-- STATS BAR -->
-    <div class="stats-bar">
+  <div class="stats-bar">
     <div class="stat"><span class="val">${data.stats.totalScenes}</span><span class="lbl">Séquences</span></div>
     <div class="stat"><span class="val">${data.stats.totalCharacters}</span><span class="lbl">Personnages</span></div>
-    <div class="stat"><span class="val">${data.stats.totalLocations}</span><span class="lbl">Lieux</span></div>
-    <div class="stat"><span class="val">${data.stats.totalProps}</span><span class="lbl">Accessoires</span></div>
+    <div class="stat"><span class="val">${data.stats.totalLocations}</span><span class="lbl">Décors</span></div>
+    <div class="stat"><span class="val">${data.stats.totalDialogues}</span><span class="lbl">Dialogues</span></div>
   </div>
 
   <!-- PERSONNAGES -->
@@ -250,12 +243,6 @@ export function generateBreakdownHtml(data: PdfBreakdownData): string {
   <div class="section">
     <div class="section-title">Lieux &amp; Décors (${data.uniqueLocations.length})</div>
     <div class="badges">${locationsHtml}</div>
-  </div>
-
-  <!-- ACCESSOIRES -->
-  <div class="section">
-    <div class="section-title">Accessoires (${data.props.length})</div>
-    <div class="badges">${propsHtml}</div>
   </div>
 
   <!-- SÉQUENCES -->

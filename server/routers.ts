@@ -295,7 +295,6 @@ export const appRouter = router({
         );
 
         const totalDialogues = pdfScenes.reduce((sum, s) => sum + s.dialogues.length, 0);
-        const propsData = await getProps(input.scenarioId);
 
         const durationSec = scenario.durationSeconds ?? 0;
         const durationLabel = durationSec > 0
@@ -314,12 +313,10 @@ export const appRouter = router({
           scenes: pdfScenes,
           characters: charactersData.map((c) => c.name ?? ""),
           uniqueLocations,
-          props: propsData.map((p) => p.name ?? "").filter(Boolean),
           stats: {
             totalScenes: pdfScenes.length,
             totalCharacters: charactersData.length,
             totalLocations: uniqueLocations.length,
-            totalProps: propsData.length,
             totalDialogues,
           },
         });
@@ -719,18 +716,9 @@ Génère une analyse complète au format JSON avec cette structure exacte:
 }
 
 Règles importantes:
-- Utilise les salaires minimums PCINE (Convention Collective Cinéma) au 1er mai 2025:
-  * Cadre supérieur (Hors niveau): 3000€/mois (190€/jour)
-  * Cadre A (Niveau I): 2779.57€/mois (177€/jour)
-  * Cadre B (Niveau III): 2229.81€/mois (142€/jour)
-  * Agent de maîtrise (Niveau IV): 1939.02€/mois (123€/jour)
-  * Employé A (Niveau V): 1838.26€/mois (117€/jour)
-  * Employé B (Niveau VI): 1801.80€/mois (114€/jour)
-- Version éco: tarifs minimums PCINE (base 39h/semaine, 5 jours/semaine)
-- Version confort: tarifs PCINE + 30% (marché standard)
-- Réalisateur, DP, Chef électricien: Cadre A ou B selon expérience
-- Assistants, Techniciens: Employé A ou Agent de maîtrise
-- Directeur de production, Régisseur: Agent de maîtrise ou Cadre B
+- Utilise les minimas syndicaux français (convention collective cinéma)
+- Version éco: tarifs minimums (250-350€/j technicien, 400-500€/j chef de poste)
+- Version confort: tarifs standard marché (350-450€/j technicien, 500-700€/j chef de poste)
 - Adapte le nombre de jours selon la complexité du scénario
 - Base-toi sur 5-8 pages/jour pour dialogue simple, 2-4 pages/jour pour scènes complexes
 - Réponds UNIQUEMENT avec le JSON, sans texte avant ou après`;

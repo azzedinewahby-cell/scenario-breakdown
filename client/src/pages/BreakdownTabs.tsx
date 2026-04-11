@@ -551,6 +551,9 @@ export function BreakdownTabs({ scenarioId, onSceneSelect }: BreakdownTabsProps)
 
         {/* Search bar (shared for Séquences, Personnages, Lieux, Accessoires) */}
         <TabsContent value="sequences">
+          <div className="mb-4 flex items-center justify-between">
+            <h3 className="text-sm font-semibold text-gray-700">Total : {sequences.length} séquence{sequences.length !== 1 ? 's' : ''}</h3>
+          </div>
           <div className="mb-4 relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
             <Input
@@ -586,6 +589,9 @@ export function BreakdownTabs({ scenarioId, onSceneSelect }: BreakdownTabsProps)
 
         {/* PERSONNAGES */}
         <TabsContent value="characters">
+          <div className="mb-4 flex items-center justify-between">
+            <h3 className="text-sm font-semibold text-gray-700">Total : {characters.length} personnage{characters.length !== 1 ? 's' : ''}</h3>
+          </div>
           <div className="mb-4 relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
             <Input

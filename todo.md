@@ -254,3 +254,9 @@
 - [x] Ajouter le nombre de personnages dans l'onglet "Personnages"
 - [x] Ajouter le nombre de lieux/décors dans l'onglet "Lieux"
 - [x] Ajouter le nombre de séquences dans l'onglet "Séquences"
+
+## Affichage compteurs au-dessus des listes dans Dépouillement
+- [x] Afficher le nombre de séquences au-dessus de la liste des séquences
+- [x] Afficher le nombre de personnages au-dessus de la liste des personnages
+- [ ] Afficher le nombre de lieux au-dessus de la liste des lieux
+- [ ] Afficher le nombre d'accessoires au-dessus de la liste des accessoires

@@ -243,3 +243,7 @@
 ## Corrections PDF dépouillement (v2)
 - [x] Réduire les espaces dans le PDF (mise en page condensée avec tableau)
 - [x] Nom du scénariste visible en haut du PDF (header + footer)
+
+## PDF dépouillement - Accessoires dans les stats
+- [x] Ajouter le nombre d'accessoires dans la barre de statistiques du PDF (séquences, personnages, lieux, accessoires)
+- [x] Ajouter la section Accessoires avec badges dans le PDF

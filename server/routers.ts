@@ -295,6 +295,7 @@ export const appRouter = router({
         );
 
         const totalDialogues = pdfScenes.reduce((sum, s) => sum + s.dialogues.length, 0);
+        const propsData = await getProps(input.scenarioId);
 
         const durationSec = scenario.durationSeconds ?? 0;
         const durationLabel = durationSec > 0
@@ -313,10 +314,12 @@ export const appRouter = router({
           scenes: pdfScenes,
           characters: charactersData.map((c) => c.name ?? ""),
           uniqueLocations,
+          props: propsData.map((p) => p.name ?? "").filter(Boolean),
           stats: {
             totalScenes: pdfScenes.length,
             totalCharacters: charactersData.length,
             totalLocations: uniqueLocations.length,
+            totalProps: propsData.length,
             totalDialogues,
           },
         });

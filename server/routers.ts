@@ -757,6 +757,55 @@ Règles importantes:
 
         return { success: true, data: parsed, totalEco, totalConfort };
       }),
+    exportExcel: protectedProcedure
+      .input(z.object({ scenarioId: z.number(), version: z.enum(['eco', 'confort']) }))
+      .mutation(async ({ ctx, input }) => {
+        const scenario = await getScenarioById(input.scenarioId);
+        if (!scenario || scenario.userId !== ctx.user.id) {
+          throw new TRPCError({ code: 'NOT_FOUND', message: 'Scénario introuvable' });
+        }
+        const budget = await getBudgetForScenario(input.scenarioId);
+        if (!budget) throw new TRPCError({ code: 'NOT_FOUND', message: 'Budget not found' });
+        
+        const parsed = JSON.parse(budget.content || '{}');
+        const team = parsed.team || [];
+        
+        // Créer un objet Excel simple avec les données du budget
+        const excelData = {
+          title: scenario.title,
+          screenwriterName: scenario.screenwriterName ?? 'N/A',
+          durationLabel: scenario.durationSeconds ? `${Math.floor(scenario.durationSeconds / 60)}min ${scenario.durationSeconds % 60}s` : 'N/A',
+          shootingDays: parsed.shootingDays || 0,
+          pagesPerDay: parsed.pagesPerDay || 0,
+          version: input.version,
+          team: team
+        };
+        
+        // Convertir en CSV simple pour l'export
+        let csv = 'BUDGET DE PRODUCTION\n\n';
+        csv += `Titre,${excelData.title}\n`;
+        csv += `Scénariste,${excelData.screenwriterName ?? 'N/A'}\n`;
+        csv += `Durée,${excelData.durationLabel}\n`;
+        csv += `Jours de tournage,${excelData.shootingDays}\n`;
+        csv += `Pages/jour,${excelData.pagesPerDay}\n`;
+        csv += `Version,${excelData.version}\n\n`;
+        
+        csv += 'ÉQUIPE\n';
+        csv += 'Département,Fonction,Jours,Tarif/jour,Coût total\n';
+        
+        let totalCost = 0;
+        for (const member of team) {
+          const days = input.version === 'eco' ? member.daysEco : member.daysConfort;
+          const rate = input.version === 'eco' ? member.rateEco : member.rateConfort;
+          const cost = days * rate;
+          totalCost += cost;
+          csv += `${member.department},${member.role},${days},${rate},${cost}\n`;
+        }
+        
+        csv += `\nTOTAL,,,${totalCost}\n`;
+        
+        return { csv, filename: `${scenario.title}-Budget-${input.version}.csv` };
+      }),
   }),
 });
 

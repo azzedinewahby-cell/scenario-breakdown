@@ -17,6 +17,7 @@ import {
   ChevronRight,
   RefreshCw,
   FileText,
+  Download,
 } from "lucide-react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────────────────
@@ -130,6 +131,7 @@ function BudgetView({ scenarioId, scenarioTitle, onBack }: { scenarioId: number;
   const generateMutation = trpc.budget.generate.useMutation({
     onSuccess: () => refetch(),
   });
+  const exportMutation = trpc.budget.exportExcel.useMutation();
 
   const budgetData: BudgetData | null = (() => {
     if (existing?.content) {
@@ -147,6 +149,23 @@ function BudgetView({ scenarioId, scenarioTitle, onBack }: { scenarioId: number;
   const totalEco = budgetData?.team.reduce((s, m) => s + m.daysEco * m.rateEco, 0) ?? 0;
   const totalConfort = budgetData?.team.reduce((s, m) => s + m.daysConfort * m.rateConfort, 0) ?? 0;
   const total = version === "eco" ? totalEco : totalConfort;
+
+  const handleExportExcel = async (exportVersion: "eco" | "confort") => {
+    try {
+      const result = await exportMutation.mutateAsync({ scenarioId, version: exportVersion });
+      const blob = new Blob([result.csv], { type: "text/csv;charset=utf-8;" });
+      const link = document.createElement("a");
+      const url = URL.createObjectURL(blob);
+      link.setAttribute("href", url);
+      link.setAttribute("download", result.filename);
+      link.style.visibility = "hidden";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (error) {
+      console.error("Export failed:", error);
+    }
+  };
 
   if (loadingExisting) {
     return (
@@ -239,6 +258,36 @@ function BudgetView({ scenarioId, scenarioTitle, onBack }: { scenarioId: number;
               <div className="text-lg font-bold">{formatEuro(totalConfort)}</div>
               <div className="text-xs mt-0.5">Version Confort (tarifs marché)</div>
             </button>
+          </div>
+
+          {/* Boutons d'export */}
+          <div className="flex gap-3">
+            <Button
+              onClick={() => handleExportExcel("eco")}
+              disabled={exportMutation.isPending}
+              variant="outline"
+              className="flex-1"
+            >
+              {exportMutation.isPending ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <Download className="h-4 w-4 mr-2" />
+              )}
+              📥 Exporter Éco
+            </Button>
+            <Button
+              onClick={() => handleExportExcel("confort")}
+              disabled={exportMutation.isPending}
+              variant="outline"
+              className="flex-1"
+            >
+              {exportMutation.isPending ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <Download className="h-4 w-4 mr-2" />
+              )}
+              📥 Exporter Confort
+            </Button>
           </div>
 
           {/* Plan de tournage */}

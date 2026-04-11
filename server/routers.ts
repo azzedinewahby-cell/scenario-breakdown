@@ -719,9 +719,18 @@ Génère une analyse complète au format JSON avec cette structure exacte:
 }
 
 Règles importantes:
-- Utilise les minimas syndicaux français (convention collective cinéma)
-- Version éco: tarifs minimums (250-350€/j technicien, 400-500€/j chef de poste)
-- Version confort: tarifs standard marché (350-450€/j technicien, 500-700€/j chef de poste)
+- Utilise les salaires minimums PCINE (Convention Collective Cinéma) au 1er mai 2025:
+  * Cadre supérieur (Hors niveau): 3000€/mois (190€/jour)
+  * Cadre A (Niveau I): 2779.57€/mois (177€/jour)
+  * Cadre B (Niveau III): 2229.81€/mois (142€/jour)
+  * Agent de maîtrise (Niveau IV): 1939.02€/mois (123€/jour)
+  * Employé A (Niveau V): 1838.26€/mois (117€/jour)
+  * Employé B (Niveau VI): 1801.80€/mois (114€/jour)
+- Version éco: tarifs minimums PCINE (base 39h/semaine, 5 jours/semaine)
+- Version confort: tarifs PCINE + 30% (marché standard)
+- Réalisateur, DP, Chef électricien: Cadre A ou B selon expérience
+- Assistants, Techniciens: Employé A ou Agent de maîtrise
+- Directeur de production, Régisseur: Agent de maîtrise ou Cadre B
 - Adapte le nombre de jours selon la complexité du scénario
 - Base-toi sur 5-8 pages/jour pour dialogue simple, 2-4 pages/jour pour scènes complexes
 - Réponds UNIQUEMENT avec le JSON, sans texte avant ou après`;

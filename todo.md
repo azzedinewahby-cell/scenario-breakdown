@@ -247,3 +247,8 @@
 ## PDF dépouillement - Accessoires dans les stats
 - [x] Ajouter le nombre d'accessoires dans la barre de statistiques du PDF (séquences, personnages, lieux, accessoires)
 - [x] Ajouter la section Accessoires avec badges dans le PDF
+
+## Intégration salaires minimums PCINE (mai 2025)
+- [x] Créer une table salary_scales en base de données avec les salaires minimums par niveau
+- [x] Mettre à jour le prompt LLM du budget pour utiliser les salaires PCINE officiels (Cadre A/B, Employé A/B, Agent de maîtrise)
+- [x] Mettre à jour la compétence cinema-production-app avec les nouveaux salaires

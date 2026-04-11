@@ -521,18 +521,22 @@ export function BreakdownTabs({ scenarioId, onSceneSelect }: BreakdownTabsProps)
           <TabsTrigger value="sequences" className="flex items-center gap-1.5">
             <Film className="w-4 h-4" />
             <span className="hidden sm:inline text-xs">Séquences</span>
+            {sequences.length > 0 && <Badge variant="secondary" className="text-xs ml-1">{sequences.length}</Badge>}
           </TabsTrigger>
           <TabsTrigger value="characters" className="flex items-center gap-1.5">
             <Users className="w-4 h-4" />
             <span className="hidden sm:inline text-xs">Personnages</span>
+            {characters.length > 0 && <Badge variant="secondary" className="text-xs ml-1">{characters.length}</Badge>}
           </TabsTrigger>
           <TabsTrigger value="locations" className="flex items-center gap-1.5">
             <MapPin className="w-4 h-4" />
             <span className="hidden sm:inline text-xs">Lieux</span>
+            {locations.length > 0 && <Badge variant="secondary" className="text-xs ml-1">{locations.length}</Badge>}
           </TabsTrigger>
           <TabsTrigger value="props" className="flex items-center gap-1.5">
             <Package className="w-4 h-4" />
             <span className="hidden sm:inline text-xs">Accessoires</span>
+            {props.length > 0 && <Badge variant="secondary" className="text-xs ml-1">{props.length}</Badge>}
           </TabsTrigger>
           <TabsTrigger value="breakdown" className="flex items-center gap-1.5">
             <Layers className="w-4 h-4" />

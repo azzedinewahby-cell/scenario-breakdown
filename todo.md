@@ -248,3 +248,9 @@
 - [x] Ajouter la route tRPC budget.exportExcel (CSV format)
 - [x] Ajouter le bouton "📥 Exporter Éco/Confort" dans BudgetPage
 - [x] Implémenter le téléchargement du fichier CSV
+
+## Amélioration module Dépouillement - Compteurs dans les onglets
+- [x] Ajouter le nombre d'accessoires dans l'onglet "Accessoires"
+- [x] Ajouter le nombre de personnages dans l'onglet "Personnages"
+- [x] Ajouter le nombre de lieux/décors dans l'onglet "Lieux"
+- [x] Ajouter le nombre de séquences dans l'onglet "Séquences"

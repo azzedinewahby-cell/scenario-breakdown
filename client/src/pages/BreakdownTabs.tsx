@@ -521,22 +521,22 @@ export function BreakdownTabs({ scenarioId, onSceneSelect }: BreakdownTabsProps)
           <TabsTrigger value="sequences" className="flex items-center gap-1.5">
             <Film className="w-4 h-4" />
             <span className="hidden sm:inline text-xs">Séquences</span>
-            {sequences.length > 0 && <Badge variant="secondary" className="text-xs ml-1">{sequences.length}</Badge>}
+            {sequences.length > 0 && <Badge variant="secondary" className="text-xs ml-1 bg-blue-100 text-blue-700 border-blue-200">{sequences.length}</Badge>}
           </TabsTrigger>
           <TabsTrigger value="characters" className="flex items-center gap-1.5">
             <Users className="w-4 h-4" />
             <span className="hidden sm:inline text-xs">Personnages</span>
-            {characters.length > 0 && <Badge variant="secondary" className="text-xs ml-1">{characters.length}</Badge>}
+            {characters.length > 0 && <Badge variant="secondary" className="text-xs ml-1 bg-blue-100 text-blue-700 border-blue-200">{characters.length}</Badge>}
           </TabsTrigger>
           <TabsTrigger value="locations" className="flex items-center gap-1.5">
             <MapPin className="w-4 h-4" />
             <span className="hidden sm:inline text-xs">Lieux</span>
-            {locations.length > 0 && <Badge variant="secondary" className="text-xs ml-1">{locations.length}</Badge>}
+            {locations.length > 0 && <Badge variant="secondary" className="text-xs ml-1 bg-blue-100 text-blue-700 border-blue-200">{locations.length}</Badge>}
           </TabsTrigger>
           <TabsTrigger value="props" className="flex items-center gap-1.5">
             <Package className="w-4 h-4" />
             <span className="hidden sm:inline text-xs">Accessoires</span>
-            {props.length > 0 && <Badge variant="secondary" className="text-xs ml-1">{props.length}</Badge>}
+            {props.length > 0 && <Badge variant="secondary" className="text-xs ml-1 bg-blue-100 text-blue-700 border-blue-200">{props.length}</Badge>}
           </TabsTrigger>
           <TabsTrigger value="breakdown" className="flex items-center gap-1.5">
             <Layers className="w-4 h-4" />
@@ -552,7 +552,7 @@ export function BreakdownTabs({ scenarioId, onSceneSelect }: BreakdownTabsProps)
         {/* Search bar (shared for Séquences, Personnages, Lieux, Accessoires) */}
         <TabsContent value="sequences">
           <div className="mb-4 flex items-center justify-between">
-            <h3 className="text-sm font-semibold text-gray-700">Total : {sequences.length} séquence{sequences.length !== 1 ? 's' : ''}</h3>
+            <h3 className="text-sm font-semibold text-gray-700">Total : <span className="text-blue-600">{sequences.length}</span> séquence{sequences.length !== 1 ? 's' : ''}</h3>
           </div>
           <div className="mb-4 relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
@@ -590,7 +590,7 @@ export function BreakdownTabs({ scenarioId, onSceneSelect }: BreakdownTabsProps)
         {/* PERSONNAGES */}
         <TabsContent value="characters">
           <div className="mb-4 flex items-center justify-between">
-            <h3 className="text-sm font-semibold text-gray-700">Total : {characters.length} personnage{characters.length !== 1 ? 's' : ''}</h3>
+            <h3 className="text-sm font-semibold text-gray-700">Total : <span className="text-blue-600">{characters.length}</span> personnage{characters.length !== 1 ? 's' : ''}</h3>
           </div>
           <div className="mb-4 relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
@@ -660,6 +660,9 @@ export function BreakdownTabs({ scenarioId, onSceneSelect }: BreakdownTabsProps)
 
         {/* LIEUX */}
         <TabsContent value="locations">
+          <div className="mb-4 flex items-center justify-between">
+            <h3 className="text-sm font-semibold text-gray-700">Total : <span className="text-blue-600">{locations.length}</span> lieu{locations.length !== 1 ? 'x' : ''}</h3>
+          </div>
           <div className="mb-4 relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
             <Input
@@ -701,6 +704,9 @@ export function BreakdownTabs({ scenarioId, onSceneSelect }: BreakdownTabsProps)
 
         {/* ACCESSOIRES */}
         <TabsContent value="props">
+          <div className="mb-4 flex items-center justify-between">
+            <h3 className="text-sm font-semibold text-gray-700">Total : <span className="text-blue-600">{props.length}</span> accessoire{props.length !== 1 ? 's' : ''}</h3>
+          </div>
           <div className="mb-4 relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
             <Input

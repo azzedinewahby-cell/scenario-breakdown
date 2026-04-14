@@ -258,5 +258,6 @@
 ## Affichage compteurs au-dessus des listes dans Dépouillement
 - [x] Afficher le nombre de séquences au-dessus de la liste des séquences
 - [x] Afficher le nombre de personnages au-dessus de la liste des personnages
-- [ ] Afficher le nombre de lieux au-dessus de la liste des lieux
-- [ ] Afficher le nombre d'accessoires au-dessus de la liste des accessoires
+- [x] Afficher le nombre de lieux au-dessus de la liste des lieux
+- [x] Afficher le nombre d'accessoires au-dessus de la liste des accessoires
+- [x] Utiliser la couleur bleu pour les compteurs dans les onglets et au-dessus des listes

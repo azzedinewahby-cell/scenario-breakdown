@@ -285,12 +285,12 @@
 
 ### Phase 3 : Pages frontend
 - [x] Page liste clients avec création/édition - ClientsTab.tsx implémenté
-- [x] Page liste produits avec création/édition - ProductsTab.tsx stub
-- [x] Page liste devis avec statuts en badges - QuotesTab.tsx stub
-- [x] Page liste factures avec statuts en badges - InvoicesTab.tsx stub
+- [x] Page liste produits avec création/édition - ProductsTab.tsx implémenté
+- [x] Page liste devis avec statuts en badges - QuotesTab.tsx implémenté
+- [x] Page liste factures avec statuts en badges - InvoicesTab.tsx implémenté
 - [x] Page liste avoirs - CreditsTab.tsx stub
-- [ ] Modal/formulaire création devis
-- [ ] Modal/formulaire création facture
+- [x] Formulaire création devis - QuoteForm.tsx
+- [x] Formulaire création produits - ProductForm.tsx
 - [ ] Transformation devis → facture en 1 clic
 
 ### Phase 4 : Génération PDF
@@ -302,6 +302,12 @@
 - [x] Ajouter un bouton "Gestion Commerciale" au tableau de bord
 - [x] Créer la page principale du module avec navigation interne
 - [x] Ajouter les routes dans App.tsx
+
+### Phase 5b : Utilitaires métier
+- [x] Calculs TVA (taux français standards) - commercialUtils.ts
+- [x] Validation SIRET et TVA - commercialUtils.ts
+- [x] Calcul pénalités retard légales - commercialUtils.ts
+- [x] Mentions légales obligatoires - commercialUtils.ts
 
 ### Phase 6 : Tests et validation
 - [ ] Tests unitaires pour calculs TVA

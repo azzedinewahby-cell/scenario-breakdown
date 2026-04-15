@@ -79,16 +79,14 @@ async function saveBudget(
       .where(eq(budgets.id, existing.id));
     return existing.id;
   } else {
-    const [result] = await db
-      .insert(budgets)
-      .values({
-        scenarioId,
-        content,
-        shootingDays,
-        pagesPerDay,
-        totalBudgetEco: totalEco,
-        totalBudgetConfort: totalConfort,
-      });
+    const [result] = await db.insert(budgets).values({
+      scenarioId,
+      content,
+      shootingDays,
+      pagesPerDay,
+      totalBudgetEco: totalEco,
+      totalBudgetConfort: totalConfort,
+    });
     return (result as any).insertId;
   }
 }

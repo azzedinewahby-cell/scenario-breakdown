@@ -10,6 +10,7 @@ import {
   Users2,
   Banknote,
   FileText,
+  ShoppingCart,
 } from "lucide-react";
 import { useLocation } from "wouter";
 import DashboardLayout from "@/components/DashboardLayout";
@@ -79,6 +80,14 @@ function DashboardContent() {
           color="bg-purple-900"
           textColor="text-purple-900"
           onClick={() => setLocation("/rapports")}
+        />
+        <ModuleCard
+          title="Gestion Commerciale"
+          description="Gérez clients, devis et factures"
+          icon={<ShoppingCart className="h-6 w-6" />}
+          color="bg-indigo-900"
+          textColor="text-indigo-900"
+          onClick={() => setLocation("/commercial")}
         />
       </div>
 

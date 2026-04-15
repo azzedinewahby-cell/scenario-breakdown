@@ -261,3 +261,50 @@
 - [x] Afficher le nombre de lieux au-dessus de la liste des lieux
 - [x] Afficher le nombre d'accessoires au-dessus de la liste des accessoires
 - [x] Utiliser la couleur bleu pour les compteurs dans les onglets et au-dessus des listes
+
+
+## Module Gestion Commerciale (Devis, Factures, Avoirs)
+
+### Phase 1 : Schéma de base de données
+- [x] Créer la table `clients` (id, type, nom, adresse, email, téléphone, SIRET, TVA intracommunautaire)
+- [x] Créer la table `products` (id, nom, description, prix HT, taux TVA, unité)
+- [x] Créer la table `quotes` (id, numéro DV-YYYY-XXXX, client_id, date émission, date validité, statut, total HT/TVA/TTC)
+- [x] Créer la table `quote_lines` (id, quote_id, product_id, quantité, prix unitaire HT)
+- [x] Créer la table `invoices` (id, numéro FA-YYYY-XXXX, client_id, quote_id, date émission, date échéance, statut, total HT/TVA/TTC)
+- [x] Créer la table `invoice_lines` (id, invoice_id, product_id, quantité, prix unitaire HT)
+- [x] Créer la table `credits` (id, numéro AV-YYYY-XXXX, invoice_id, montant, raison)
+
+### Phase 2 : Routes tRPC backend
+- [x] CRUD clients (create, read, update, delete, list) - Fonctions db.ts créées
+- [x] CRUD produits (create, read, update, delete, list) - Fonctions db.ts créées
+- [x] CRUD devis (create, read, update, delete, list, transform to invoice) - Fonctions db.ts créées
+- [x] CRUD factures (create, read, update, delete, list) - Fonctions db.ts créées
+- [x] CRUD avoirs (create, read, update, delete, list) - Fonctions db.ts créées
+- [x] Calcul automatique TVA (multi-taux) - à implémenter dans les routes
+- [x] Numérotation automatique (DV-YYYY-XXXX, FA-YYYY-XXXX, AV-YYYY-XXXX) - Fonction generateNextNumber créée
+
+### Phase 3 : Pages frontend
+- [x] Page liste clients avec création/édition - ClientsTab.tsx implémenté
+- [x] Page liste produits avec création/édition - ProductsTab.tsx stub
+- [x] Page liste devis avec statuts en badges - QuotesTab.tsx stub
+- [x] Page liste factures avec statuts en badges - InvoicesTab.tsx stub
+- [x] Page liste avoirs - CreditsTab.tsx stub
+- [ ] Modal/formulaire création devis
+- [ ] Modal/formulaire création facture
+- [ ] Transformation devis → facture en 1 clic
+
+### Phase 4 : Génération PDF
+- [ ] Template PDF devis (mentions légales, totaux, conditions paiement)
+- [ ] Template PDF facture (mentions légales obligatoires France, pénalités retard)
+- [ ] Export PDF depuis les pages
+
+### Phase 5 : Intégration au tableau de bord
+- [x] Ajouter un bouton "Gestion Commerciale" au tableau de bord
+- [x] Créer la page principale du module avec navigation interne
+- [x] Ajouter les routes dans App.tsx
+
+### Phase 6 : Tests et validation
+- [ ] Tests unitaires pour calculs TVA
+- [ ] Tests unitaires pour numérotation
+- [ ] Tests d'intégration pour workflows (devis → facture)
+- [ ] Validation des mentions légales France

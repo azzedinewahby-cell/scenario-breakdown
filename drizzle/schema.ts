@@ -176,3 +176,150 @@ export const budgets = mysqlTable("budgets", {
 
 export type Budget = typeof budgets.$inferSelect;
 export type InsertBudget = typeof budgets.$inferInsert;
+
+// ─── Salary Scales (PCINE) ───────────────────────────────────────────────────
+
+export const salaryScales = mysqlTable("salary_scales", {
+  id: int("id").autoincrement().primaryKey(),
+  role: varchar("role", { length: 256 }).notNull().unique(),
+  category: varchar("category", { length: 256 }).notNull(),
+  monthlySalary: int("monthlySalary").default(0),
+  dailyRate: int("dailyRate").default(0),
+  hourlyRate: int("hourlyRate").default(0),
+  source: varchar("source", { length: 256 }).default("PCINE mai 2025"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type SalaryScale = typeof salaryScales.$inferSelect;
+export type InsertSalaryScale = typeof salaryScales.$inferInsert;
+
+// ─── Clients (Gestion Commerciale) ───────────────────────────────────────────
+
+export const clients = mysqlTable("clients", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  type: mysqlEnum("type", ["particulier", "entreprise"]).default("entreprise").notNull(),
+  name: varchar("name", { length: 256 }).notNull(),
+  address: text("address"),
+  email: varchar("email", { length: 256 }),
+  phone: varchar("phone", { length: 20 }),
+  siret: varchar("siret", { length: 20 }),
+  vatNumber: varchar("vatNumber", { length: 50 }),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type Client = typeof clients.$inferSelect;
+export type InsertClient = typeof clients.$inferInsert;
+
+// ─── Products (Gestion Commerciale) ──────────────────────────────────────────
+
+export const products = mysqlTable("products", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  name: varchar("name", { length: 256 }).notNull(),
+  description: text("description"),
+  priceHT: int("priceHT").default(0),
+  vatRate: int("vatRate").default(20),
+  unit: mysqlEnum("unit", ["heure", "jour", "forfait"]).default("forfait").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type Product = typeof products.$inferSelect;
+export type InsertProduct = typeof products.$inferInsert;
+
+// ─── Quotes (Devis) ──────────────────────────────────────────────────────────
+
+export const quotes = mysqlTable("quotes", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  clientId: int("clientId").notNull(),
+  number: varchar("number", { length: 32 }).notNull().unique(),
+  issueDate: timestamp("issueDate").defaultNow().notNull(),
+  validityDate: timestamp("validityDate"),
+  status: mysqlEnum("status", ["brouillon", "envoyé", "accepté", "refusé"]).default("brouillon").notNull(),
+  totalHT: int("totalHT").default(0),
+  totalVAT: int("totalVAT").default(0),
+  totalTTC: int("totalTTC").default(0),
+  paymentTerms: text("paymentTerms"),
+  clientSignature: varchar("clientSignature", { length: 512 }),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type Quote = typeof quotes.$inferSelect;
+export type InsertQuote = typeof quotes.$inferInsert;
+
+// ─── Quote Lines ─────────────────────────────────────────────────────────────
+
+export const quoteLines = mysqlTable("quote_lines", {
+  id: int("id").autoincrement().primaryKey(),
+  quoteId: int("quoteId").notNull(),
+  productId: int("productId").notNull(),
+  quantity: int("quantity").default(1),
+  unitPriceHT: int("unitPriceHT").default(0),
+  vatRate: int("vatRate").default(20),
+  lineTotal: int("lineTotal").default(0),
+  orderIndex: int("orderIndex").default(0),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type QuoteLine = typeof quoteLines.$inferSelect;
+export type InsertQuoteLine = typeof quoteLines.$inferInsert;
+
+// ─── Invoices (Factures) ─────────────────────────────────────────────────────
+
+export const invoices = mysqlTable("invoices", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  clientId: int("clientId").notNull(),
+  quoteId: int("quoteId"),
+  number: varchar("number", { length: 32 }).notNull().unique(),
+  issueDate: timestamp("issueDate").defaultNow().notNull(),
+  dueDate: timestamp("dueDate"),
+  status: mysqlEnum("status", ["brouillon", "envoyée", "payée", "en retard"]).default("brouillon").notNull(),
+  totalHT: int("totalHT").default(0),
+  totalVAT: int("totalVAT").default(0),
+  totalTTC: int("totalTTC").default(0),
+  paymentMethod: varchar("paymentMethod", { length: 64 }),
+  paymentDate: timestamp("paymentDate"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type Invoice = typeof invoices.$inferSelect;
+export type InsertInvoice = typeof invoices.$inferInsert;
+
+// ─── Invoice Lines ───────────────────────────────────────────────────────────
+
+export const invoiceLines = mysqlTable("invoice_lines", {
+  id: int("id").autoincrement().primaryKey(),
+  invoiceId: int("invoiceId").notNull(),
+  productId: int("productId").notNull(),
+  quantity: int("quantity").default(1),
+  unitPriceHT: int("unitPriceHT").default(0),
+  vatRate: int("vatRate").default(20),
+  lineTotal: int("lineTotal").default(0),
+  orderIndex: int("orderIndex").default(0),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type InvoiceLine = typeof invoiceLines.$inferSelect;
+export type InsertInvoiceLine = typeof invoiceLines.$inferInsert;
+
+// ─── Credits (Avoirs) ────────────────────────────────────────────────────────
+
+export const credits = mysqlTable("credits", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  invoiceId: int("invoiceId").notNull(),
+  number: varchar("number", { length: 32 }).notNull().unique(),
+  amount: int("amount").default(0),
+  reason: text("reason"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type Credit = typeof credits.$inferSelect;
+export type InsertCredit = typeof credits.$inferInsert;

@@ -12,6 +12,14 @@ import {
   sceneProps,
   sequences,
   sequenceScenes,
+  clients,
+  products,
+  quotes,
+  quoteLines,
+  invoices,
+  invoiceLines,
+  credits,
+  salaryScales,
   type InsertScenario,
   type InsertScene,
   type InsertCharacter,
@@ -21,6 +29,14 @@ import {
   type InsertSceneProp,
   type InsertSequence,
   type InsertSequenceScene,
+  type InsertClient,
+  type InsertProduct,
+  type InsertQuote,
+  type InsertQuoteLine,
+  type InsertInvoice,
+  type InsertInvoiceLine,
+  type InsertCredit,
+  type InsertSalaryScale,
 } from "../drizzle/schema";
 import { ENV } from "./_core/env";
 
@@ -633,3 +649,270 @@ export async function getScenarioDuration(scenarioId: number): Promise<{
   };
 }
 
+
+
+// ─── Clients (Gestion Commerciale) ────────────────────────────────────────────
+
+export async function createClient(data: InsertClient) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const result = await db.insert(clients).values(data);
+  return result;
+}
+
+export async function getClientsByUserId(userId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return await db.select().from(clients).where(eq(clients.userId, userId));
+}
+
+export async function getClientById(clientId: number) {
+  const db = await getDb();
+  if (!db) return null;
+  const result = await db.select().from(clients).where(eq(clients.id, clientId)).limit(1);
+  return result.length > 0 ? result[0] : null;
+}
+
+export async function updateClient(clientId: number, data: Partial<InsertClient>) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  return await db.update(clients).set(data).where(eq(clients.id, clientId));
+}
+
+export async function deleteClient(clientId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  return await db.delete(clients).where(eq(clients.id, clientId));
+}
+
+// ─── Products (Gestion Commerciale) ──────────────────────────────────────────
+
+export async function createProduct(data: InsertProduct) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const result = await db.insert(products).values(data);
+  return result;
+}
+
+export async function getProductsByUserId(userId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return await db.select().from(products).where(eq(products.userId, userId));
+}
+
+export async function getProductById(productId: number) {
+  const db = await getDb();
+  if (!db) return null;
+  const result = await db.select().from(products).where(eq(products.id, productId)).limit(1);
+  return result.length > 0 ? result[0] : null;
+}
+
+export async function updateProduct(productId: number, data: Partial<InsertProduct>) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  return await db.update(products).set(data).where(eq(products.id, productId));
+}
+
+export async function deleteProduct(productId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  return await db.delete(products).where(eq(products.id, productId));
+}
+
+// ─── Quotes (Devis) ──────────────────────────────────────────────────────────
+
+export async function createQuote(data: InsertQuote) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const result = await db.insert(quotes).values(data);
+  return result;
+}
+
+export async function getQuotesByUserId(userId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return await db.select().from(quotes).where(eq(quotes.userId, userId)).orderBy(desc(quotes.createdAt));
+}
+
+export async function getQuoteById(quoteId: number) {
+  const db = await getDb();
+  if (!db) return null;
+  const result = await db.select().from(quotes).where(eq(quotes.id, quoteId)).limit(1);
+  return result.length > 0 ? result[0] : null;
+}
+
+export async function updateQuote(quoteId: number, data: Partial<InsertQuote>) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  return await db.update(quotes).set(data).where(eq(quotes.id, quoteId));
+}
+
+export async function deleteQuote(quoteId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  return await db.delete(quotes).where(eq(quotes.id, quoteId));
+}
+
+export async function getQuoteLines(quoteId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return await db.select().from(quoteLines).where(eq(quoteLines.quoteId, quoteId)).orderBy(quoteLines.orderIndex);
+}
+
+export async function createQuoteLine(data: InsertQuoteLine) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  return await db.insert(quoteLines).values(data);
+}
+
+export async function deleteQuoteLine(lineId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  return await db.delete(quoteLines).where(eq(quoteLines.id, lineId));
+}
+
+// ─── Invoices (Factures) ─────────────────────────────────────────────────────
+
+export async function createInvoice(data: InsertInvoice) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const result = await db.insert(invoices).values(data);
+  return result;
+}
+
+export async function getInvoicesByUserId(userId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return await db.select().from(invoices).where(eq(invoices.userId, userId)).orderBy(desc(invoices.createdAt));
+}
+
+export async function getInvoiceById(invoiceId: number) {
+  const db = await getDb();
+  if (!db) return null;
+  const result = await db.select().from(invoices).where(eq(invoices.id, invoiceId)).limit(1);
+  return result.length > 0 ? result[0] : null;
+}
+
+export async function updateInvoice(invoiceId: number, data: Partial<InsertInvoice>) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  return await db.update(invoices).set(data).where(eq(invoices.id, invoiceId));
+}
+
+export async function deleteInvoice(invoiceId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  return await db.delete(invoices).where(eq(invoices.id, invoiceId));
+}
+
+export async function getInvoiceLines(invoiceId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return await db.select().from(invoiceLines).where(eq(invoiceLines.invoiceId, invoiceId)).orderBy(invoiceLines.orderIndex);
+}
+
+export async function createInvoiceLine(data: InsertInvoiceLine) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  return await db.insert(invoiceLines).values(data);
+}
+
+export async function deleteInvoiceLine(lineId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  return await db.delete(invoiceLines).where(eq(invoiceLines.id, lineId));
+}
+
+// ─── Credits (Avoirs) ────────────────────────────────────────────────────────
+
+export async function createCredit(data: InsertCredit) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const result = await db.insert(credits).values(data);
+  return result;
+}
+
+export async function getCreditsByUserId(userId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return await db.select().from(credits).where(eq(credits.userId, userId)).orderBy(desc(credits.createdAt));
+}
+
+export async function getCreditById(creditId: number) {
+  const db = await getDb();
+  if (!db) return null;
+  const result = await db.select().from(credits).where(eq(credits.id, creditId)).limit(1);
+  return result.length > 0 ? result[0] : null;
+}
+
+export async function updateCredit(creditId: number, data: Partial<InsertCredit>) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  return await db.update(credits).set(data).where(eq(credits.id, creditId));
+}
+
+export async function deleteCredit(creditId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  return await db.delete(credits).where(eq(credits.id, creditId));
+}
+
+// ─── Salary Scales (PCINE) ───────────────────────────────────────────────────
+
+export async function getSalaryScales() {
+  const db = await getDb();
+  if (!db) return [];
+  return await db.select().from(salaryScales);
+}
+
+export async function getSalaryScaleByRole(role: string) {
+  const db = await getDb();
+  if (!db) return null;
+  const result = await db.select().from(salaryScales).where(eq(salaryScales.role, role)).limit(1);
+  return result.length > 0 ? result[0] : null;
+}
+
+// ─── Utility: Generate next number for quotes/invoices/credits ────────────────
+
+export async function generateNextNumber(prefix: "DV" | "FA" | "AV", userId: number): Promise<string> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  const year = new Date().getFullYear();
+  const baseNumber = `${prefix}-${year}-`;
+  
+  let table: any;
+  let numberField: any;
+  
+  if (prefix === "DV") {
+    table = quotes;
+    numberField = quotes.number;
+  } else if (prefix === "FA") {
+    table = invoices;
+    numberField = invoices.number;
+  } else {
+    table = credits;
+    numberField = credits.number;
+  }
+  
+  // Get the highest number for this year and prefix
+  const result = await db
+    .select({ number: numberField })
+    .from(table)
+    .where(and(
+      eq(table.userId, userId),
+      sql`${numberField} LIKE ${baseNumber + "%"}`
+    ))
+    .orderBy(desc(numberField))
+    .limit(1);
+  
+  let nextSequence = 1;
+  if (result.length > 0) {
+    const lastNumber = result[0].number;
+    const parts = lastNumber.split("-");
+    const currentSequence = parseInt(parts[2], 10);
+    nextSequence = currentSequence + 1;
+  }
+  
+  return `${baseNumber}${String(nextSequence).padStart(4, "0")}`;
+}

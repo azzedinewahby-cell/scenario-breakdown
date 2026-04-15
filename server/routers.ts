@@ -47,19 +47,48 @@ import { eq } from "drizzle-orm";
 async function getBudgetForScenario(scenarioId: number) {
   const db = await getDb();
   if (!db) return null;
-  const rows = await db.select().from(budgets).where(eq(budgets.scenarioId, scenarioId)).limit(1);
+  const rows = await db
+    .select()
+    .from(budgets)
+    .where(eq(budgets.scenarioId, scenarioId))
+    .limit(1);
   return rows[0] ?? null;
 }
 
-async function saveBudget(scenarioId: number, content: string, shootingDays: number, pagesPerDay: number, totalEco: number, totalConfort: number) {
+async function saveBudget(
+  scenarioId: number,
+  content: string,
+  shootingDays: number,
+  pagesPerDay: number,
+  totalEco: number,
+  totalConfort: number
+) {
   const db = await getDb();
   if (!db) return null;
   const existing = await getBudgetForScenario(scenarioId);
   if (existing) {
-    await db.update(budgets).set({ content, shootingDays, pagesPerDay, totalBudgetEco: totalEco, totalBudgetConfort: totalConfort }).where(eq(budgets.id, existing.id));
+    await db
+      .update(budgets)
+      .set({
+        content,
+        shootingDays,
+        pagesPerDay,
+        totalBudgetEco: totalEco,
+        totalBudgetConfort: totalConfort,
+      })
+      .where(eq(budgets.id, existing.id));
     return existing.id;
   } else {
-    const [result] = await db.insert(budgets).values({ scenarioId, content, shootingDays, pagesPerDay, totalBudgetEco: totalEco, totalBudgetConfort: totalConfort });
+    const [result] = await db
+      .insert(budgets)
+      .values({
+        scenarioId,
+        content,
+        shootingDays,
+        pagesPerDay,
+        totalBudgetEco: totalEco,
+        totalBudgetConfort: totalConfort,
+      });
     return (result as any).insertId;
   }
 }
@@ -67,7 +96,7 @@ async function saveBudget(scenarioId: number, content: string, shootingDays: num
 export const appRouter = router({
   system: systemRouter,
   auth: router({
-    me: publicProcedure.query((opts) => opts.ctx.user),
+    me: publicProcedure.query(opts => opts.ctx.user),
     logout: publicProcedure.mutation(({ ctx }) => {
       const cookieOptions = getSessionCookieOptions(ctx.req);
       ctx.res.clearCookie(COOKIE_NAME, { ...cookieOptions, maxAge: -1 });
@@ -99,10 +128,16 @@ export const appRouter = router({
         // Upload to S3
         const fileKey = `scenarios/${userId}/${nanoid()}-${input.fileName}`;
         const buffer = Buffer.from(input.fileBase64, "base64");
-        const { url: fileUrl } = await storagePut(fileKey, buffer, input.contentType);
+        const { url: fileUrl } = await storagePut(
+          fileKey,
+          buffer,
+          input.contentType
+        );
 
         // Create scenario record
-        const title = input.fileName.replace(/\.[^.]+$/, "").replace(/[-_]/g, " ");
+        const title = input.fileName
+          .replace(/\.[^.]+$/, "")
+          .replace(/[-_]/g, " ");
         const scenarioId = await createScenario({
           userId,
           title,
@@ -114,7 +149,7 @@ export const appRouter = router({
         });
 
         // Parse asynchronously (don't block the response)
-        processScenario(scenarioId, fileUrl, input.fileName).catch((err) => {
+        processScenario(scenarioId, fileUrl, input.fileName).catch(err => {
           console.error(`[Scenario] Parse error for ${scenarioId}:`, err);
         });
 
@@ -132,7 +167,10 @@ export const appRouter = router({
       .query(async ({ ctx, input }) => {
         const scenario = await getScenarioById(input.id);
         if (!scenario || scenario.userId !== ctx.user.id) {
-          throw new TRPCError({ code: "NOT_FOUND", message: "Scénario introuvable" });
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Scénario introuvable",
+          });
         }
         return scenario;
       }),
@@ -143,16 +181,21 @@ export const appRouter = router({
       .query(async ({ ctx, input }) => {
         const scenario = await getScenarioById(input.scenarioId);
         if (!scenario || scenario.userId !== ctx.user.id) {
-          throw new TRPCError({ code: "NOT_FOUND", message: "Scénario introuvable" });
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Scénario introuvable",
+          });
         }
 
         const scenesData = await getScenesByScenarioId(input.scenarioId);
-        const charactersData = await getCharactersByScenarioId(input.scenarioId);
-        const sceneIds = scenesData.map((s) => s.id);
+        const charactersData = await getCharactersByScenarioId(
+          input.scenarioId
+        );
+        const sceneIds = scenesData.map(s => s.id);
         const sceneChars = await getSceneCharactersBySceneIds(sceneIds);
 
         // Build scene → characters map
-        const charMap = new Map(charactersData.map((c) => [c.id, c.name]));
+        const charMap = new Map(charactersData.map(c => [c.id, c.name]));
         const sceneCharMap = new Map<number, string[]>();
         for (const sc of sceneChars) {
           const arr = sceneCharMap.get(sc.sceneId) ?? [];
@@ -162,19 +205,22 @@ export const appRouter = router({
         }
 
         // Build dialogues per scene
-        const dialoguesMap = new Map<number, { character: string; text: string }[]>();
+        const dialoguesMap = new Map<
+          number,
+          { character: string; text: string }[]
+        >();
         for (const scene of scenesData) {
           const dials = await getDialoguesBySceneId(scene.id);
           dialoguesMap.set(
             scene.id,
-            dials.map((d) => ({
+            dials.map(d => ({
               character: charMap.get(d.characterId ?? 0) ?? "Inconnu",
               text: d.text ?? "",
             }))
           );
         }
 
-        const scenesWithDetails = scenesData.map((scene) => ({
+        const scenesWithDetails = scenesData.map(scene => ({
           ...scene,
           characters: sceneCharMap.get(scene.id) ?? [],
           dialogues: dialoguesMap.get(scene.id) ?? [],
@@ -184,7 +230,13 @@ export const appRouter = router({
           scenario,
           scenes: scenesWithDetails,
           characters: charactersData,
-          uniqueLocations: Array.from(new Set(scenesData.map((s) => s.location).filter((l): l is string => l !== null))),
+          uniqueLocations: Array.from(
+            new Set(
+              scenesData
+                .map(s => s.location)
+                .filter((l): l is string => l !== null)
+            )
+          ),
         };
       }),
 
@@ -194,7 +246,10 @@ export const appRouter = router({
       .mutation(async ({ ctx, input }) => {
         const scenario = await getScenarioById(input.scenarioId);
         if (!scenario || scenario.userId !== ctx.user.id) {
-          throw new TRPCError({ code: "NOT_FOUND", message: "Scénario introuvable" });
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Scénario introuvable",
+          });
         }
         await deleteScenario(input.scenarioId);
         return { success: true };
@@ -206,15 +261,20 @@ export const appRouter = router({
       .query(async ({ ctx, input }) => {
         const scenario = await getScenarioById(input.scenarioId);
         if (!scenario || scenario.userId !== ctx.user.id) {
-          throw new TRPCError({ code: "NOT_FOUND", message: "Scénario introuvable" });
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Scénario introuvable",
+          });
         }
 
         const scenesData = await getScenesByScenarioId(input.scenarioId);
-        const charactersData = await getCharactersByScenarioId(input.scenarioId);
-        const sceneIds = scenesData.map((s) => s.id);
+        const charactersData = await getCharactersByScenarioId(
+          input.scenarioId
+        );
+        const sceneIds = scenesData.map(s => s.id);
         const sceneChars = await getSceneCharactersBySceneIds(sceneIds);
 
-        const charMap = new Map(charactersData.map((c) => [c.id, c.name]));
+        const charMap = new Map(charactersData.map(c => [c.id, c.name]));
         const sceneCharMap = new Map<number, string[]>();
         for (const sc of sceneChars) {
           const arr = sceneCharMap.get(sc.sceneId) ?? [];
@@ -224,8 +284,9 @@ export const appRouter = router({
         }
 
         // Build CSV
-        const header = "Séquence;INT/EXT;Lieu;Jour/Nuit;Description;Personnages";
-        const rows = scenesData.map((scene) => {
+        const header =
+          "Séquence;INT/EXT;Lieu;Jour/Nuit;Description;Personnages";
+        const rows = scenesData.map(scene => {
           const chars = (sceneCharMap.get(scene.id) ?? []).join(", ");
           const escapeCsv = (val: string | null) => {
             if (!val) return "";
@@ -242,7 +303,10 @@ export const appRouter = router({
           ].join(";");
         });
 
-        return { csv: [header, ...rows].join("\n"), fileName: `${scenario.title}-depouillement.csv` };
+        return {
+          csv: [header, ...rows].join("\n"),
+          fileName: `${scenario.title}-depouillement.csv`,
+        };
       }),
 
     // Export breakdown as styled HTML for PDF generation (client-side print)
@@ -251,15 +315,20 @@ export const appRouter = router({
       .query(async ({ ctx, input }) => {
         const scenario = await getScenarioById(input.scenarioId);
         if (!scenario || scenario.userId !== ctx.user.id) {
-          throw new TRPCError({ code: "NOT_FOUND", message: "Sc\u00e9nario introuvable" });
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Sc\u00e9nario introuvable",
+          });
         }
 
         const scenesData = await getScenesByScenarioId(input.scenarioId);
-        const charactersData = await getCharactersByScenarioId(input.scenarioId);
-        const sceneIds = scenesData.map((s) => s.id);
+        const charactersData = await getCharactersByScenarioId(
+          input.scenarioId
+        );
+        const sceneIds = scenesData.map(s => s.id);
         const sceneChars = await getSceneCharactersBySceneIds(sceneIds);
 
-        const charMap = new Map(charactersData.map((c) => [c.id, c.name]));
+        const charMap = new Map(charactersData.map(c => [c.id, c.name]));
         const sceneCharMap = new Map<number, string[]>();
         for (const sc of sceneChars) {
           const arr = sceneCharMap.get(sc.sceneId) ?? [];
@@ -268,19 +337,22 @@ export const appRouter = router({
           sceneCharMap.set(sc.sceneId, arr);
         }
 
-        const dialoguesMap = new Map<number, { character: string; text: string }[]>();
+        const dialoguesMap = new Map<
+          number,
+          { character: string; text: string }[]
+        >();
         for (const scene of scenesData) {
           const dials = await getDialoguesBySceneId(scene.id);
           dialoguesMap.set(
             scene.id,
-            dials.map((d) => ({
+            dials.map(d => ({
               character: charMap.get(d.characterId ?? 0) ?? "Inconnu",
               text: d.text ?? "",
             }))
           );
         }
 
-        const pdfScenes = scenesData.map((scene) => ({
+        const pdfScenes = scenesData.map(scene => ({
           sceneNumber: scene.sceneNumber,
           intExt: scene.intExt,
           location: scene.location,
@@ -291,15 +363,23 @@ export const appRouter = router({
         }));
 
         const uniqueLocations = Array.from(
-          new Set(scenesData.map((s) => s.location).filter((l): l is string => l !== null))
+          new Set(
+            scenesData
+              .map(s => s.location)
+              .filter((l): l is string => l !== null)
+          )
         );
 
-        const totalDialogues = pdfScenes.reduce((sum, s) => sum + s.dialogues.length, 0);
+        const totalDialogues = pdfScenes.reduce(
+          (sum, s) => sum + s.dialogues.length,
+          0
+        );
 
         const durationSec = scenario.durationSeconds ?? 0;
-        const durationLabel = durationSec > 0
-          ? `${Math.floor(durationSec / 60)}min ${durationSec % 60 > 0 ? `${durationSec % 60}s` : ""}`.trim()
-          : null;
+        const durationLabel =
+          durationSec > 0
+            ? `${Math.floor(durationSec / 60)}min ${durationSec % 60 > 0 ? `${durationSec % 60}s` : ""}`.trim()
+            : null;
         const html = generateBreakdownHtml({
           title: scenario.title,
           fileName: scenario.fileName,
@@ -311,7 +391,7 @@ export const appRouter = router({
           screenwriterName: scenario.screenwriterName ?? null,
           durationLabel,
           scenes: pdfScenes,
-          characters: charactersData.map((c) => c.name ?? ""),
+          characters: charactersData.map(c => c.name ?? ""),
           uniqueLocations,
           stats: {
             totalScenes: pdfScenes.length,
@@ -323,8 +403,6 @@ export const appRouter = router({
 
         return { html, fileName: `${scenario.title}-depouillement.pdf` };
       }),
-
-
   }),
 
   dashboard: router({
@@ -340,19 +418,25 @@ export const appRouter = router({
       .query(async ({ ctx, input }) => {
         const scenario = await getScenarioById(input.scenarioId);
         if (!scenario || scenario.userId !== ctx.user.id) {
-          throw new TRPCError({ code: "NOT_FOUND", message: "Scénario introuvable" });
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Scénario introuvable",
+          });
         }
         const characters = await getCharactersByScenarioId(input.scenarioId);
         const scenes = await getScenesByScenarioId(input.scenarioId);
-        const sceneIds = scenes.map((s) => s.id);
+        const sceneIds = scenes.map(s => s.id);
         const sceneChars = await getSceneCharactersBySceneIds(sceneIds);
-        
+
         const charSceneCount = new Map<number, number>();
         for (const sc of sceneChars) {
-          charSceneCount.set(sc.characterId, (charSceneCount.get(sc.characterId) ?? 0) + 1);
+          charSceneCount.set(
+            sc.characterId,
+            (charSceneCount.get(sc.characterId) ?? 0) + 1
+          );
         }
-        
-        return characters.map((c) => ({
+
+        return characters.map(c => ({
           ...c,
           sceneCount: charSceneCount.get(c.id) ?? 0,
         }));
@@ -364,20 +448,29 @@ export const appRouter = router({
       .query(async ({ ctx, input }) => {
         const scenario = await getScenarioById(input.scenarioId);
         if (!scenario || scenario.userId !== ctx.user.id) {
-          throw new TRPCError({ code: "NOT_FOUND", message: "Scénario introuvable" });
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Scénario introuvable",
+          });
         }
         const scenes = await getScenesByScenarioId(input.scenarioId);
-        
-        const locationMap = new Map<string, { count: number; dayNight: Set<string> }>();
+
+        const locationMap = new Map<
+          string,
+          { count: number; dayNight: Set<string> }
+        >();
         for (const scene of scenes) {
           if (scene.location) {
-            const entry = locationMap.get(scene.location) ?? { count: 0, dayNight: new Set() };
+            const entry = locationMap.get(scene.location) ?? {
+              count: 0,
+              dayNight: new Set(),
+            };
             entry.count++;
             if (scene.dayNight) entry.dayNight.add(scene.dayNight);
             locationMap.set(scene.location, entry);
           }
         }
-        
+
         return Array.from(locationMap.entries()).map(([name, data]) => ({
           name,
           sceneCount: data.count,
@@ -391,9 +484,12 @@ export const appRouter = router({
       .query(async ({ ctx, input }) => {
         const scenario = await getScenarioById(input.scenarioId);
         if (!scenario || scenario.userId !== ctx.user.id) {
-          throw new TRPCError({ code: "NOT_FOUND", message: "Scénario introuvable" });
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Scénario introuvable",
+          });
         }
-        
+
         // Return existing props
         return getProps(input.scenarioId);
       }),
@@ -404,9 +500,12 @@ export const appRouter = router({
       .query(async ({ ctx, input }) => {
         const scenario = await getScenarioById(input.scenarioId);
         if (!scenario || scenario.userId !== ctx.user.id) {
-          throw new TRPCError({ code: "NOT_FOUND", message: "Scénario introuvable" });
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Scénario introuvable",
+          });
         }
-        
+
         // Auto-create sequences from scenes if none exist yet (migration for old scenarios)
         const existing = await getSequences(input.scenarioId);
         if (existing.length === 0 && scenario.status === "completed") {
@@ -414,14 +513,22 @@ export const appRouter = router({
           for (let i = 0; i < scenes.length; i++) {
             const scene = scenes[i];
             const sequenceName = `${scene.intExt ? scene.intExt + ". " : ""}${scene.location || "Scène " + scene.sceneNumber}`;
-            await insertSequences([{ scenarioId: input.scenarioId, name: sequenceName, orderIndex: i }]);
+            await insertSequences([
+              {
+                scenarioId: input.scenarioId,
+                name: sequenceName,
+                orderIndex: i,
+              },
+            ]);
           }
           const created = await getSequences(input.scenarioId);
           for (let i = 0; i < scenes.length && i < created.length; i++) {
             const seq = created[i];
             const scene = scenes[i];
             if (seq && scene) {
-              await insertSequenceScenes([{ sequenceId: seq.id, sceneId: scene.id }]);
+              await insertSequenceScenes([
+                { sequenceId: seq.id, sceneId: scene.id },
+              ]);
               // Generate summary in background (non-blocking)
               (async () => {
                 try {
@@ -430,23 +537,29 @@ export const appRouter = router({
                     const { invokeLLM } = await import("./_core/llm");
                     const summaryResp = await invokeLLM({
                       messages: [
-                        { role: "system", content: "Tu es un assistant de production cinema. Resume la scene suivante en 1 ou 2 phrases courtes et precises, en francais, de maniere factuelle (qui fait quoi, ou)." },
+                        {
+                          role: "system",
+                          content:
+                            "Tu es un assistant de production cinema. Resume la scene suivante en 1 ou 2 phrases courtes et precises, en francais, de maniere factuelle (qui fait quoi, ou).",
+                        },
                         { role: "user", content: sceneText.slice(0, 1500) },
                       ],
                     });
-                    const rawContent = summaryResp?.choices?.[0]?.message?.content;
-                    const summary = typeof rawContent === "string" ? rawContent.trim() : "";
+                    const rawContent =
+                      summaryResp?.choices?.[0]?.message?.content;
+                    const summary =
+                      typeof rawContent === "string" ? rawContent.trim() : "";
                     if (summary) await updateSequenceSummary(seq.id, summary);
                   }
                 } catch (e) {
                   console.error("[Summary generation failed]", e);
                 }
-              })().catch(() => {})
+              })().catch(() => {});
             }
           }
           return getSequences(input.scenarioId);
         }
-        
+
         return existing;
       }),
 
@@ -455,7 +568,9 @@ export const appRouter = router({
       .input(z.object({ propId: z.number() }))
       .query(async ({ input }) => {
         // Trigger automatic backfill if needed (non-blocking, in background)
-        backfillScenePropsForProp(input.propId).catch(e => console.error("[Backfill failed]", e));
+        backfillScenePropsForProp(input.propId).catch(e =>
+          console.error("[Backfill failed]", e)
+        );
         // Return immediately with whatever sequences are already in the database
         return getSequencesForProp(input.propId);
       }),
@@ -487,9 +602,14 @@ export const appRouter = router({
       .mutation(async ({ ctx, input }) => {
         const scenario = await getScenarioById(input.scenarioId);
         if (!scenario || scenario.userId !== ctx.user.id) {
-          throw new TRPCError({ code: "NOT_FOUND", message: "Scenario not found" });
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Scenario not found",
+          });
         }
-        const durationSeconds = await calculateAndSaveScenarioDuration(input.scenarioId);
+        const durationSeconds = await calculateAndSaveScenarioDuration(
+          input.scenarioId
+        );
         return {
           durationSeconds,
           totalMinutes: Math.floor(durationSeconds / 60),
@@ -503,10 +623,19 @@ export const appRouter = router({
       .query(async ({ ctx, input }) => {
         const scenario = await getScenarioById(input.scenarioId);
         if (!scenario || scenario.userId !== ctx.user.id) {
-          throw new TRPCError({ code: "NOT_FOUND", message: "Scenario not found" });
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Scenario not found",
+          });
         }
         const duration = await getScenarioDuration(input.scenarioId);
-        return duration || { totalSeconds: 0, totalMinutes: 0, totalSeconds_remainder: 0 };
+        return (
+          duration || {
+            totalSeconds: 0,
+            totalMinutes: 0,
+            totalSeconds_remainder: 0,
+          }
+        );
       }),
 
     // Generate or get synopsis for a scenario
@@ -515,7 +644,10 @@ export const appRouter = router({
       .query(async ({ ctx, input }) => {
         const scenario = await getScenarioById(input.scenarioId);
         if (!scenario || scenario.userId !== ctx.user.id) {
-          throw new TRPCError({ code: "NOT_FOUND", message: "Scénario introuvable" });
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Scénario introuvable",
+          });
         }
         // Return cached synopsis if available
         if (scenario.synopsis) {
@@ -532,11 +664,16 @@ export const appRouter = router({
       .mutation(async ({ ctx, input }) => {
         const scenario = await getScenarioById(input.scenarioId);
         if (!scenario || scenario.userId !== ctx.user.id) {
-          throw new TRPCError({ code: "NOT_FOUND", message: "Scénario introuvable" });
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Scénario introuvable",
+          });
         }
         const sequences = await getSequences(input.scenarioId);
         const orderIndex = sequences.length;
-        await insertSequences([{ scenarioId: input.scenarioId, name: input.name, orderIndex }]);
+        await insertSequences([
+          { scenarioId: input.scenarioId, name: input.name, orderIndex },
+        ]);
         return { success: true };
       }),
     // Generate technical breakdown (découpage technique) for a scenario
@@ -545,12 +682,18 @@ export const appRouter = router({
       .mutation(async ({ ctx, input }) => {
         const scenario = await getScenarioById(input.scenarioId);
         if (!scenario || scenario.userId !== ctx.user.id) {
-          throw new TRPCError({ code: "NOT_FOUND", message: "Scénario introuvable" });
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Scénario introuvable",
+          });
         }
         const scenes = await getScenesByScenarioId(input.scenarioId);
         const characters = await getCharactersByScenarioId(input.scenarioId);
         if (scenes.length === 0) {
-          throw new TRPCError({ code: "BAD_REQUEST", message: "Aucune scène trouvée pour ce scénario" });
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "Aucune scène trouvée pour ce scénario",
+          });
         }
         const scenesText = scenes
           .map((s, i) => {
@@ -627,19 +770,30 @@ Règles:
 - Réponds UNIQUEMENT avec le JSON valide`;
         const response = await invokeLLM({
           messages: [
-            { role: "system", content: "Tu es un expert en production cinématographique française. Réponds uniquement en JSON valide." },
+            {
+              role: "system",
+              content:
+                "Tu es un expert en production cinématographique française. Réponds uniquement en JSON valide.",
+            },
             { role: "user", content: prompt },
           ],
           response_format: { type: "json_object" },
         });
         const rawContent = response?.choices?.[0]?.message?.content;
         const raw = typeof rawContent === "string" ? rawContent : null;
-        if (!raw) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Erreur LLM" });
+        if (!raw)
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: "Erreur LLM",
+          });
         let parsedBreakdown: any;
         try {
           parsedBreakdown = JSON.parse(raw);
         } catch {
-          throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Réponse LLM invalide" });
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: "Réponse LLM invalide",
+          });
         }
         return { success: true, data: parsedBreakdown };
       }),
@@ -651,7 +805,10 @@ Règles:
       .query(async ({ ctx, input }) => {
         const scenario = await getScenarioById(input.scenarioId);
         if (!scenario || scenario.userId !== ctx.user.id) {
-          throw new TRPCError({ code: "NOT_FOUND", message: "Scénario introuvable" });
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Scénario introuvable",
+          });
         }
         return getBudgetForScenario(input.scenarioId);
       }),
@@ -661,14 +818,20 @@ Règles:
       .mutation(async ({ ctx, input }) => {
         const scenario = await getScenarioById(input.scenarioId);
         if (!scenario || scenario.userId !== ctx.user.id) {
-          throw new TRPCError({ code: "NOT_FOUND", message: "Scénario introuvable" });
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Scénario introuvable",
+          });
         }
         const scenes = await getScenesByScenarioId(input.scenarioId);
         const characters = await getCharactersByScenarioId(input.scenarioId);
         const sequences = await getSequences(input.scenarioId);
 
         const scenesText = scenes
-          .map((s, i) => `Séquence ${i + 1}: ${s.intExt || ""} ${s.location || ""} - ${s.dayNight || ""} | ${s.description?.substring(0, 200) || ""}`)
+          .map(
+            (s, i) =>
+              `Séquence ${i + 1}: ${s.intExt || ""} ${s.location || ""} - ${s.dayNight || ""} | ${s.description?.substring(0, 200) || ""}`
+          )
           .join("\n");
 
         const prompt = `Tu es un expert en direction de production cinéma en France. Analyse ce scénario et génère un plan de production complet.
@@ -725,7 +888,11 @@ Règles importantes:
 
         const response = await invokeLLM({
           messages: [
-            { role: "system", content: "Tu es un expert en production cinématographique française. Réponds uniquement en JSON valide." },
+            {
+              role: "system",
+              content:
+                "Tu es un expert en production cinématographique française. Réponds uniquement en JSON valide.",
+            },
             { role: "user", content: prompt },
           ],
           response_format: { type: "json_object" },
@@ -733,18 +900,32 @@ Règles importantes:
 
         const rawContent = response?.choices?.[0]?.message?.content;
         const raw = typeof rawContent === "string" ? rawContent : null;
-        if (!raw) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Erreur LLM" });
+        if (!raw)
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: "Erreur LLM",
+          });
         let parsed: any;
         try {
-          parsed = JSON.parse(raw);;
+          parsed = JSON.parse(raw);
         } catch {
-          throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Réponse LLM invalide" });
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: "Réponse LLM invalide",
+          });
         }
 
         // Calculate totals
         const team = parsed.team || [];
-        const totalEco = team.reduce((sum: number, m: any) => sum + (m.daysEco || 0) * (m.rateEco || 0), 0);
-        const totalConfort = team.reduce((sum: number, m: any) => sum + (m.daysConfort || 0) * (m.rateConfort || 0), 0);
+        const totalEco = team.reduce(
+          (sum: number, m: any) => sum + (m.daysEco || 0) * (m.rateEco || 0),
+          0
+        );
+        const totalConfort = team.reduce(
+          (sum: number, m: any) =>
+            sum + (m.daysConfort || 0) * (m.rateConfort || 0),
+          0
+        );
 
         await saveBudget(
           input.scenarioId,
@@ -758,68 +939,431 @@ Règles importantes:
         return { success: true, data: parsed, totalEco, totalConfort };
       }),
     exportExcel: protectedProcedure
-      .input(z.object({ scenarioId: z.number(), version: z.enum(['eco', 'confort']) }))
+      .input(
+        z.object({
+          scenarioId: z.number(),
+          version: z.enum(["eco", "confort"]),
+        })
+      )
       .mutation(async ({ ctx, input }) => {
         const scenario = await getScenarioById(input.scenarioId);
         if (!scenario || scenario.userId !== ctx.user.id) {
-          throw new TRPCError({ code: 'NOT_FOUND', message: 'Scénario introuvable' });
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Scénario introuvable",
+          });
         }
         const budget = await getBudgetForScenario(input.scenarioId);
-        if (!budget) throw new TRPCError({ code: 'NOT_FOUND', message: 'Budget not found' });
-        
-        const parsed = JSON.parse(budget.content || '{}');
+        if (!budget)
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Budget not found",
+          });
+
+        const parsed = JSON.parse(budget.content || "{}");
         const team = parsed.team || [];
-        
+
         // Créer un objet Excel simple avec les données du budget
         const excelData = {
           title: scenario.title,
-          screenwriterName: scenario.screenwriterName ?? 'N/A',
-          durationLabel: scenario.durationSeconds ? `${Math.floor(scenario.durationSeconds / 60)}min ${scenario.durationSeconds % 60}s` : 'N/A',
+          screenwriterName: scenario.screenwriterName ?? "N/A",
+          durationLabel: scenario.durationSeconds
+            ? `${Math.floor(scenario.durationSeconds / 60)}min ${scenario.durationSeconds % 60}s`
+            : "N/A",
           shootingDays: parsed.shootingDays || 0,
           pagesPerDay: parsed.pagesPerDay || 0,
           version: input.version,
-          team: team
+          team: team,
         };
-        
+
         // Convertir en CSV simple pour l'export
-        let csv = 'BUDGET DE PRODUCTION\n\n';
+        let csv = "BUDGET DE PRODUCTION\n\n";
         csv += `Titre,${excelData.title}\n`;
-        csv += `Scénariste,${excelData.screenwriterName ?? 'N/A'}\n`;
+        csv += `Scénariste,${excelData.screenwriterName ?? "N/A"}\n`;
         csv += `Durée,${excelData.durationLabel}\n`;
         csv += `Jours de tournage,${excelData.shootingDays}\n`;
         csv += `Pages/jour,${excelData.pagesPerDay}\n`;
         csv += `Version,${excelData.version}\n\n`;
-        
-        csv += 'ÉQUIPE\n';
-        csv += 'Département,Fonction,Jours,Tarif/jour,Coût total\n';
-        
+
+        csv += "ÉQUIPE\n";
+        csv += "Département,Fonction,Jours,Tarif/jour,Coût total\n";
+
         let totalCost = 0;
         for (const member of team) {
-          const days = input.version === 'eco' ? member.daysEco : member.daysConfort;
-          const rate = input.version === 'eco' ? member.rateEco : member.rateConfort;
+          const days =
+            input.version === "eco" ? member.daysEco : member.daysConfort;
+          const rate =
+            input.version === "eco" ? member.rateEco : member.rateConfort;
           const cost = days * rate;
           totalCost += cost;
           csv += `${member.department},${member.role},${days},${rate},${cost}\n`;
         }
-        
+
         csv += `\nTOTAL,,,${totalCost}\n`;
-        
-        return { csv, filename: `${scenario.title}-Budget-${input.version}.csv` };
+
+        return {
+          csv,
+          filename: `${scenario.title}-Budget-${input.version}.csv`,
+        };
       }),
+  }),
+
+  // ─── Commercial Module (Gestion Commerciale) ──────────────────────────────────
+  commercial: router({
+    // Clients
+    clients: router({
+      list: protectedProcedure.query(async ({ ctx }) => {
+        const { getClientsByUserId } = await import("./db");
+        return await getClientsByUserId(ctx.user.id);
+      }),
+      create: protectedProcedure
+        .input(
+          z.object({
+            type: z.enum(["particulier", "entreprise"]),
+            name: z.string(),
+            address: z.string().optional(),
+            email: z.string().email().optional(),
+            phone: z.string().optional(),
+            siret: z.string().optional(),
+            vatNumber: z.string().optional(),
+          })
+        )
+        .mutation(async ({ ctx, input }) => {
+          const { createClient } = await import("./db");
+          return await createClient({
+            userId: ctx.user.id,
+            ...input,
+          });
+        }),
+      get: protectedProcedure
+        .input(z.object({ clientId: z.number() }))
+        .query(async ({ input }) => {
+          const { getClientById } = await import("./db");
+          return await getClientById(input.clientId);
+        }),
+      update: protectedProcedure
+        .input(
+          z.object({
+            clientId: z.number(),
+            data: z.object({
+              type: z.enum(["particulier", "entreprise"]).optional(),
+              name: z.string().optional(),
+              address: z.string().optional(),
+              email: z.string().email().optional(),
+              phone: z.string().optional(),
+              siret: z.string().optional(),
+              vatNumber: z.string().optional(),
+            }),
+          })
+        )
+        .mutation(async ({ input }) => {
+          const { updateClient } = await import("./db");
+          return await updateClient(input.clientId, input.data);
+        }),
+      delete: protectedProcedure
+        .input(z.object({ clientId: z.number() }))
+        .mutation(async ({ input }) => {
+          const { deleteClient } = await import("./db");
+          return await deleteClient(input.clientId);
+        }),
+    }),
+
+    // Products
+    products: router({
+      list: protectedProcedure.query(async ({ ctx }) => {
+        const { getProductsByUserId } = await import("./db");
+        return await getProductsByUserId(ctx.user.id);
+      }),
+      create: protectedProcedure
+        .input(
+          z.object({
+            name: z.string(),
+            description: z.string().optional(),
+            priceHT: z.number(),
+            vatRate: z.number().default(20),
+            unit: z.enum(["heure", "jour", "forfait"]),
+          })
+        )
+        .mutation(async ({ ctx, input }) => {
+          const { createProduct } = await import("./db");
+          return await createProduct({
+            userId: ctx.user.id,
+            ...input,
+          });
+        }),
+      get: protectedProcedure
+        .input(z.object({ productId: z.number() }))
+        .query(async ({ input }) => {
+          const { getProductById } = await import("./db");
+          return await getProductById(input.productId);
+        }),
+      update: protectedProcedure
+        .input(
+          z.object({
+            productId: z.number(),
+            data: z.object({
+              name: z.string().optional(),
+              description: z.string().optional(),
+              priceHT: z.number().optional(),
+              vatRate: z.number().optional(),
+              unit: z.enum(["heure", "jour", "forfait"]).optional(),
+            }),
+          })
+        )
+        .mutation(async ({ input }) => {
+          const { updateProduct } = await import("./db");
+          return await updateProduct(input.productId, input.data);
+        }),
+      delete: protectedProcedure
+        .input(z.object({ productId: z.number() }))
+        .mutation(async ({ input }) => {
+          const { deleteProduct } = await import("./db");
+          return await deleteProduct(input.productId);
+        }),
+    }),
+
+    // Quotes (Devis)
+    quotes: router({
+      list: protectedProcedure.query(async ({ ctx }) => {
+        const { getQuotesByUserId } = await import("./db");
+        return await getQuotesByUserId(ctx.user.id);
+      }),
+      create: protectedProcedure
+        .input(
+          z.object({
+            clientId: z.number(),
+            validityDate: z.date().optional(),
+            paymentTerms: z.string().optional(),
+          })
+        )
+        .mutation(async ({ ctx, input }) => {
+          const { createQuote, generateNextNumber } = await import("./db");
+          const number = await generateNextNumber("DV", ctx.user.id);
+          return await createQuote({
+            userId: ctx.user.id,
+            clientId: input.clientId,
+            number,
+            validityDate: input.validityDate,
+            paymentTerms: input.paymentTerms,
+          });
+        }),
+      get: protectedProcedure
+        .input(z.object({ quoteId: z.number() }))
+        .query(async ({ input }) => {
+          const { getQuoteById, getQuoteLines } = await import("./db");
+          const quote = await getQuoteById(input.quoteId);
+          if (!quote) return null;
+          const lines = await getQuoteLines(input.quoteId);
+          return { ...quote, lines };
+        }),
+      update: protectedProcedure
+        .input(
+          z.object({
+            quoteId: z.number(),
+            data: z.object({
+              status: z
+                .enum(["brouillon", "envoyé", "accepté", "refusé"])
+                .optional(),
+              totalHT: z.number().optional(),
+              totalVAT: z.number().optional(),
+              totalTTC: z.number().optional(),
+              paymentTerms: z.string().optional(),
+            }),
+          })
+        )
+        .mutation(async ({ input }) => {
+          const { updateQuote } = await import("./db");
+          return await updateQuote(input.quoteId, input.data);
+        }),
+      delete: protectedProcedure
+        .input(z.object({ quoteId: z.number() }))
+        .mutation(async ({ input }) => {
+          const { deleteQuote } = await import("./db");
+          return await deleteQuote(input.quoteId);
+        }),
+      addLine: protectedProcedure
+        .input(
+          z.object({
+            quoteId: z.number(),
+            productId: z.number(),
+            quantity: z.number(),
+            unitPriceHT: z.number(),
+            vatRate: z.number(),
+          })
+        )
+        .mutation(async ({ input }) => {
+          const { createQuoteLine } = await import("./db");
+          const lineTotal = input.quantity * input.unitPriceHT;
+          return await createQuoteLine({
+            quoteId: input.quoteId,
+            productId: input.productId,
+            quantity: input.quantity,
+            unitPriceHT: input.unitPriceHT,
+            vatRate: input.vatRate,
+            lineTotal,
+          });
+        }),
+      removeLine: protectedProcedure
+        .input(z.object({ lineId: z.number() }))
+        .mutation(async ({ input }) => {
+          const { deleteQuoteLine } = await import("./db");
+          return await deleteQuoteLine(input.lineId);
+        }),
+    }),
+
+    // Invoices (Factures)
+    invoices: router({
+      list: protectedProcedure.query(async ({ ctx }) => {
+        const { getInvoicesByUserId } = await import("./db");
+        return await getInvoicesByUserId(ctx.user.id);
+      }),
+      create: protectedProcedure
+        .input(
+          z.object({
+            clientId: z.number(),
+            quoteId: z.number().optional(),
+            dueDate: z.date().optional(),
+            paymentMethod: z.string().optional(),
+          })
+        )
+        .mutation(async ({ ctx, input }) => {
+          const { createInvoice, generateNextNumber } = await import("./db");
+          const number = await generateNextNumber("FA", ctx.user.id);
+          return await createInvoice({
+            userId: ctx.user.id,
+            clientId: input.clientId,
+            quoteId: input.quoteId,
+            number,
+            dueDate: input.dueDate,
+            paymentMethod: input.paymentMethod,
+          });
+        }),
+      get: protectedProcedure
+        .input(z.object({ invoiceId: z.number() }))
+        .query(async ({ input }) => {
+          const { getInvoiceById, getInvoiceLines } = await import("./db");
+          const invoice = await getInvoiceById(input.invoiceId);
+          if (!invoice) return null;
+          const lines = await getInvoiceLines(input.invoiceId);
+          return { ...invoice, lines };
+        }),
+      update: protectedProcedure
+        .input(
+          z.object({
+            invoiceId: z.number(),
+            data: z.object({
+              status: z
+                .enum(["brouillon", "envoyée", "payée", "en retard"])
+                .optional(),
+              totalHT: z.number().optional(),
+              totalVAT: z.number().optional(),
+              totalTTC: z.number().optional(),
+              paymentMethod: z.string().optional(),
+              paymentDate: z.date().optional(),
+            }),
+          })
+        )
+        .mutation(async ({ input }) => {
+          const { updateInvoice } = await import("./db");
+          return await updateInvoice(input.invoiceId, input.data);
+        }),
+      delete: protectedProcedure
+        .input(z.object({ invoiceId: z.number() }))
+        .mutation(async ({ input }) => {
+          const { deleteInvoice } = await import("./db");
+          return await deleteInvoice(input.invoiceId);
+        }),
+      addLine: protectedProcedure
+        .input(
+          z.object({
+            invoiceId: z.number(),
+            productId: z.number(),
+            quantity: z.number(),
+            unitPriceHT: z.number(),
+            vatRate: z.number(),
+          })
+        )
+        .mutation(async ({ input }) => {
+          const { createInvoiceLine } = await import("./db");
+          const lineTotal = input.quantity * input.unitPriceHT;
+          return await createInvoiceLine({
+            invoiceId: input.invoiceId,
+            productId: input.productId,
+            quantity: input.quantity,
+            unitPriceHT: input.unitPriceHT,
+            vatRate: input.vatRate,
+            lineTotal,
+          });
+        }),
+      removeLine: protectedProcedure
+        .input(z.object({ lineId: z.number() }))
+        .mutation(async ({ input }) => {
+          const { deleteInvoiceLine } = await import("./db");
+          return await deleteInvoiceLine(input.lineId);
+        }),
+    }),
+
+    // Credits (Avoirs)
+    credits: router({
+      list: protectedProcedure.query(async ({ ctx }) => {
+        const { getCreditsByUserId } = await import("./db");
+        return await getCreditsByUserId(ctx.user.id);
+      }),
+      create: protectedProcedure
+        .input(
+          z.object({
+            invoiceId: z.number(),
+            amount: z.number(),
+            reason: z.string().optional(),
+          })
+        )
+        .mutation(async ({ ctx, input }) => {
+          const { createCredit, generateNextNumber } = await import("./db");
+          const number = await generateNextNumber("AV", ctx.user.id);
+          return await createCredit({
+            userId: ctx.user.id,
+            invoiceId: input.invoiceId,
+            number,
+            amount: input.amount,
+            reason: input.reason,
+          });
+        }),
+      get: protectedProcedure
+        .input(z.object({ creditId: z.number() }))
+        .query(async ({ input }) => {
+          const { getCreditById } = await import("./db");
+          return await getCreditById(input.creditId);
+        }),
+      delete: protectedProcedure
+        .input(z.object({ creditId: z.number() }))
+        .mutation(async ({ input }) => {
+          const { deleteCredit } = await import("./db");
+          return await deleteCredit(input.creditId);
+        }),
+    }),
   }),
 });
 
 export type AppRouter = typeof appRouter;
 
 // ─── Background processing ───────────────────────────────────────────────────
-async function processScenario(scenarioId: number, fileUrl: string, fileName: string) {
+async function processScenario(
+  scenarioId: number,
+  fileUrl: string,
+  fileName: string
+) {
   try {
     await updateScenarioStatus(scenarioId, "processing");
 
     const parsed = await parseScenarioWithLLM(fileUrl, fileName);
 
     // Update scenario title and screenwriter info if LLM found them
-    if (parsed.title || parsed.screenwriterName || parsed.screenwriterEmail || parsed.screenwriterPhone) {
+    if (
+      parsed.title ||
+      parsed.screenwriterName ||
+      parsed.screenwriterEmail ||
+      parsed.screenwriterPhone
+    ) {
       const { getDb } = await import("./db");
       const db = await getDb();
       if (db) {
@@ -827,10 +1371,16 @@ async function processScenario(scenarioId: number, fileUrl: string, fileName: st
         const { eq } = await import("drizzle-orm");
         const updateData: Record<string, string | null> = {};
         if (parsed.title) updateData.title = parsed.title;
-        if (parsed.screenwriterName !== undefined) updateData.screenwriterName = parsed.screenwriterName;
-        if (parsed.screenwriterEmail !== undefined) updateData.screenwriterEmail = parsed.screenwriterEmail;
-        if (parsed.screenwriterPhone !== undefined) updateData.screenwriterPhone = parsed.screenwriterPhone;
-        await db.update(scenarios).set(updateData).where(eq(scenarios.id, scenarioId));
+        if (parsed.screenwriterName !== undefined)
+          updateData.screenwriterName = parsed.screenwriterName;
+        if (parsed.screenwriterEmail !== undefined)
+          updateData.screenwriterEmail = parsed.screenwriterEmail;
+        if (parsed.screenwriterPhone !== undefined)
+          updateData.screenwriterPhone = parsed.screenwriterPhone;
+        await db
+          .update(scenarios)
+          .set(updateData)
+          .where(eq(scenarios.id, scenarioId));
       }
     }
 
@@ -838,7 +1388,12 @@ async function processScenario(scenarioId: number, fileUrl: string, fileName: st
     const charNameToId = new Map<string, number>();
     if (parsed.characters.length > 0) {
       const charIds = await insertCharacters(
-        parsed.characters.map((c) => ({ scenarioId, name: c.name, gender: c.gender, age: c.age }))
+        parsed.characters.map(c => ({
+          scenarioId,
+          name: c.name,
+          gender: c.gender,
+          age: c.age,
+        }))
       );
       parsed.characters.forEach((c, i) => {
         charNameToId.set(c.name.toUpperCase(), charIds[i]);
@@ -891,7 +1446,7 @@ async function processScenario(scenarioId: number, fileUrl: string, fileName: st
     const propNameToId = new Map<string, number>();
     if (parsed.props && parsed.props.length > 0) {
       const propIds = await insertProps(
-        parsed.props.map((p) => ({ scenarioId, name: p }))
+        parsed.props.map(p => ({ scenarioId, name: p }))
       );
       parsed.props.forEach((p, i) => {
         propNameToId.set(p.toUpperCase(), propIds[i]);
@@ -905,7 +1460,7 @@ async function processScenario(scenarioId: number, fileUrl: string, fileName: st
     if (parsed.props.length > 0 && scenes.length > 0) {
       const { invokeLLM } = await import("./_core/llm");
       const propsStr = parsed.props.join(", ");
-      
+
       for (const scene of scenes) {
         const sceneText = scene.description || "";
         if (sceneText.trim().length > 10) {
@@ -914,15 +1469,15 @@ async function processScenario(scenarioId: number, fileUrl: string, fileName: st
               messages: [
                 {
                   role: "system",
-                  content: `Tu es un assistant de production cinéma. Analyse la description de scène et identifie quels accessoires de la liste fournie sont utilisés dans cette scène. Réponds UNIQUEMENT avec un JSON valide: {"props": ["accessoire1", "accessoire2"]}`
+                  content: `Tu es un assistant de production cinéma. Analyse la description de scène et identifie quels accessoires de la liste fournie sont utilisés dans cette scène. Réponds UNIQUEMENT avec un JSON valide: {"props": ["accessoire1", "accessoire2"]}`,
                 },
                 {
                   role: "user",
-                  content: `Scène: ${sceneText.slice(0, 1000)}\n\nAccessoires disponibles: ${propsStr}`
-                }
-              ]
+                  content: `Scène: ${sceneText.slice(0, 1000)}\n\nAccessoires disponibles: ${propsStr}`,
+                },
+              ],
             });
-            
+
             const content = resp?.choices?.[0]?.message?.content;
             if (content && typeof content === "string") {
               try {
@@ -952,20 +1507,24 @@ async function processScenario(scenarioId: number, fileUrl: string, fileName: st
     for (let i = 0; i < scenes.length; i++) {
       const scene = scenes[i];
       const sequenceName = `${scene.intExt ? scene.intExt + ". " : ""}${scene.location || "Sc\u00e8ne " + scene.sceneNumber}`;
-      await insertSequences([{
-        scenarioId,
-        name: sequenceName,
-        orderIndex: i,
-      }]);
+      await insertSequences([
+        {
+          scenarioId,
+          name: sequenceName,
+          orderIndex: i,
+        },
+      ]);
     }
-    
+
     // Link scenes to sequences and generate summaries
     const updatedSequences = await getSequences(scenarioId);
     for (let i = 0; i < scenes.length && i < updatedSequences.length; i++) {
       const scene = scenes[i];
       const sequence = updatedSequences[i];
       if (sequence && sequence.id) {
-        await insertSequenceScenes([{ sequenceId: sequence.id, sceneId: scene.id }]);
+        await insertSequenceScenes([
+          { sequenceId: sequence.id, sceneId: scene.id },
+        ]);
         // Generate a short summary for this scene/sequence
         try {
           const sceneText = scene.description || "";
@@ -973,12 +1532,17 @@ async function processScenario(scenarioId: number, fileUrl: string, fileName: st
             const { invokeLLM } = await import("./_core/llm");
             const summaryResp = await invokeLLM({
               messages: [
-                { role: "system", content: "Tu es un assistant de production cin\u00e9ma. R\u00e9sume la sc\u00e8ne suivante en 1 ou 2 phrases courtes et pr\u00e9cises, en fran\u00e7ais, de mani\u00e8re factuelle (qui fait quoi, o\u00f9)." },
+                {
+                  role: "system",
+                  content:
+                    "Tu es un assistant de production cin\u00e9ma. R\u00e9sume la sc\u00e8ne suivante en 1 ou 2 phrases courtes et pr\u00e9cises, en fran\u00e7ais, de mani\u00e8re factuelle (qui fait quoi, o\u00f9).",
+                },
                 { role: "user", content: sceneText.slice(0, 1500) },
               ],
             });
             const rawContent = summaryResp?.choices?.[0]?.message?.content;
-            const summary = typeof rawContent === "string" ? rawContent.trim() : "";
+            const summary =
+              typeof rawContent === "string" ? rawContent.trim() : "";
             if (summary) await updateSequenceSummary(sequence.id, summary);
           }
         } catch (e) {
@@ -997,7 +1561,10 @@ async function processScenario(scenarioId: number, fileUrl: string, fileName: st
       await calculateAndSaveScenarioDuration(scenarioId);
     } catch (e) {
       // Non-blocking: skip duration calculation if it fails
-      console.warn(`[Scenario] Duration calculation failed for ${scenarioId}:`, e);
+      console.warn(
+        `[Scenario] Duration calculation failed for ${scenarioId}:`,
+        e
+      );
     }
   } catch (err: any) {
     console.error(`[Scenario] Processing failed for ${scenarioId}:`, err);
@@ -1020,7 +1587,10 @@ async function generateSynopsis(scenarioId: number) {
 
     // Build a text summary of all scenes
     const scenesText = scenes
-      .map((s, i) => `Scène ${i + 1} (${s.intExt || ""} ${s.location || ""} - ${s.dayNight || ""}): ${s.description || ""}`)
+      .map(
+        (s, i) =>
+          `Scène ${i + 1} (${s.intExt || ""} ${s.location || ""} - ${s.dayNight || ""}): ${s.description || ""}`
+      )
       .join("\n\n");
 
     const { invokeLLM } = await import("./_core/llm");
@@ -1049,10 +1619,12 @@ Le synopsis doit:
       await updateScenarioSynopsis(scenarioId, synopsis);
     }
   } catch (err) {
-    console.error(`[Synopsis] Generation failed for scenario ${scenarioId}:`, err);
+    console.error(
+      `[Synopsis] Generation failed for scenario ${scenarioId}:`,
+      err
+    );
   }
 }
-
 
 // Backfill scene_props for a prop if not already done
 async function backfillScenePropsForProp(propId: number) {
@@ -1068,18 +1640,28 @@ async function backfillScenePropsForProp(propId: number) {
     const { eq, count } = await import("drizzle-orm");
 
     // Check if this prop already has scene associations
-    const existing = await db.select({ count: count() }).from(sceneProps).where(eq(sceneProps.propId, propId));
+    const existing = await db
+      .select({ count: count() })
+      .from(sceneProps)
+      .where(eq(sceneProps.propId, propId));
     if (existing[0]?.count > 0) return; // Already backfilled
 
     // Get the prop details
-    const prop = await db.select().from(props).where(eq(props.id, propId)).limit(1);
+    const prop = await db
+      .select()
+      .from(props)
+      .where(eq(props.id, propId))
+      .limit(1);
     if (!prop || prop.length === 0) return;
 
     const propName = prop[0].name;
     const scenarioId = prop[0].scenarioId;
 
     // Get all scenes for this scenario
-    const allScenes = await db.select().from(scenes).where(eq(scenes.scenarioId, scenarioId));
+    const allScenes = await db
+      .select()
+      .from(scenes)
+      .where(eq(scenes.scenarioId, scenarioId));
     if (allScenes.length === 0) return;
 
     // Use LLM to associate prop to scenes
@@ -1094,13 +1676,13 @@ async function backfillScenePropsForProp(propId: number) {
             messages: [
               {
                 role: "system",
-                content: `Tu es un assistant de production cinéma. Analyse la description de scène et détermine si l'accessoire "${propName}" est utilisé dans cette scène. Réponds UNIQUEMENT avec un JSON valide: {"used": true} ou {"used": false}`
+                content: `Tu es un assistant de production cinéma. Analyse la description de scène et détermine si l'accessoire "${propName}" est utilisé dans cette scène. Réponds UNIQUEMENT avec un JSON valide: {"used": true} ou {"used": false}`,
               },
               {
                 role: "user",
-                content: `Accessoire: ${propName}\n\nDescription de scène: ${sceneText.slice(0, 1000)}`
-              }
-            ]
+                content: `Accessoire: ${propName}\n\nDescription de scène: ${sceneText.slice(0, 1000)}`,
+              },
+            ],
           });
 
           const content = resp?.choices?.[0]?.message?.content;

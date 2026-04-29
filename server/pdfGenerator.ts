@@ -40,8 +40,12 @@ function escapeHtml(str: string): string {
 
 export function generateBreakdownHtml(data: PdfBreakdownData): string {
   const sequencesHtml = data.scenes
-    .map((scene) => {
-      const heading = [scene.intExt, scene.location, scene.dayNight ? `— ${scene.dayNight}` : null]
+    .map(scene => {
+      const heading = [
+        scene.intExt,
+        scene.location,
+        scene.dayNight ? `— ${scene.dayNight}` : null,
+      ]
         .filter(Boolean)
         .join(" ");
       return `<tr>
@@ -52,13 +56,19 @@ export function generateBreakdownHtml(data: PdfBreakdownData): string {
     })
     .join("");
 
-  const charactersHtml = data.characters.length > 0
-    ? data.characters.map((c) => `<span class="badge">${escapeHtml(c)}</span>`).join("")
-    : "<span class='empty'>Aucun personnage</span>";
+  const charactersHtml =
+    data.characters.length > 0
+      ? data.characters
+          .map(c => `<span class="badge">${escapeHtml(c)}</span>`)
+          .join("")
+      : "<span class='empty'>Aucun personnage</span>";
 
-  const locationsHtml = data.uniqueLocations.length > 0
-    ? data.uniqueLocations.map((l) => `<span class="badge loc">${escapeHtml(l)}</span>`).join("")
-    : "<span class='empty'>Aucun lieu</span>";
+  const locationsHtml =
+    data.uniqueLocations.length > 0
+      ? data.uniqueLocations
+          .map(l => `<span class="badge loc">${escapeHtml(l)}</span>`)
+          .join("")
+      : "<span class='empty'>Aucun lieu</span>";
 
   return `<!DOCTYPE html>
 <html lang="fr">
@@ -268,4 +278,470 @@ export function generateBreakdownHtml(data: PdfBreakdownData): string {
 
 </body>
 </html>`;
+}
+
+/**
+ * ==========================================
+ * COMMERCIAL PDF GENERATION
+ * ==========================================
+ */
+
+import { PDFDocument, rgb } from "pdf-lib";
+import {
+  formatEuro,
+  formatDateFR,
+  generateLegalMentions,
+} from "./commercialUtils";
+
+export interface QuoteData {
+  number: string;
+  date: Date;
+  validityDate: Date;
+  client: {
+    name: string;
+    type: "particulier" | "entreprise";
+    siret?: string;
+    vatNumber?: string;
+    address?: string;
+    email?: string;
+    phone?: string;
+  };
+  lines: Array<{
+    description: string;
+    quantity: number;
+    unitPriceHT: number;
+    vatRate: number;
+  }>;
+  totalHT: number;
+  totalVAT: number;
+  totalTTC: number;
+  paymentTerms?: string;
+  companyInfo: {
+    name: string;
+    siret?: string;
+    vatNumber?: string;
+    address?: string;
+    phone?: string;
+    email?: string;
+  };
+}
+
+export interface InvoiceData extends QuoteData {
+  invoiceNumber: string;
+  dueDate: Date;
+  status: string;
+}
+
+/**
+ * Génère un PDF de devis
+ */
+export async function generateQuotePDF(data: QuoteData): Promise<Buffer> {
+  const pdfDoc = await PDFDocument.create();
+  const page = pdfDoc.addPage([595, 842]); // A4
+  const { width, height } = page.getSize();
+
+  let yPosition = height - 50;
+
+  // En-tête
+  page.drawText("DEVIS", {
+    x: 50,
+    y: yPosition,
+    size: 24,
+    color: rgb(0, 0, 0),
+  });
+
+  yPosition -= 40;
+
+  // Informations entreprise
+  page.drawText(data.companyInfo.name, {
+    x: 50,
+    y: yPosition,
+    size: 10,
+    color: rgb(0, 0, 0),
+  });
+  yPosition -= 15;
+
+  if (data.companyInfo.siret) {
+    page.drawText(`SIRET: ${data.companyInfo.siret}`, {
+      x: 50,
+      y: yPosition,
+      size: 9,
+      color: rgb(100, 100, 100),
+    });
+    yPosition -= 12;
+  }
+
+  if (data.companyInfo.address) {
+    page.drawText(data.companyInfo.address, {
+      x: 50,
+      y: yPosition,
+      size: 9,
+      color: rgb(100, 100, 100),
+    });
+    yPosition -= 12;
+  }
+
+  // Numéro et date
+  yPosition -= 20;
+  page.drawText(`Devis n°: ${data.number}`, {
+    x: 50,
+    y: yPosition,
+    size: 11,
+    color: rgb(0, 0, 0),
+  });
+  yPosition -= 15;
+
+  page.drawText(`Date: ${formatDateFR(data.date)}`, {
+    x: 50,
+    y: yPosition,
+    size: 10,
+    color: rgb(100, 100, 100),
+  });
+  yPosition -= 12;
+
+  page.drawText(`Validité: ${formatDateFR(data.validityDate)}`, {
+    x: 50,
+    y: yPosition,
+    size: 10,
+    color: rgb(100, 100, 100),
+  });
+
+  // Informations client
+  yPosition -= 30;
+  page.drawText("CLIENT", {
+    x: 50,
+    y: yPosition,
+    size: 11,
+    color: rgb(0, 0, 0),
+  });
+  yPosition -= 15;
+
+  page.drawText(data.client.name, {
+    x: 50,
+    y: yPosition,
+    size: 10,
+    color: rgb(0, 0, 0),
+  });
+  yPosition -= 12;
+
+  if (data.client.siret) {
+    page.drawText(`SIRET: ${data.client.siret}`, {
+      x: 50,
+      y: yPosition,
+      size: 9,
+      color: rgb(100, 100, 100),
+    });
+    yPosition -= 12;
+  }
+
+  if (data.client.address) {
+    page.drawText(data.client.address, {
+      x: 50,
+      y: yPosition,
+      size: 9,
+      color: rgb(100, 100, 100),
+    });
+    yPosition -= 12;
+  }
+
+  // Tableau des lignes
+  yPosition -= 20;
+  const colX = [50, 250, 400, 500];
+
+  // En-tête du tableau
+  page.drawRectangle({
+    x: 40,
+    y: yPosition - 12,
+    width: 515,
+    height: 20,
+    color: rgb(0, 102, 204),
+  });
+
+  page.drawText("Description", {
+    x: colX[0],
+    y: yPosition,
+    size: 10,
+    color: rgb(255, 255, 255),
+  });
+  page.drawText("Qté", {
+    x: colX[1],
+    y: yPosition,
+    size: 10,
+    color: rgb(255, 255, 255),
+  });
+  page.drawText("PU HT", {
+    x: colX[2],
+    y: yPosition,
+    size: 10,
+    color: rgb(255, 255, 255),
+  });
+  page.drawText("Total HT", {
+    x: colX[3],
+    y: yPosition,
+    size: 10,
+    color: rgb(255, 255, 255),
+  });
+
+  yPosition -= 25;
+
+  // Lignes
+  for (const line of data.lines) {
+    const lineTotal = line.quantity * line.unitPriceHT;
+    page.drawText(line.description, { x: colX[0], y: yPosition, size: 9 });
+    page.drawText(line.quantity.toString(), {
+      x: colX[1],
+      y: yPosition,
+      size: 9,
+    });
+    page.drawText(formatEuro(line.unitPriceHT), {
+      x: colX[2],
+      y: yPosition,
+      size: 9,
+    });
+    page.drawText(formatEuro(lineTotal), { x: colX[3], y: yPosition, size: 9 });
+    yPosition -= 15;
+  }
+
+  // Totaux
+  yPosition -= 10;
+  page.drawText(`Total HT: ${formatEuro(data.totalHT)}`, {
+    x: 400,
+    y: yPosition,
+    size: 10,
+    color: rgb(0, 0, 0),
+  });
+  yPosition -= 15;
+
+  page.drawText(`TVA: ${formatEuro(data.totalVAT)}`, {
+    x: 400,
+    y: yPosition,
+    size: 10,
+    color: rgb(0, 0, 0),
+  });
+  yPosition -= 15;
+
+  page.drawText(`Total TTC: ${formatEuro(data.totalTTC)}`, {
+    x: 400,
+    y: yPosition,
+    size: 12,
+    color: rgb(0, 102, 204),
+  });
+
+  // Mentions légales
+  yPosition -= 40;
+  const legalText = generateLegalMentions(data.companyInfo);
+  const legalLines = legalText.split("\n");
+  for (const line of legalLines) {
+    page.drawText(line, {
+      x: 50,
+      y: yPosition,
+      size: 8,
+      color: rgb(100, 100, 100),
+    });
+    yPosition -= 10;
+  }
+
+  const pdfBytes = await pdfDoc.save();
+  return Buffer.from(pdfBytes);
+}
+
+/**
+ * Génère un PDF de facture
+ */
+export async function generateInvoicePDF(data: InvoiceData): Promise<Buffer> {
+  const pdfDoc = await PDFDocument.create();
+  const page = pdfDoc.addPage([595, 842]); // A4
+  const { width, height } = page.getSize();
+
+  let yPosition = height - 50;
+
+  // En-tête
+  page.drawText("FACTURE", {
+    x: 50,
+    y: yPosition,
+    size: 24,
+    color: rgb(0, 0, 0),
+  });
+
+  yPosition -= 40;
+
+  // Informations entreprise
+  page.drawText(data.companyInfo.name, {
+    x: 50,
+    y: yPosition,
+    size: 10,
+    color: rgb(0, 0, 0),
+  });
+  yPosition -= 15;
+
+  if (data.companyInfo.siret) {
+    page.drawText(`SIRET: ${data.companyInfo.siret}`, {
+      x: 50,
+      y: yPosition,
+      size: 9,
+      color: rgb(100, 100, 100),
+    });
+    yPosition -= 12;
+  }
+
+  // Numéro et dates
+  yPosition -= 20;
+  page.drawText(`Facture n°: ${data.invoiceNumber}`, {
+    x: 50,
+    y: yPosition,
+    size: 11,
+    color: rgb(0, 0, 0),
+  });
+  yPosition -= 15;
+
+  page.drawText(`Date d'émission: ${formatDateFR(data.date)}`, {
+    x: 50,
+    y: yPosition,
+    size: 10,
+    color: rgb(100, 100, 100),
+  });
+  yPosition -= 12;
+
+  page.drawText(`Date d'échéance: ${formatDateFR(data.dueDate)}`, {
+    x: 50,
+    y: yPosition,
+    size: 10,
+    color: rgb(100, 100, 100),
+  });
+  yPosition -= 12;
+
+  page.drawText(`Statut: ${data.status}`, {
+    x: 50,
+    y: yPosition,
+    size: 10,
+    color: data.status === "payée" ? rgb(0, 128, 0) : rgb(255, 0, 0),
+  });
+
+  // Informations client
+  yPosition -= 30;
+  page.drawText("CLIENT", {
+    x: 50,
+    y: yPosition,
+    size: 11,
+    color: rgb(0, 0, 0),
+  });
+  yPosition -= 15;
+
+  page.drawText(data.client.name, {
+    x: 50,
+    y: yPosition,
+    size: 10,
+    color: rgb(0, 0, 0),
+  });
+  yPosition -= 12;
+
+  if (data.client.address) {
+    page.drawText(data.client.address, {
+      x: 50,
+      y: yPosition,
+      size: 9,
+      color: rgb(100, 100, 100),
+    });
+    yPosition -= 12;
+  }
+
+  // Tableau des lignes
+  yPosition -= 20;
+  const colX = [50, 250, 400, 500];
+
+  // En-tête du tableau
+  page.drawRectangle({
+    x: 40,
+    y: yPosition - 12,
+    width: 515,
+    height: 20,
+    color: rgb(0, 102, 204),
+  });
+
+  page.drawText("Description", {
+    x: colX[0],
+    y: yPosition,
+    size: 10,
+    color: rgb(255, 255, 255),
+  });
+  page.drawText("Qté", {
+    x: colX[1],
+    y: yPosition,
+    size: 10,
+    color: rgb(255, 255, 255),
+  });
+  page.drawText("PU HT", {
+    x: colX[2],
+    y: yPosition,
+    size: 10,
+    color: rgb(255, 255, 255),
+  });
+  page.drawText("Total HT", {
+    x: colX[3],
+    y: yPosition,
+    size: 10,
+    color: rgb(255, 255, 255),
+  });
+
+  yPosition -= 25;
+
+  // Lignes
+  for (const line of data.lines) {
+    const lineTotal = line.quantity * line.unitPriceHT;
+    page.drawText(line.description, { x: colX[0], y: yPosition, size: 9 });
+    page.drawText(line.quantity.toString(), {
+      x: colX[1],
+      y: yPosition,
+      size: 9,
+    });
+    page.drawText(formatEuro(line.unitPriceHT), {
+      x: colX[2],
+      y: yPosition,
+      size: 9,
+    });
+    page.drawText(formatEuro(lineTotal), { x: colX[3], y: yPosition, size: 9 });
+    yPosition -= 15;
+  }
+
+  // Totaux
+  yPosition -= 10;
+  page.drawText(`Total HT: ${formatEuro(data.totalHT)}`, {
+    x: 400,
+    y: yPosition,
+    size: 10,
+    color: rgb(0, 0, 0),
+  });
+  yPosition -= 15;
+
+  page.drawText(`TVA: ${formatEuro(data.totalVAT)}`, {
+    x: 400,
+    y: yPosition,
+    size: 10,
+    color: rgb(0, 0, 0),
+  });
+  yPosition -= 15;
+
+  page.drawText(`Total TTC: ${formatEuro(data.totalTTC)}`, {
+    x: 400,
+    y: yPosition,
+    size: 12,
+    color: rgb(0, 102, 204),
+  });
+
+  // Mentions légales
+  yPosition -= 40;
+  const legalText = generateLegalMentions(data.companyInfo);
+  const legalLines = legalText.split("\n");
+  for (const line of legalLines) {
+    page.drawText(line, {
+      x: 50,
+      y: yPosition,
+      size: 8,
+      color: rgb(100, 100, 100),
+    });
+    yPosition -= 10;
+  }
+
+  const pdfBytes = await pdfDoc.save();
+  return Buffer.from(pdfBytes);
 }

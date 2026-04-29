@@ -33,7 +33,7 @@ export default function InvoicesTab() {
                 <div className="flex-1">
                   <h3 className="font-semibold text-slate-900">{invoice.number}</h3>
                   <p className="text-sm text-slate-600">Statut: {invoice.status}</p>
-                  <p className="text-sm text-slate-600">Total: {(invoice.totalTTC / 100).toFixed(2)}€ TTC</p>
+                  <p className="text-sm text-slate-600">Total: {invoice.totalTTC ? (invoice.totalTTC / 100).toFixed(2) : "0.00"}€ TTC</p>
                 </div>
                 <div className="flex gap-2">
                   <Button variant="outline" size="sm" className="gap-1">

@@ -294,9 +294,9 @@
 - [ ] Transformation devis → facture en 1 clic
 
 ### Phase 4 : Génération PDF
-- [ ] Template PDF devis (mentions légales, totaux, conditions paiement)
-- [ ] Template PDF facture (mentions légales obligatoires France, pénalités retard)
-- [ ] Export PDF depuis les pages
+- [x] Template PDF devis (mentions légales, totaux, conditions paiement) - pdfGenerator.ts
+- [x] Template PDF facture (mentions légales obligatoires France, pénalités retard) - pdfGenerator.ts
+- [ ] Export PDF depuis les pages (routes tRPC + boutons download)
 
 ### Phase 5 : Intégration au tableau de bord
 - [x] Ajouter un bouton "Gestion Commerciale" au tableau de bord

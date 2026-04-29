@@ -57,7 +57,7 @@ export default function QuotesTab() {
                 <div className="flex-1">
                   <h3 className="font-semibold text-slate-900">{quote.number}</h3>
                   <p className="text-sm text-slate-600">Statut: {quote.status}</p>
-                  <p className="text-sm text-slate-600">Total: {(quote.totalTTC / 100).toFixed(2)}€ TTC</p>
+                  <p className="text-sm text-slate-600">Total: {quote.totalTTC ? (quote.totalTTC / 100).toFixed(2) : "0.00"}€ TTC</p>
                 </div>
                 <div className="flex gap-2">
                   <Button variant="outline" size="sm" className="gap-1">

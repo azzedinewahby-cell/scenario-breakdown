@@ -7,6 +7,7 @@ import ProductsTab from "./commercial/ProductsTab";
 import QuotesTab from "./commercial/QuotesTab";
 import InvoicesTab from "./commercial/InvoicesTab";
 import CreditsTab from "./commercial/CreditsTab";
+import SettingsTab from "./commercial/SettingsTab";
 
 export default function CommercialPage() {
   const [activeTab, setActiveTab] = useState("clients");
@@ -16,13 +17,17 @@ export default function CommercialPage() {
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-4xl font-bold text-slate-900 mb-2">Gestion Commerciale</h1>
-          <p className="text-slate-600">Gérez vos clients, produits, devis, factures et avoirs</p>
+          <h1 className="text-4xl font-bold text-slate-900 mb-2">
+            Gestion Commerciale
+          </h1>
+          <p className="text-slate-600">
+            Gérez vos clients, produits, devis, factures et avoirs
+          </p>
         </div>
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-5 mb-8 bg-white border border-slate-200 rounded-lg p-1">
+          <TabsList className="grid w-full grid-cols-6 mb-8 bg-white border border-slate-200 rounded-lg p-1">
             <TabsTrigger value="clients" className="flex items-center gap-2">
               <span className="hidden sm:inline">Clients</span>
               <span className="sm:hidden">👥</span>
@@ -42,6 +47,10 @@ export default function CommercialPage() {
             <TabsTrigger value="credits" className="flex items-center gap-2">
               <span className="hidden sm:inline">Avoirs</span>
               <span className="sm:hidden">↩️</span>
+            </TabsTrigger>
+            <TabsTrigger value="settings" className="flex items-center gap-2">
+              <span className="hidden sm:inline">Paramètres</span>
+              <span className="sm:hidden">⚙️</span>
             </TabsTrigger>
           </TabsList>
 
@@ -64,6 +73,10 @@ export default function CommercialPage() {
 
           <TabsContent value="credits" className="space-y-4">
             <CreditsTab />
+          </TabsContent>
+
+          <TabsContent value="settings" className="space-y-4">
+            <SettingsTab />
           </TabsContent>
         </Tabs>
       </div>

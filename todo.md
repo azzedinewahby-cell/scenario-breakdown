@@ -324,3 +324,15 @@
 - [x] Afficher les résultats de recherche (nom, adresse, TVA, etc.) - SiretSearchForm.tsx
 - [x] Gestion des erreurs (SIRET invalide, non trouvé) - siretService.ts + SiretSearchForm.tsx
 - [x] Intégrer la recherche dans ClientForm - ClientForm.tsx
+
+
+## Module Paramètres (Infos Entreprise + Facture)
+- [x] Créer table `company_settings` en base de données - schema.ts + migration
+- [x] Ajouter route tRPC pour get/update company settings - routers.ts
+- [x] Créer onglet SettingsTab dans CommercialPage - SettingsTab.tsx
+- [x] Formulaire infos entreprise (nom, SIRET, TVA, adresse, téléphone, email) - SettingsTab.tsx
+- [x] Formulaire mentions légales personnalisées - SettingsTab.tsx
+- [x] Formulaire conditions de paiement par défaut - SettingsTab.tsx
+- [ ] Upload logo/en-tête pour factures
+- [ ] Intégrer les settings dans génération PDF
+- [ ] Afficher un aperçu des factures avec les settings

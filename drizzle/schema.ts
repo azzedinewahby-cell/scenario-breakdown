@@ -323,3 +323,34 @@ export const credits = mysqlTable("credits", {
 
 export type Credit = typeof credits.$inferSelect;
 export type InsertCredit = typeof credits.$inferInsert;
+
+
+// ─── Company Settings ────────────────────────────────────────────────────────
+export const companySettings = mysqlTable("company_settings", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull().unique(),
+  companyName: varchar("companyName", { length: 256 }).notNull(),
+  siret: varchar("siret", { length: 14 }),
+  vatNumber: varchar("vatNumber", { length: 32 }),
+  address: text("address"),
+  phone: varchar("phone", { length: 20 }),
+  email: varchar("email", { length: 256 }),
+  website: varchar("website", { length: 256 }),
+  logoUrl: text("logoUrl"),
+  logoKey: varchar("logoKey", { length: 512 }),
+  legalMentions: text("legalMentions"),
+  paymentTerms: varchar("paymentTerms", { length: 256 }).default("30 jours net"),
+  paymentConditions: text("paymentConditions"),
+  bankDetails: text("bankDetails"),
+  signature: text("signature"),
+  signatureUrl: text("signatureUrl"),
+  signatureKey: varchar("signatureKey", { length: 512 }),
+  defaultVatRate: int("defaultVatRate").default(20),
+  invoicePrefix: varchar("invoicePrefix", { length: 10 }).default("FA"),
+  quotePrefix: varchar("quotePrefix", { length: 10 }).default("DV"),
+  creditPrefix: varchar("creditPrefix", { length: 10 }).default("AV"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+export type CompanySettings = typeof companySettings.$inferSelect;
+export type InsertCompanySettings = typeof companySettings.$inferInsert;

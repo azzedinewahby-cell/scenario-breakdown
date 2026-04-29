@@ -1,7 +1,6 @@
 import { eq, desc, and, sql, inArray } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import {
-  InsertUser,
   users,
   scenarios,
   scenes,
@@ -12,6 +11,7 @@ import {
   sceneProps,
   sequences,
   sequenceScenes,
+  budgets,
   clients,
   products,
   quotes,
@@ -19,7 +19,7 @@ import {
   invoices,
   invoiceLines,
   credits,
-  salaryScales,
+  companySettings,
   type InsertScenario,
   type InsertScene,
   type InsertCharacter,
@@ -37,6 +37,7 @@ import {
   type InsertInvoiceLine,
   type InsertCredit,
   type InsertSalaryScale,
+  type InsertCompanySettings,
 } from "../drizzle/schema";
 import { ENV } from "./_core/env";
 
@@ -95,7 +96,10 @@ export async function upsertUser(user: InsertUser): Promise<void> {
     if (Object.keys(updateSet).length === 0) {
       updateSet.lastSignedIn = new Date();
     }
-    await db.insert(users).values(values).onDuplicateKeyUpdate({ set: updateSet });
+    await db
+      .insert(users)
+      .values(values)
+      .onDuplicateKeyUpdate({ set: updateSet });
   } catch (error) {
     console.error("[Database] Failed to upsert user:", error);
     throw error;
@@ -108,7 +112,11 @@ export async function getUserByOpenId(openId: string) {
     console.warn("[Database] Cannot get user: database not available");
     return undefined;
   }
-  const result = await db.select().from(users).where(eq(users.openId, openId)).limit(1);
+  const result = await db
+    .select()
+    .from(users)
+    .where(eq(users.openId, openId))
+    .limit(1);
   return result.length > 0 ? result[0] : undefined;
 }
 
@@ -124,7 +132,11 @@ export async function createScenario(data: InsertScenario) {
 export async function getScenarioById(id: number) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  const result = await db.select().from(scenarios).where(eq(scenarios.id, id)).limit(1);
+  const result = await db
+    .select()
+    .from(scenarios)
+    .where(eq(scenarios.id, id))
+    .limit(1);
   return result[0] ?? null;
 }
 
@@ -141,15 +153,22 @@ export async function getScenariosByUserId(userId: number) {
 export async function updateScenarioStatus(
   id: number,
   status: "uploading" | "processing" | "completed" | "error",
-  extra?: { errorMessage?: string; sceneCount?: number; characterCount?: number; locationCount?: number }
+  extra?: {
+    errorMessage?: string;
+    sceneCount?: number;
+    characterCount?: number;
+    locationCount?: number;
+  }
 ) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   const set: Record<string, unknown> = { status };
   if (extra?.errorMessage !== undefined) set.errorMessage = extra.errorMessage;
   if (extra?.sceneCount !== undefined) set.sceneCount = extra.sceneCount;
-  if (extra?.characterCount !== undefined) set.characterCount = extra.characterCount;
-  if (extra?.locationCount !== undefined) set.locationCount = extra.locationCount;
+  if (extra?.characterCount !== undefined)
+    set.characterCount = extra.characterCount;
+  if (extra?.locationCount !== undefined)
+    set.locationCount = extra.locationCount;
   await db.update(scenarios).set(set).where(eq(scenarios.id, id));
 }
 
@@ -157,8 +176,11 @@ export async function deleteScenario(id: number) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   // Delete in order: dialogues → scene_characters → scenes → characters → scenario
-  const sceneRows = await db.select({ id: scenes.id }).from(scenes).where(eq(scenes.scenarioId, id));
-  const sceneIds = sceneRows.map((s) => s.id);
+  const sceneRows = await db
+    .select({ id: scenes.id })
+    .from(scenes)
+    .where(eq(scenes.scenarioId, id));
+  const sceneIds = sceneRows.map(s => s.id);
   if (sceneIds.length > 0) {
     for (const sid of sceneIds) {
       await db.delete(dialogues).where(eq(dialogues.sceneId, sid));
@@ -211,7 +233,10 @@ export async function insertCharacters(data: InsertCharacter[]) {
 export async function getCharactersByScenarioId(scenarioId: number) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  return db.select().from(characters).where(eq(characters.scenarioId, scenarioId));
+  return db
+    .select()
+    .from(characters)
+    .where(eq(characters.scenarioId, scenarioId));
 }
 
 // ─── Scene–Characters ────────────────────────────────────────────────────────
@@ -231,7 +256,10 @@ export async function getSceneCharactersBySceneIds(sceneIds: number[]) {
   if (sceneIds.length === 0) return [];
   const results = [];
   for (const sid of sceneIds) {
-    const rows = await db.select().from(sceneCharacters).where(eq(sceneCharacters.sceneId, sid));
+    const rows = await db
+      .select()
+      .from(sceneCharacters)
+      .where(eq(sceneCharacters.sceneId, sid));
     results.push(...rows);
   }
   return results;
@@ -270,7 +298,12 @@ export async function insertProps(data: InsertProp[]) {
   for (const p of data) {
     const result = await db.insert(props).values(p);
     // Get the inserted prop by querying back
-    const inserted = await db.select().from(props).where(eq(props.scenarioId, p.scenarioId)).orderBy(desc(props.id)).limit(1);
+    const inserted = await db
+      .select()
+      .from(props)
+      .where(eq(props.scenarioId, p.scenarioId))
+      .orderBy(desc(props.id))
+      .limit(1);
     if (inserted.length > 0) {
       propIds.push(inserted[0].id);
     }
@@ -309,7 +342,11 @@ export async function insertSequences(data: InsertSequence[]) {
 export async function getSequences(scenarioId: number) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  return db.select().from(sequences).where(eq(sequences.scenarioId, scenarioId)).orderBy(sequences.orderIndex);
+  return db
+    .select()
+    .from(sequences)
+    .where(eq(sequences.scenarioId, scenarioId))
+    .orderBy(sequences.orderIndex);
 }
 
 // ─── Sequence Scenes ────────────────────────────────────────────────────────
@@ -323,16 +360,26 @@ export async function insertSequenceScenes(data: InsertSequenceScene[]) {
   }
 }
 
-export async function updateSequenceSummary(sequenceId: number, summary: string) {
+export async function updateSequenceSummary(
+  sequenceId: number,
+  summary: string
+) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  await db.update(sequences).set({ summary }).where(eq(sequences.id, sequenceId));
+  await db
+    .update(sequences)
+    .set({ summary })
+    .where(eq(sequences.id, sequenceId));
 }
 
 export async function getSequenceScenes(sequenceId: number) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  return db.select().from(sequenceScenes).where(eq(sequenceScenes.sequenceId, sequenceId)).orderBy(sequenceScenes.orderIndex);
+  return db
+    .select()
+    .from(sequenceScenes)
+    .where(eq(sequenceScenes.sequenceId, sequenceId))
+    .orderBy(sequenceScenes.orderIndex);
 }
 
 // ─── Dashboard stats ───────────────────────────────────────────────────────────────
@@ -347,10 +394,21 @@ export async function getDashboardStats(userId: number) {
     .where(eq(scenarios.userId, userId));
 
   const totalScenarios = userScenarios.length;
-  const completedScenarios = userScenarios.filter((s) => s.status === "completed").length;
-  const totalScenes = userScenarios.reduce((sum, s) => sum + (s.sceneCount ?? 0), 0);
-  const totalCharacters = userScenarios.reduce((sum, s) => sum + (s.characterCount ?? 0), 0);
-  const totalLocations = userScenarios.reduce((sum, s) => sum + (s.locationCount ?? 0), 0);
+  const completedScenarios = userScenarios.filter(
+    s => s.status === "completed"
+  ).length;
+  const totalScenes = userScenarios.reduce(
+    (sum, s) => sum + (s.sceneCount ?? 0),
+    0
+  );
+  const totalCharacters = userScenarios.reduce(
+    (sum, s) => sum + (s.characterCount ?? 0),
+    0
+  );
+  const totalLocations = userScenarios.reduce(
+    (sum, s) => sum + (s.locationCount ?? 0),
+    0
+  );
 
   return {
     totalScenarios,
@@ -361,42 +419,45 @@ export async function getDashboardStats(userId: number) {
   };
 }
 
-
 // ─── Props Sequences (Accessoires par séquence) ──────────────────────────────
 export async function getSequencesForProp(propId: number) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  
+
   // Get the prop
-  const prop = await db.select().from(props).where(eq(props.id, propId)).limit(1);
+  const prop = await db
+    .select()
+    .from(props)
+    .where(eq(props.id, propId))
+    .limit(1);
   if (prop.length === 0) return [];
-  
+
   const propName = prop[0].name.toLowerCase();
-  
+
   // Extract key words from prop name (split by spaces and filter short words)
   const keywords = propName
     .split(/[\s\-,()]+/)
     .filter(word => word.length > 2)
     .map(word => word.toLowerCase());
-  
+
   // Search for prop name or keywords in scene descriptions
   const allScenes = await db.select().from(scenes);
   const matchingSceneIds = allScenes
     .filter(scene => {
       if (!scene.description) return false;
       const desc = scene.description.toLowerCase();
-      
+
       // First try exact match
       if (desc.includes(propName)) return true;
-      
+
       // Then try matching at least 2 keywords
       const matchedKeywords = keywords.filter(kw => desc.includes(kw));
       return matchedKeywords.length >= 2;
     })
     .map(scene => scene.id);
-  
+
   if (matchingSceneIds.length === 0) return [];
-  
+
   // Get unique sequences for these scenes
   const result = await db
     .selectDistinct({
@@ -409,7 +470,7 @@ export async function getSequencesForProp(propId: number) {
     .innerJoin(sequences, eq(sequenceScenes.sequenceId, sequences.id))
     .where(inArray(sequenceScenes.sceneId, matchingSceneIds))
     .orderBy(sequences.orderIndex);
-  
+
   return result;
 }
 
@@ -417,15 +478,15 @@ export async function getSequencesForProp(propId: number) {
 export async function getSequencesForCharacter(characterId: number) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  
+
   // Get scenes for this character
   const sceneIds = await db
     .select({ sceneId: sceneCharacters.sceneId })
     .from(sceneCharacters)
     .where(eq(sceneCharacters.characterId, characterId));
-  
+
   if (sceneIds.length === 0) return [];
-  
+
   // Get unique sequences for these scenes
   const result = await db
     .selectDistinct({
@@ -436,17 +497,28 @@ export async function getSequencesForCharacter(characterId: number) {
     })
     .from(sequenceScenes)
     .innerJoin(sequences, eq(sequenceScenes.sequenceId, sequences.id))
-    .where(inArray(sequenceScenes.sceneId, sceneIds.map(s => s.sceneId)))
+    .where(
+      inArray(
+        sequenceScenes.sceneId,
+        sceneIds.map(s => s.sceneId)
+      )
+    )
     .orderBy(sequences.orderIndex);
-  
+
   return result;
 }
 
 // ─── Synopsis ─────────────────────────────────────────────────────────────────
-export async function updateScenarioSynopsis(scenarioId: number, synopsis: string) {
+export async function updateScenarioSynopsis(
+  scenarioId: number,
+  synopsis: string
+) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  await db.update(scenarios).set({ synopsis }).where(eq(scenarios.id, scenarioId));
+  await db
+    .update(scenarios)
+    .set({ synopsis })
+    .where(eq(scenarios.id, scenarioId));
 }
 
 // ─── Characters for a Sequence ────────────────────────────────────────────────
@@ -462,7 +534,7 @@ export async function getCharactersForSequence(sequenceId: number) {
 
   if (sceneLinks.length === 0) return [];
 
-  const sceneIds = sceneLinks.map((s) => s.sceneId);
+  const sceneIds = sceneLinks.map(s => s.sceneId);
 
   // Get distinct characters for these scenes
   const result = await db
@@ -493,7 +565,7 @@ export async function getPropsForSequence(sequenceId: number) {
 
   if (sceneLinks.length === 0) return [];
 
-  const sceneIds = sceneLinks.map((s) => s.sceneId);
+  const sceneIds = sceneLinks.map(s => s.sceneId);
 
   // Get all scenes for this sequence
   const sequenceSceneList = await db
@@ -507,7 +579,7 @@ export async function getPropsForSequence(sequenceId: number) {
   // Find props that appear in any scene description
   // Use propName as key to deduplicate by name (not by ID)
   const matchingProps = new Map<string, { propId: number; propName: string }>();
-  
+
   allProps.forEach(prop => {
     const propName = prop.name.toLowerCase();
     const keywords = propName
@@ -519,10 +591,10 @@ export async function getPropsForSequence(sequenceId: number) {
     const isInSequence = sequenceSceneList.some(scene => {
       if (!scene.description) return false;
       const desc = scene.description.toLowerCase();
-      
+
       // First try exact match
       if (desc.includes(propName)) return true;
-      
+
       // Then try matching at least 2 keywords
       const matchedKeywords = keywords.filter(kw => desc.includes(kw));
       return matchedKeywords.length >= 2;
@@ -537,19 +609,23 @@ export async function getPropsForSequence(sequenceId: number) {
   });
 
   // Convert to array and sort by name
-  const result = Array.from(matchingProps.values())
-    .sort((a, b) => a.propName.localeCompare(b.propName));
+  const result = Array.from(matchingProps.values()).sort((a, b) =>
+    a.propName.localeCompare(b.propName)
+  );
 
   return result;
 }
 
-
 // ─── Duration Calculation ─────────────────────────────────────────────────────
 
-export async function calculateAndSaveScenarioDuration(scenarioId: number): Promise<number> {
+export async function calculateAndSaveScenarioDuration(
+  scenarioId: number
+): Promise<number> {
   const db = await getDb();
   if (!db) {
-    console.warn("[Database] Cannot calculate duration: database not available");
+    console.warn(
+      "[Database] Cannot calculate duration: database not available"
+    );
     return 0;
   }
 
@@ -569,7 +645,7 @@ export async function calculateAndSaveScenarioDuration(scenarioId: number): Prom
   for (const scene of scenarioScenes) {
     if (!scene.description) continue;
 
-    const lines = scene.description.split('\n').length;
+    const lines = scene.description.split("\n").length;
     const words = scene.description.split(/\s+/).length;
 
     // Estimation de pages (250 mots ≈ 1 page)
@@ -582,12 +658,43 @@ export async function calculateAndSaveScenarioDuration(scenarioId: number): Prom
     const description = scene.description.toLowerCase();
 
     // Détecter les mots-clés d'action
-    const actionKeywords = ['court', 'saute', 'tire', 'explose', 'crash', 'poursuit', 'combat', 'chute', 'fuit', 'attaque', 'frappe', 'course', 'explosion', 'poursuite'];
-    const hasActionKeywords = actionKeywords.some(keyword => description.includes(keyword));
+    const actionKeywords = [
+      "court",
+      "saute",
+      "tire",
+      "explose",
+      "crash",
+      "poursuit",
+      "combat",
+      "chute",
+      "fuit",
+      "attaque",
+      "frappe",
+      "course",
+      "explosion",
+      "poursuite",
+    ];
+    const hasActionKeywords = actionKeywords.some(keyword =>
+      description.includes(keyword)
+    );
 
     // Détecter les scènes contemplatives
-    const contemplativeKeywords = ['silence', 'contemple', 'regarde', 'pense', 'rêve', 'souvenir', 'flashback', 'montage', 'musique', 'poétique', 'lent'];
-    const hasContemplativeKeywords = contemplativeKeywords.some(keyword => description.includes(keyword));
+    const contemplativeKeywords = [
+      "silence",
+      "contemple",
+      "regarde",
+      "pense",
+      "rêve",
+      "souvenir",
+      "flashback",
+      "montage",
+      "musique",
+      "poétique",
+      "lent",
+    ];
+    const hasContemplativeKeywords = contemplativeKeywords.some(keyword =>
+      description.includes(keyword)
+    );
 
     // Compter les lignes de dialogue
     const dialogueMatches = scene.description.match(/^[A-Z\s]+:/gm) || [];
@@ -649,8 +756,6 @@ export async function getScenarioDuration(scenarioId: number): Promise<{
   };
 }
 
-
-
 // ─── Clients (Gestion Commerciale) ────────────────────────────────────────────
 
 export async function createClient(data: InsertClient) {
@@ -669,11 +774,18 @@ export async function getClientsByUserId(userId: number) {
 export async function getClientById(clientId: number) {
   const db = await getDb();
   if (!db) return null;
-  const result = await db.select().from(clients).where(eq(clients.id, clientId)).limit(1);
+  const result = await db
+    .select()
+    .from(clients)
+    .where(eq(clients.id, clientId))
+    .limit(1);
   return result.length > 0 ? result[0] : null;
 }
 
-export async function updateClient(clientId: number, data: Partial<InsertClient>) {
+export async function updateClient(
+  clientId: number,
+  data: Partial<InsertClient>
+) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   return await db.update(clients).set(data).where(eq(clients.id, clientId));
@@ -703,11 +815,18 @@ export async function getProductsByUserId(userId: number) {
 export async function getProductById(productId: number) {
   const db = await getDb();
   if (!db) return null;
-  const result = await db.select().from(products).where(eq(products.id, productId)).limit(1);
+  const result = await db
+    .select()
+    .from(products)
+    .where(eq(products.id, productId))
+    .limit(1);
   return result.length > 0 ? result[0] : null;
 }
 
-export async function updateProduct(productId: number, data: Partial<InsertProduct>) {
+export async function updateProduct(
+  productId: number,
+  data: Partial<InsertProduct>
+) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   return await db.update(products).set(data).where(eq(products.id, productId));
@@ -731,13 +850,21 @@ export async function createQuote(data: InsertQuote) {
 export async function getQuotesByUserId(userId: number) {
   const db = await getDb();
   if (!db) return [];
-  return await db.select().from(quotes).where(eq(quotes.userId, userId)).orderBy(desc(quotes.createdAt));
+  return await db
+    .select()
+    .from(quotes)
+    .where(eq(quotes.userId, userId))
+    .orderBy(desc(quotes.createdAt));
 }
 
 export async function getQuoteById(quoteId: number) {
   const db = await getDb();
   if (!db) return null;
-  const result = await db.select().from(quotes).where(eq(quotes.id, quoteId)).limit(1);
+  const result = await db
+    .select()
+    .from(quotes)
+    .where(eq(quotes.id, quoteId))
+    .limit(1);
   return result.length > 0 ? result[0] : null;
 }
 
@@ -756,7 +883,11 @@ export async function deleteQuote(quoteId: number) {
 export async function getQuoteLines(quoteId: number) {
   const db = await getDb();
   if (!db) return [];
-  return await db.select().from(quoteLines).where(eq(quoteLines.quoteId, quoteId)).orderBy(quoteLines.orderIndex);
+  return await db
+    .select()
+    .from(quoteLines)
+    .where(eq(quoteLines.quoteId, quoteId))
+    .orderBy(quoteLines.orderIndex);
 }
 
 export async function createQuoteLine(data: InsertQuoteLine) {
@@ -783,17 +914,28 @@ export async function createInvoice(data: InsertInvoice) {
 export async function getInvoicesByUserId(userId: number) {
   const db = await getDb();
   if (!db) return [];
-  return await db.select().from(invoices).where(eq(invoices.userId, userId)).orderBy(desc(invoices.createdAt));
+  return await db
+    .select()
+    .from(invoices)
+    .where(eq(invoices.userId, userId))
+    .orderBy(desc(invoices.createdAt));
 }
 
 export async function getInvoiceById(invoiceId: number) {
   const db = await getDb();
   if (!db) return null;
-  const result = await db.select().from(invoices).where(eq(invoices.id, invoiceId)).limit(1);
+  const result = await db
+    .select()
+    .from(invoices)
+    .where(eq(invoices.id, invoiceId))
+    .limit(1);
   return result.length > 0 ? result[0] : null;
 }
 
-export async function updateInvoice(invoiceId: number, data: Partial<InsertInvoice>) {
+export async function updateInvoice(
+  invoiceId: number,
+  data: Partial<InsertInvoice>
+) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   return await db.update(invoices).set(data).where(eq(invoices.id, invoiceId));
@@ -808,7 +950,11 @@ export async function deleteInvoice(invoiceId: number) {
 export async function getInvoiceLines(invoiceId: number) {
   const db = await getDb();
   if (!db) return [];
-  return await db.select().from(invoiceLines).where(eq(invoiceLines.invoiceId, invoiceId)).orderBy(invoiceLines.orderIndex);
+  return await db
+    .select()
+    .from(invoiceLines)
+    .where(eq(invoiceLines.invoiceId, invoiceId))
+    .orderBy(invoiceLines.orderIndex);
 }
 
 export async function createInvoiceLine(data: InsertInvoiceLine) {
@@ -835,17 +981,28 @@ export async function createCredit(data: InsertCredit) {
 export async function getCreditsByUserId(userId: number) {
   const db = await getDb();
   if (!db) return [];
-  return await db.select().from(credits).where(eq(credits.userId, userId)).orderBy(desc(credits.createdAt));
+  return await db
+    .select()
+    .from(credits)
+    .where(eq(credits.userId, userId))
+    .orderBy(desc(credits.createdAt));
 }
 
 export async function getCreditById(creditId: number) {
   const db = await getDb();
   if (!db) return null;
-  const result = await db.select().from(credits).where(eq(credits.id, creditId)).limit(1);
+  const result = await db
+    .select()
+    .from(credits)
+    .where(eq(credits.id, creditId))
+    .limit(1);
   return result.length > 0 ? result[0] : null;
 }
 
-export async function updateCredit(creditId: number, data: Partial<InsertCredit>) {
+export async function updateCredit(
+  creditId: number,
+  data: Partial<InsertCredit>
+) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   return await db.update(credits).set(data).where(eq(credits.id, creditId));
@@ -868,22 +1025,29 @@ export async function getSalaryScales() {
 export async function getSalaryScaleByRole(role: string) {
   const db = await getDb();
   if (!db) return null;
-  const result = await db.select().from(salaryScales).where(eq(salaryScales.role, role)).limit(1);
+  const result = await db
+    .select()
+    .from(salaryScales)
+    .where(eq(salaryScales.role, role))
+    .limit(1);
   return result.length > 0 ? result[0] : null;
 }
 
 // ─── Utility: Generate next number for quotes/invoices/credits ────────────────
 
-export async function generateNextNumber(prefix: "DV" | "FA" | "AV", userId: number): Promise<string> {
+export async function generateNextNumber(
+  prefix: "DV" | "FA" | "AV",
+  userId: number
+): Promise<string> {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  
+
   const year = new Date().getFullYear();
   const baseNumber = `${prefix}-${year}-`;
-  
+
   let table: any;
   let numberField: any;
-  
+
   if (prefix === "DV") {
     table = quotes;
     numberField = quotes.number;
@@ -894,18 +1058,20 @@ export async function generateNextNumber(prefix: "DV" | "FA" | "AV", userId: num
     table = credits;
     numberField = credits.number;
   }
-  
+
   // Get the highest number for this year and prefix
   const result = await db
     .select({ number: numberField })
     .from(table)
-    .where(and(
-      eq(table.userId, userId),
-      sql`${numberField} LIKE ${baseNumber + "%"}`
-    ))
+    .where(
+      and(
+        eq(table.userId, userId),
+        sql`${numberField} LIKE ${baseNumber + "%"}`
+      )
+    )
     .orderBy(desc(numberField))
     .limit(1);
-  
+
   let nextSequence = 1;
   if (result.length > 0) {
     const lastNumber = result[0].number;
@@ -913,6 +1079,50 @@ export async function generateNextNumber(prefix: "DV" | "FA" | "AV", userId: num
     const currentSequence = parseInt(parts[2], 10);
     nextSequence = currentSequence + 1;
   }
-  
+
   return `${baseNumber}${String(nextSequence).padStart(4, "0")}`;
+}
+
+/**
+ * Company Settings Management
+ */
+
+export async function getCompanySettingsByUserId(userId: number) {
+  const db = await getDb();
+  if (!db) return null;
+  return await db.query.companySettings.findFirst({
+    where: (settings, { eq }) => eq(settings.userId, userId),
+  });
+}
+
+export async function createOrUpdateCompanySettings(userId: number, data: any) {
+  const db = await getDb();
+  if (!db) return null;
+
+  const existing = await getCompanySettingsByUserId(userId);
+
+  if (existing) {
+    return await db
+      .update(companySettings)
+      .set({
+        ...data,
+        updatedAt: new Date(),
+      })
+      .where(eq(companySettings.userId, userId));
+  } else {
+    return await db.insert(companySettings).values({
+      userId,
+      ...data,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+  }
+}
+
+export async function deleteCompanySettings(userId: number) {
+  const db = await getDb();
+  if (!db) return null;
+  return await db
+    .delete(companySettings)
+    .where(eq(companySettings.userId, userId));
 }

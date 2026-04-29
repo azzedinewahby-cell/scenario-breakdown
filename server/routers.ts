@@ -1113,6 +1113,38 @@ Règles importantes:
         }),
     }),
 
+    // Settings
+    settings: router({
+      get: protectedProcedure.query(async ({ ctx }) => {
+        const { getCompanySettingsByUserId } = await import("./db");
+        return await getCompanySettingsByUserId(ctx.user.id);
+      }),
+      update: protectedProcedure
+        .input(
+          z.object({
+            companyName: z.string(),
+            siret: z.string().optional(),
+            vatNumber: z.string().optional(),
+            address: z.string().optional(),
+            phone: z.string().optional(),
+            email: z.string().email().optional(),
+            website: z.string().optional(),
+            legalMentions: z.string().optional(),
+            paymentTerms: z.string().optional(),
+            paymentConditions: z.string().optional(),
+            bankDetails: z.string().optional(),
+            defaultVatRate: z.number().optional(),
+            invoicePrefix: z.string().optional(),
+            quotePrefix: z.string().optional(),
+            creditPrefix: z.string().optional(),
+          })
+        )
+        .mutation(async ({ ctx, input }) => {
+          const { createOrUpdateCompanySettings } = await import("./db");
+          return await createOrUpdateCompanySettings(ctx.user.id, input);
+        }),
+    }),
+
     // Products
     products: router({
       list: protectedProcedure.query(async ({ ctx }) => {

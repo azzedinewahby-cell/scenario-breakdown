@@ -40,7 +40,23 @@ export default function SettingsTab() {
     if (settingsQuery.data) {
       setFormData(prev => ({
         ...prev,
-        ...settingsQuery.data,
+        companyName: settingsQuery.data?.companyName || "",
+        siret: settingsQuery.data?.siret || "",
+        vatNumber: settingsQuery.data?.vatNumber || "",
+        address: settingsQuery.data?.address || "",
+        phone: settingsQuery.data?.phone || "",
+        email: settingsQuery.data?.email || "",
+        website: settingsQuery.data?.website || "",
+        legalMentions: settingsQuery.data?.legalMentions || "",
+        paymentTerms: settingsQuery.data?.paymentTerms || "30 jours net",
+        paymentConditions: settingsQuery.data?.paymentConditions || "",
+        bankDetails: settingsQuery.data?.bankDetails || "",
+        defaultVatRate: settingsQuery.data?.defaultVatRate || 20,
+        invoicePrefix: settingsQuery.data?.invoicePrefix || "FA",
+        quotePrefix: settingsQuery.data?.quotePrefix || "DV",
+        creditPrefix: settingsQuery.data?.creditPrefix || "AV",
+        logoUrl: settingsQuery.data?.logoUrl || "",
+        signatureUrl: settingsQuery.data?.signatureUrl || "",
       }));
     }
   }, [settingsQuery.data]);
@@ -227,8 +243,13 @@ export default function SettingsTab() {
                 id="defaultVatRate"
                 name="defaultVatRate"
                 type="number"
-                value={formData.defaultVatRate}
-                onChange={handleChange}
+                value={String(formData.defaultVatRate)}
+                onChange={e =>
+                  setFormData(prev => ({
+                    ...prev,
+                    defaultVatRate: parseInt(e.target.value),
+                  }))
+                }
                 min="0"
                 max="100"
               />
@@ -365,10 +386,10 @@ export default function SettingsTab() {
               <Input
                 id="invoicePrefix"
                 name="invoicePrefix"
-                value={formData.invoicePrefix}
+                value={String(formData.invoicePrefix)}
                 onChange={handleChange}
                 placeholder="FA"
-                maxLength="10"
+                maxLength={10}
               />
               <p className="text-xs text-slate-500 mt-1">Ex: FA-2026-001</p>
             </div>
@@ -378,10 +399,10 @@ export default function SettingsTab() {
               <Input
                 id="quotePrefix"
                 name="quotePrefix"
-                value={formData.quotePrefix}
+                value={String(formData.quotePrefix)}
                 onChange={handleChange}
                 placeholder="DV"
-                maxLength="10"
+                maxLength={10}
               />
               <p className="text-xs text-slate-500 mt-1">Ex: DV-2026-001</p>
             </div>
@@ -391,10 +412,10 @@ export default function SettingsTab() {
               <Input
                 id="creditPrefix"
                 name="creditPrefix"
-                value={formData.creditPrefix}
+                value={String(formData.creditPrefix)}
                 onChange={handleChange}
                 placeholder="AV"
-                maxLength="10"
+                maxLength={10}
               />
               <p className="text-xs text-slate-500 mt-1">Ex: AV-2026-001</p>
             </div>

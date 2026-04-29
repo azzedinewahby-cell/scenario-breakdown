@@ -15,7 +15,8 @@ export default function InvoicesTab() {
     notes: "",
   });
 
-  const { data: invoices, isLoading } = trpc.commercial.invoices.list.useQuery();
+  const { data: invoices, isLoading } =
+    trpc.commercial.invoices.list.useQuery();
   const { data: clients } = trpc.commercial.clients.list.useQuery();
   const { data: quotes } = trpc.commercial.quotes.list.useQuery();
 
@@ -31,13 +32,7 @@ export default function InvoicesTab() {
       await createMutation.mutateAsync({
         clientId: parseInt(formData.clientId),
         quoteId: parseInt(formData.quoteId),
-        number: "",
-        status: "draft",
-        emissionDate: new Date(),
         dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-        totalHT: 0,
-        totalTVA: 0,
-        totalTTC: 0,
       });
       setShowForm(false);
       setFormData({ clientId: "", quoteId: "", notes: "" });
@@ -82,13 +77,13 @@ export default function InvoicesTab() {
               <select
                 id="clientId"
                 value={formData.clientId}
-                onChange={(e) =>
+                onChange={e =>
                   setFormData({ ...formData, clientId: e.target.value })
                 }
                 className="w-full px-3 py-2 border border-slate-300 rounded-md"
               >
                 <option value="">Sélectionner un client</option>
-                {clients?.map((client) => (
+                {clients?.map(client => (
                   <option key={client.id} value={client.id}>
                     {client.name}
                   </option>
@@ -101,13 +96,13 @@ export default function InvoicesTab() {
               <select
                 id="quoteId"
                 value={formData.quoteId}
-                onChange={(e) =>
+                onChange={e =>
                   setFormData({ ...formData, quoteId: e.target.value })
                 }
                 className="w-full px-3 py-2 border border-slate-300 rounded-md"
               >
                 <option value="">Sélectionner un devis</option>
-                {quotes?.map((quote) => (
+                {quotes?.map(quote => (
                   <option key={quote.id} value={quote.id}>
                     {quote.number}
                   </option>
@@ -120,7 +115,7 @@ export default function InvoicesTab() {
               <Textarea
                 id="notes"
                 value={formData.notes}
-                onChange={(e) =>
+                onChange={e =>
                   setFormData({ ...formData, notes: e.target.value })
                 }
                 placeholder="Notes additionnelles"
@@ -129,10 +124,7 @@ export default function InvoicesTab() {
             </div>
 
             <div className="flex gap-2 justify-end">
-              <Button
-                variant="outline"
-                onClick={() => setShowForm(false)}
-              >
+              <Button variant="outline" onClick={() => setShowForm(false)}>
                 Annuler
               </Button>
               <Button
@@ -154,7 +146,7 @@ export default function InvoicesTab() {
         </Card>
       ) : (
         <div className="grid gap-4">
-          {invoices.map((invoice) => (
+          {invoices.map(invoice => (
             <Card
               key={invoice.id}
               className="p-4 bg-white border border-slate-200 hover:shadow-md transition"
@@ -168,7 +160,8 @@ export default function InvoicesTab() {
                     Statut: {invoice.status}
                   </p>
                   <p className="text-sm text-slate-600">
-                    Total: {invoice.totalTTC
+                    Total:{" "}
+                    {invoice.totalTTC
                       ? (invoice.totalTTC / 100).toFixed(2)
                       : "0.00"}
                     € TTC

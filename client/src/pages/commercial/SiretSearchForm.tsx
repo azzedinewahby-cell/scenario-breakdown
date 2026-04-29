@@ -77,7 +77,7 @@ export default function SiretSearchForm({ onSelect }: SiretSearchFormProps) {
             value={siret}
             onChange={e => setSiret(e.target.value.replace(/\s/g, ""))}
             placeholder="14 ou 9 chiffres"
-            maxLength="14"
+            maxLength={14}
           />
         </div>
 

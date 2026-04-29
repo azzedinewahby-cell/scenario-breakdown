@@ -38,6 +38,8 @@ import {
   type InsertCredit,
   type InsertSalaryScale,
   type InsertCompanySettings,
+  type InsertUser,
+  salaryScales,
 } from "../drizzle/schema";
 import { ENV } from "./_core/env";
 

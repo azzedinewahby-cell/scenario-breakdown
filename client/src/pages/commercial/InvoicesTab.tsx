@@ -2,10 +2,49 @@ import { useState } from "react";
 import { trpc } from "@/lib/trpc";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, Eye, Download, Trash2 } from "lucide-react";
+import { Plus, Eye, Download, Trash2, X } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 
 export default function InvoicesTab() {
+  const [showForm, setShowForm] = useState(false);
+  const [formData, setFormData] = useState({
+    clientId: "",
+    quoteId: "",
+    notes: "",
+  });
+
   const { data: invoices, isLoading } = trpc.commercial.invoices.list.useQuery();
+  const { data: clients } = trpc.commercial.clients.list.useQuery();
+  const { data: quotes } = trpc.commercial.quotes.list.useQuery();
+
+  const createMutation = trpc.commercial.invoices.create.useMutation();
+
+  const handleCreate = async () => {
+    if (!formData.clientId || !formData.quoteId) {
+      alert("Veuillez sélectionner un client et un devis");
+      return;
+    }
+
+    try {
+      await createMutation.mutateAsync({
+        clientId: parseInt(formData.clientId),
+        quoteId: parseInt(formData.quoteId),
+        number: "",
+        status: "draft",
+        emissionDate: new Date(),
+        dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+        totalHT: 0,
+        totalTVA: 0,
+        totalTTC: 0,
+      });
+      setShowForm(false);
+      setFormData({ clientId: "", quoteId: "", notes: "" });
+    } catch (error) {
+      console.error("Erreur création facture:", error);
+    }
+  };
 
   if (isLoading) {
     return <div className="text-center py-8">Chargement des factures...</div>;
@@ -14,26 +53,126 @@ export default function InvoicesTab() {
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold text-slate-900">Factures ({invoices?.length || 0})</h2>
-        <Button className="gap-2">
+        <h2 className="text-2xl font-bold text-slate-900">
+          Factures ({invoices?.length || 0})
+        </h2>
+        <Button className="gap-2" onClick={() => setShowForm(!showForm)}>
           <Plus size={16} />
           Nouvelle facture
         </Button>
       </div>
 
+      {showForm && (
+        <Card className="p-6 bg-white border border-blue-200 bg-blue-50">
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="text-lg font-semibold text-slate-900">
+              Créer une nouvelle facture
+            </h3>
+            <button
+              onClick={() => setShowForm(false)}
+              className="text-slate-500 hover:text-slate-700"
+            >
+              <X size={20} />
+            </button>
+          </div>
+
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="clientId">Client *</Label>
+              <select
+                id="clientId"
+                value={formData.clientId}
+                onChange={(e) =>
+                  setFormData({ ...formData, clientId: e.target.value })
+                }
+                className="w-full px-3 py-2 border border-slate-300 rounded-md"
+              >
+                <option value="">Sélectionner un client</option>
+                {clients?.map((client) => (
+                  <option key={client.id} value={client.id}>
+                    {client.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <Label htmlFor="quoteId">Devis *</Label>
+              <select
+                id="quoteId"
+                value={formData.quoteId}
+                onChange={(e) =>
+                  setFormData({ ...formData, quoteId: e.target.value })
+                }
+                className="w-full px-3 py-2 border border-slate-300 rounded-md"
+              >
+                <option value="">Sélectionner un devis</option>
+                {quotes?.map((quote) => (
+                  <option key={quote.id} value={quote.id}>
+                    {quote.number}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <Label htmlFor="notes">Notes</Label>
+              <Textarea
+                id="notes"
+                value={formData.notes}
+                onChange={(e) =>
+                  setFormData({ ...formData, notes: e.target.value })
+                }
+                placeholder="Notes additionnelles"
+                rows={3}
+              />
+            </div>
+
+            <div className="flex gap-2 justify-end">
+              <Button
+                variant="outline"
+                onClick={() => setShowForm(false)}
+              >
+                Annuler
+              </Button>
+              <Button
+                onClick={handleCreate}
+                disabled={createMutation.isPending}
+              >
+                {createMutation.isPending ? "Création..." : "Créer la facture"}
+              </Button>
+            </div>
+          </div>
+        </Card>
+      )}
+
       {!invoices || invoices.length === 0 ? (
         <Card className="p-8 text-center bg-slate-50 border border-slate-200">
-          <p className="text-slate-600">Aucune facture. Créez votre première facture pour commencer.</p>
+          <p className="text-slate-600">
+            Aucune facture. Créez votre première facture pour commencer.
+          </p>
         </Card>
       ) : (
         <div className="grid gap-4">
           {invoices.map((invoice) => (
-            <Card key={invoice.id} className="p-4 bg-white border border-slate-200 hover:shadow-md transition">
+            <Card
+              key={invoice.id}
+              className="p-4 bg-white border border-slate-200 hover:shadow-md transition"
+            >
               <div className="flex justify-between items-start">
                 <div className="flex-1">
-                  <h3 className="font-semibold text-slate-900">{invoice.number}</h3>
-                  <p className="text-sm text-slate-600">Statut: {invoice.status}</p>
-                  <p className="text-sm text-slate-600">Total: {invoice.totalTTC ? (invoice.totalTTC / 100).toFixed(2) : "0.00"}€ TTC</p>
+                  <h3 className="font-semibold text-slate-900">
+                    {invoice.number}
+                  </h3>
+                  <p className="text-sm text-slate-600">
+                    Statut: {invoice.status}
+                  </p>
+                  <p className="text-sm text-slate-600">
+                    Total: {invoice.totalTTC
+                      ? (invoice.totalTTC / 100).toFixed(2)
+                      : "0.00"}
+                    € TTC
+                  </p>
                 </div>
                 <div className="flex gap-2">
                   <Button variant="outline" size="sm" className="gap-1">

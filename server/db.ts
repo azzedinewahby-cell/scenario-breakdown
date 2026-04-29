@@ -1090,9 +1090,12 @@ export async function generateNextNumber(
 export async function getCompanySettingsByUserId(userId: number) {
   const db = await getDb();
   if (!db) return null;
-  return await db.query.companySettings.findFirst({
-    where: (settings, { eq }) => eq(settings.userId, userId),
-  });
+  const result = await db
+    .select()
+    .from(companySettings)
+    .where(eq(companySettings.userId, userId))
+    .limit(1);
+  return result.length > 0 ? result[0] : null;
 }
 
 export async function createOrUpdateCompanySettings(userId: number, data: any) {

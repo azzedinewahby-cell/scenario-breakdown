@@ -25,6 +25,8 @@ export default function SettingsTab() {
     invoicePrefix: "FA",
     quotePrefix: "DV",
     creditPrefix: "AV",
+    logoUrl: "",
+    signatureUrl: "",
   });
 
   const [isLoading, setIsLoading] = useState(false);
@@ -36,7 +38,7 @@ export default function SettingsTab() {
 
   useEffect(() => {
     if (settingsQuery.data) {
-      setFormData((prev) => ({
+      setFormData(prev => ({
         ...prev,
         ...settingsQuery.data,
       }));
@@ -49,7 +51,7 @@ export default function SettingsTab() {
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({
+    setFormData(prev => ({
       ...prev,
       [name]: name === "defaultVatRate" ? parseInt(value) : value,
     }));
@@ -258,6 +260,99 @@ export default function SettingsTab() {
           </div>
         </Card>
 
+        {/* Logo et Signature */}
+        <Card className="p-6">
+          <h3 className="text-lg font-semibold text-slate-900 mb-4">
+            Logo et Signature
+          </h3>
+
+          <div className="grid grid-cols-2 gap-6">
+            <div>
+              <Label htmlFor="logo">Logo de l'entreprise</Label>
+              <div className="mt-2 p-4 border-2 border-dashed border-slate-300 rounded-lg">
+                <input
+                  id="logo"
+                  type="file"
+                  accept="image/*"
+                  onChange={async e => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      try {
+                        const formData = new FormData();
+                        formData.append("file", file);
+                        // Upload to S3 via backend
+                        // const response = await fetch("/api/upload/logo", {
+                        //   method: "POST",
+                        //   body: formData,
+                        // });
+                        // const data = await response.json();
+                        // setFormData(prev => ({ ...prev, logoUrl: data.url }));
+                      } catch (err) {
+                        console.error("Erreur upload logo:", err);
+                      }
+                    }
+                  }}
+                  className="w-full"
+                />
+                <p className="text-xs text-slate-500 mt-2">
+                  PNG, JPG, SVG (max 2MB)
+                </p>
+              </div>
+              {formData.logoUrl && (
+                <div className="mt-3">
+                  <p className="text-sm font-semibold text-slate-900 mb-2">
+                    Aperçu :
+                  </p>
+                  <img
+                    src={formData.logoUrl}
+                    alt="Logo"
+                    className="max-w-xs h-auto border border-slate-200 rounded"
+                  />
+                </div>
+              )}
+            </div>
+
+            <div>
+              <Label htmlFor="signature">Signature numérique</Label>
+              <div className="mt-2 p-4 border-2 border-dashed border-slate-300 rounded-lg">
+                <input
+                  id="signature"
+                  type="file"
+                  accept="image/*"
+                  onChange={async e => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      try {
+                        const formData = new FormData();
+                        formData.append("file", file);
+                        // Upload to S3 via backend
+                      } catch (err) {
+                        console.error("Erreur upload signature:", err);
+                      }
+                    }
+                  }}
+                  className="w-full"
+                />
+                <p className="text-xs text-slate-500 mt-2">
+                  PNG, JPG (max 1MB)
+                </p>
+              </div>
+              {formData.signatureUrl && (
+                <div className="mt-3">
+                  <p className="text-sm font-semibold text-slate-900 mb-2">
+                    Aperçu :
+                  </p>
+                  <img
+                    src={formData.signatureUrl}
+                    alt="Signature"
+                    className="max-w-xs h-auto border border-slate-200 rounded"
+                  />
+                </div>
+              )}
+            </div>
+          </div>
+        </Card>
+
         {/* Numérotation */}
         <Card className="p-6">
           <h3 className="text-lg font-semibold text-slate-900 mb-4">
@@ -307,11 +402,7 @@ export default function SettingsTab() {
         </Card>
 
         <div className="flex gap-2 justify-end">
-          <Button
-            type="submit"
-            disabled={isLoading}
-            className="gap-2"
-          >
+          <Button type="submit" disabled={isLoading} className="gap-2">
             {isLoading && <Loader2 size={16} className="animate-spin" />}
             {isLoading ? "Sauvegarde..." : "Sauvegarder les paramètres"}
           </Button>

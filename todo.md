@@ -333,6 +333,6 @@
 - [x] Formulaire infos entreprise (nom, SIRET, TVA, adresse, téléphone, email) - SettingsTab.tsx
 - [x] Formulaire mentions légales personnalisées - SettingsTab.tsx
 - [x] Formulaire conditions de paiement par défaut - SettingsTab.tsx
-- [ ] Upload logo/en-tête pour factures
-- [ ] Intégrer les settings dans génération PDF
+- [x] Upload logo/en-tête pour factures - SettingsTab.tsx (S3)
+- [x] Intégrer les settings dans génération PDF - pdfGenerator.ts
 - [ ] Afficher un aperçu des factures avec les settings

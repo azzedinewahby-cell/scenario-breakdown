@@ -314,3 +314,13 @@
 - [ ] Tests unitaires pour numérotation
 - [ ] Tests d'intégration pour workflows (devis → facture)
 - [ ] Validation des mentions légales France
+
+
+## Module Recherche SIRET/INSEE
+- [x] Intégrer API Sirene (INSEE) pour recherche SIRET - siretService.ts
+- [x] Créer route tRPC pour recherche client par SIRET - routers.ts (searchBySiret + searchBySiren)
+- [x] Créer composant SiretSearchForm pour rechercher clients - SiretSearchForm.tsx
+- [x] Pré-remplir les données client automatiquement - ClientForm.tsx
+- [x] Afficher les résultats de recherche (nom, adresse, TVA, etc.) - SiretSearchForm.tsx
+- [x] Gestion des erreurs (SIRET invalide, non trouvé) - siretService.ts + SiretSearchForm.tsx
+- [x] Intégrer la recherche dans ClientForm - ClientForm.tsx

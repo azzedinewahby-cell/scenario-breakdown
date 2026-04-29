@@ -40,6 +40,7 @@ import {
 import { parseScenarioWithLLM } from "./scenarioParser";
 import { generateBreakdownHtml } from "./pdfGenerator";
 import { invokeLLM } from "./_core/llm";
+import { searchBySiret, searchBySiren, formatAddress } from "./siretService";
 import { getDb } from "./db";
 import { budgets } from "../drizzle/schema";
 import { eq } from "drizzle-orm";
@@ -1063,6 +1064,52 @@ Règles importantes:
         .mutation(async ({ input }) => {
           const { deleteClient } = await import("./db");
           return await deleteClient(input.clientId);
+        }),
+      searchBySiret: publicProcedure
+        .input(z.object({ siret: z.string() }))
+        .query(async ({ input }) => {
+          try {
+            const result = await searchBySiret(input.siret);
+            if (!result) {
+              throw new TRPCError({
+                code: "NOT_FOUND",
+                message: "SIRET non trouve dans la base INSEE",
+              });
+            }
+            return result;
+          } catch (error) {
+            if (error instanceof TRPCError) throw error;
+            throw new TRPCError({
+              code: "INTERNAL_SERVER_ERROR",
+              message:
+                error instanceof Error
+                  ? error.message
+                  : "Erreur lors de la recherche SIRET",
+            });
+          }
+        }),
+      searchBySiren: publicProcedure
+        .input(z.object({ siren: z.string() }))
+        .query(async ({ input }) => {
+          try {
+            const result = await searchBySiren(input.siren);
+            if (!result) {
+              throw new TRPCError({
+                code: "NOT_FOUND",
+                message: "SIREN non trouve dans la base INSEE",
+              });
+            }
+            return result;
+          } catch (error) {
+            if (error instanceof TRPCError) throw error;
+            throw new TRPCError({
+              code: "INTERNAL_SERVER_ERROR",
+              message:
+                error instanceof Error
+                  ? error.message
+                  : "Erreur lors de la recherche SIREN",
+            });
+          }
         }),
     }),
 

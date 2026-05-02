@@ -336,3 +336,10 @@
 - [x] Upload logo/en-tête pour factures - SettingsTab.tsx (S3)
 - [x] Intégrer les settings dans génération PDF - pdfGenerator.ts
 - [ ] Afficher un aperçu des factures avec les settings
+
+
+## Corrections Dépouillement (session actuelle)
+- [ ] Corriger le nombre de scènes pour les décors/lieux
+- [x] Ajouter bouton télécharger liste accessoires (CSV/Excel)
+- [x] Ajouter bouton télécharger liste lieux (CSV/Excel)
+- [x] Ajouter bouton télécharger liste personnages (CSV/Excel)

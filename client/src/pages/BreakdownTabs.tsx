@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import {
   Users, MapPin, Package, Film, Search, Plus, BookOpen,
   ChevronDown, ChevronUp, Loader2, Layers, Sun, Moon,
-  AlertTriangle, CheckCircle2, Calendar, Zap
+  AlertTriangle, CheckCircle2, Calendar, Zap, Download
 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { CharacterIcon } from "@/components/CharacterIcon";
@@ -15,6 +15,32 @@ import { CharacterIcon } from "@/components/CharacterIcon";
 interface BreakdownTabsProps {
   scenarioId: number;
   onSceneSelect?: (sceneNumber: number) => void;
+}
+
+// ─── Download CSV Helper ─────────────────────────────────────────────────────
+function downloadCSV(data: any[], filename: string, columns: string[]) {
+  const headers = columns.map(col => {
+    // Capitalize first letter
+    return col.charAt(0).toUpperCase() + col.slice(1);
+  });
+  
+  const rows = data.map(item => 
+    columns.map(col => {
+      const value = item[col];
+      // Escape quotes and wrap in quotes if contains comma
+      if (typeof value === 'string' && (value.includes(',') || value.includes('"'))) {
+        return `"${value.replace(/"/g, '""')}"`;
+      }
+      return value || '';
+    }).join(',')
+  );
+  
+  const csv = [headers.join(','), ...rows].join('\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = `${filename}-${new Date().toISOString().split('T')[0]}.csv`;
+  link.click();
 }
 
 // ─── Sequence Detail Card ─────────────────────────────────────────────────────
@@ -591,6 +617,15 @@ export function BreakdownTabs({ scenarioId, onSceneSelect }: BreakdownTabsProps)
         <TabsContent value="characters">
           <div className="mb-4 flex items-center justify-between">
             <h3 className="text-sm font-semibold text-gray-700">Total : <span className="text-blue-600">{characters.length}</span> personnage{characters.length !== 1 ? 's' : ''}</h3>
+            <Button
+              onClick={() => downloadCSV(characters, 'personnages', ['name', 'gender', 'age', 'sceneCount'])}
+              size="sm"
+              variant="outline"
+              className="gap-2"
+            >
+              <Download size={16} />
+              Télécharger
+            </Button>
           </div>
           <div className="mb-4 relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
@@ -662,6 +697,15 @@ export function BreakdownTabs({ scenarioId, onSceneSelect }: BreakdownTabsProps)
         <TabsContent value="locations">
           <div className="mb-4 flex items-center justify-between">
             <h3 className="text-sm font-semibold text-gray-700">Total : <span className="text-blue-600">{locations.length}</span> lieu{locations.length !== 1 ? 'x' : ''}</h3>
+            <Button
+              onClick={() => downloadCSV(locations, 'lieux', ['name', 'type', 'sceneCount'])}
+              size="sm"
+              variant="outline"
+              className="gap-2"
+            >
+              <Download size={16} />
+              Télécharger
+            </Button>
           </div>
           <div className="mb-4 relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
@@ -706,6 +750,15 @@ export function BreakdownTabs({ scenarioId, onSceneSelect }: BreakdownTabsProps)
         <TabsContent value="props">
           <div className="mb-4 flex items-center justify-between">
             <h3 className="text-sm font-semibold text-gray-700">Total : <span className="text-blue-600">{props.length}</span> accessoire{props.length !== 1 ? 's' : ''}</h3>
+            <Button
+              onClick={() => downloadCSV(props, 'accessoires', ['name', 'description', 'sceneCount'])}
+              size="sm"
+              variant="outline"
+              className="gap-2"
+            >
+              <Download size={16} />
+              Télécharger
+            </Button>
           </div>
           <div className="mb-4 relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />

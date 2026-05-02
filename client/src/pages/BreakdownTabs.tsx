@@ -650,7 +650,7 @@ export function BreakdownTabs({ scenarioId, onSceneSelect }: BreakdownTabsProps)
           <div className="mb-4 flex items-center justify-between">
             <h3 className="text-sm font-semibold text-gray-700">Total : <span className="text-blue-600">{characters.length}</span> personnage{characters.length !== 1 ? 's' : ''}</h3>
             <Button
-              onClick={() => downloadPDF(characters, 'personnages', ['name', 'gender', 'age', 'sceneCount'])}
+              onClick={async () => { try { await downloadPDF(characters, 'personnages', ['name', 'gender', 'age', 'sceneCount'], 'Personnages'); } catch (err) { console.error(err); } }}
               size="sm"
               variant="outline"
               className="gap-2"
@@ -730,7 +730,7 @@ export function BreakdownTabs({ scenarioId, onSceneSelect }: BreakdownTabsProps)
           <div className="mb-4 flex items-center justify-between">
             <h3 className="text-sm font-semibold text-gray-700">Total : <span className="text-blue-600">{locations.length}</span> lieu{locations.length !== 1 ? 'x' : ''}</h3>
             <Button
-              onClick={() => downloadPDF(locations, 'lieux', ['name', 'type', 'sceneCount'])}
+              onClick={async () => { try { await downloadPDF(locations, 'lieux', ['name', 'type', 'sceneCount'], 'Lieux'); } catch (err) { console.error(err); } }}
               size="sm"
               variant="outline"
               className="gap-2"
@@ -783,7 +783,7 @@ export function BreakdownTabs({ scenarioId, onSceneSelect }: BreakdownTabsProps)
           <div className="mb-4 flex items-center justify-between">
             <h3 className="text-sm font-semibold text-gray-700">Total : <span className="text-blue-600">{props.length}</span> accessoire{props.length !== 1 ? 's' : ''}</h3>
             <Button
-              onClick={() => downloadPDF(props, 'accessoires', ['name', 'description', 'sceneCount'])}
+              onClick={async () => { try { await downloadPDF(props, 'accessoires', ['name', 'description', 'sceneCount'], 'Accessoires'); } catch (err) { console.error(err); } }}
               size="sm"
               variant="outline"
               className="gap-2"

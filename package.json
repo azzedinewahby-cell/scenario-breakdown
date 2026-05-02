@@ -60,6 +60,7 @@
     "express": "^4.21.2",
     "fast-xml-parser": "^5.5.11",
     "framer-motion": "^12.23.22",
+    "html2pdf.js": "^0.14.0",
     "input-otp": "^1.4.2",
     "jose": "6.1.0",
     "jszip": "^3.10.1",

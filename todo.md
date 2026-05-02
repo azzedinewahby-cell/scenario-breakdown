@@ -340,6 +340,6 @@
 
 ## Corrections Dépouillement (session actuelle)
 - [ ] Corriger le nombre de scènes pour les décors/lieux
-- [x] Ajouter bouton télécharger liste accessoires (CSV/Excel)
-- [x] Ajouter bouton télécharger liste lieux (CSV/Excel)
-- [x] Ajouter bouton télécharger liste personnages (CSV/Excel)
+- [ ] Ajouter bouton télécharger liste accessoires (PDF avec support arabe)
+- [ ] Ajouter bouton télécharger liste lieux (PDF avec support arabe)
+- [ ] Ajouter bouton télécharger liste personnages (PDF avec support arabe)

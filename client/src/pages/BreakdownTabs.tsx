@@ -18,31 +18,63 @@ interface BreakdownTabsProps {
 }
 
 // ─── Download CSV Helper ─────────────────────────────────────────────────────
-function downloadCSV(data: any[], filename: string, columns: string[]) {
-  const headers = columns.map(col => {
-    // Capitalize first letter
-    return col.charAt(0).toUpperCase() + col.slice(1);
-  });
-  
-  const rows = data.map(item => 
-    columns.map(col => {
-      const value = item[col];
-      // Escape quotes and wrap in quotes if contains comma
-      if (typeof value === 'string' && (value.includes(',') || value.includes('"'))) {
-        return `"${value.replace(/"/g, '""')}"`;
-      }
-      return value || '';
-    }).join(',')
-  );
-  
-  const csv = [headers.join(','), ...rows].join('\n');
-  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-  const link = document.createElement('a');
-  link.href = URL.createObjectURL(blob);
-  link.download = `${filename}-${new Date().toISOString().split('T')[0]}.csv`;
-  link.click();
+async function downloadPDF(data: any[], filename: string, columns: string[], title: string = 'Liste') {
+  try {
+    const html2pdf = (await import('html2pdf.js')).default;
+    
+    const headers = columns.map(col => col.charAt(0).toUpperCase() + col.slice(1));
+    const tableHTML = `
+      <html dir="rtl">
+        <head>
+          <meta charset="UTF-8">
+          <style>
+            body { font-family: 'Arial', sans-serif; direction: rtl; }
+            h1 { text-align: center; margin-bottom: 10px; }
+            .date { text-align: center; color: #666; margin-bottom: 20px; font-size: 12px; }
+            table { width: 100%; border-collapse: collapse; }
+            th { background-color: #333; color: white; padding: 10px; text-align: right; border: 1px solid #ddd; }
+            td { padding: 8px; border: 1px solid #ddd; text-align: right; }
+            tr:nth-child(even) { background-color: #f9f9f9; }
+          </style>
+        </head>
+        <body>
+          <h1>${title}</h1>
+          <p class="date">التاريخ: ${new Date().toLocaleDateString('ar-SA')}</p>
+          <table>
+            <thead>
+              <tr>
+                ${headers.map(h => `<th>${h}</th>`).join('')}
+              </tr>
+            </thead>
+            <tbody>
+              ${data.map(item => `
+                <tr>
+                  ${columns.map(col => `<td>${item[col] || ''}</td>`).join('')}
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </body>
+      </html>
+    `;
+    
+    const element = document.createElement('div');
+    element.innerHTML = tableHTML;
+    
+    const opt = {
+      margin: 10,
+      filename: `${filename}-${new Date().toISOString().split('T')[0]}.pdf`,
+      image: { type: 'png' as const, quality: 0.98 },
+      html2canvas: { scale: 2 },
+      jsPDF: { orientation: 'landscape' as const, unit: 'mm', format: 'a4' }
+    };
+    
+    html2pdf().set(opt).from(element).save();
+  } catch (error) {
+    console.error('PDF generation failed:', error);
+    alert('Erreur lors de la génération du PDF');
+  }
 }
-
 // ─── Sequence Detail Card ─────────────────────────────────────────────────────
 function SequenceDetailCard({ seq, index }: { seq: any; index: number }) {
   const [expanded, setExpanded] = useState(false);
@@ -618,7 +650,7 @@ export function BreakdownTabs({ scenarioId, onSceneSelect }: BreakdownTabsProps)
           <div className="mb-4 flex items-center justify-between">
             <h3 className="text-sm font-semibold text-gray-700">Total : <span className="text-blue-600">{characters.length}</span> personnage{characters.length !== 1 ? 's' : ''}</h3>
             <Button
-              onClick={() => downloadCSV(characters, 'personnages', ['name', 'gender', 'age', 'sceneCount'])}
+              onClick={() => downloadPDF(characters, 'personnages', ['name', 'gender', 'age', 'sceneCount'])}
               size="sm"
               variant="outline"
               className="gap-2"
@@ -698,7 +730,7 @@ export function BreakdownTabs({ scenarioId, onSceneSelect }: BreakdownTabsProps)
           <div className="mb-4 flex items-center justify-between">
             <h3 className="text-sm font-semibold text-gray-700">Total : <span className="text-blue-600">{locations.length}</span> lieu{locations.length !== 1 ? 'x' : ''}</h3>
             <Button
-              onClick={() => downloadCSV(locations, 'lieux', ['name', 'type', 'sceneCount'])}
+              onClick={() => downloadPDF(locations, 'lieux', ['name', 'type', 'sceneCount'])}
               size="sm"
               variant="outline"
               className="gap-2"
@@ -751,7 +783,7 @@ export function BreakdownTabs({ scenarioId, onSceneSelect }: BreakdownTabsProps)
           <div className="mb-4 flex items-center justify-between">
             <h3 className="text-sm font-semibold text-gray-700">Total : <span className="text-blue-600">{props.length}</span> accessoire{props.length !== 1 ? 's' : ''}</h3>
             <Button
-              onClick={() => downloadCSV(props, 'accessoires', ['name', 'description', 'sceneCount'])}
+              onClick={() => downloadPDF(props, 'accessoires', ['name', 'description', 'sceneCount'])}
               size="sm"
               variant="outline"
               className="gap-2"

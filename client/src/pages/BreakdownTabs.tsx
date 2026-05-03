@@ -1,113 +1,89 @@
-import { useState, useMemo } from "react";
-import { trpc } from "@/lib/trpc";
-import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { useState } from "react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@/components/ui/tabs";
-import {
-  Download,
-  Search,
-  ChevronDown,
-  Lightbulb,
+  Users, MapPin, Package, Film, Search, Plus, BookOpen,
+  ChevronDown, ChevronUp, Loader2, Layers, Sun, Moon,
+  AlertTriangle, CheckCircle2, Calendar, Zap, Download, Lightbulb
 } from "lucide-react";
+import { trpc } from "@/lib/trpc";
+import { CharacterIcon } from "@/components/CharacterIcon";
 
 interface BreakdownTabsProps {
   scenarioId: number;
   onSceneSelect?: (sceneNumber: number) => void;
 }
 
-// ─── Download PDF Helper ─────────────────────────────────────────────────────
+// ─── Download CSV Helper ─────────────────────────────────────────────────────
 async function downloadPDF(data: any[], filename: string, columns: string[], title: string = 'Liste'): Promise<void> {
-  try {
-    // Validate data
-    if (!data || data.length === 0) {
-      throw new Error('Aucune donnée à télécharger');
+  return new Promise((resolve, reject) => {
+    try {
+      import('html2pdf.js').then((module) => {
+        const html2pdf = module.default;
+        
+        const headers = columns.map(col => col.charAt(0).toUpperCase() + col.slice(1));
+        const tableHTML = `
+          <html dir="rtl">
+            <head>
+              <meta charset="UTF-8">
+              <style>
+                body { font-family: 'Arial', sans-serif; direction: rtl; }
+                h1 { text-align: center; margin-bottom: 10px; }
+                .date { text-align: center; color: #666; margin-bottom: 20px; font-size: 12px; }
+                table { width: 100%; border-collapse: collapse; }
+                th { background-color: #333; color: white; padding: 10px; text-align: right; border: 1px solid #ddd; }
+                td { padding: 8px; border: 1px solid #ddd; text-align: right; }
+                tr:nth-child(even) { background-color: #f9f9f9; }
+              </style>
+            </head>
+            <body>
+              <h1>${title}</h1>
+              <p class="date">التاريخ: ${new Date().toLocaleDateString('ar-SA')}</p>
+              <table>
+                <thead>
+                  <tr>
+                    ${headers.map(h => `<th>${h}</th>`).join('')}
+                  </tr>
+                </thead>
+                <tbody>
+                  ${data.map(item => `
+                    <tr>
+                      ${columns.map(col => `<td>${item[col] || ''}</td>`).join('')}
+                    </tr>
+                  `).join('')}
+                </tbody>
+              </table>
+            </body>
+          </html>
+        `;
+        
+        const element = document.createElement('div');
+        element.innerHTML = tableHTML;
+        
+        const opt = {
+          margin: 10,
+          filename: `${filename}-${new Date().toISOString().split('T')[0]}.pdf`,
+          image: { type: 'png' as const, quality: 0.98 },
+          html2canvas: { scale: 2 },
+          jsPDF: { orientation: 'landscape' as const, unit: 'mm', format: 'a4' }
+        };
+        
+        html2pdf()
+          .set(opt)
+          .from(element)
+          .save()
+          .then(() => resolve())
+          .catch((error: any) => reject(error));
+      }).catch((error) => reject(error));
+    } catch (error) {
+      console.error('PDF generation failed:', error);
+      reject(error);
     }
-
-    // Dynamic import
-    const module = await import('html2pdf.js');
-    const html2pdf = module.default;
-    
-    const headers = columns.map(col => {
-      const labelMap: Record<string, string> = {
-        'name': 'Nom',
-        'gender': 'Genre',
-        'age': 'Âge',
-        'type': 'Type',
-        'description': 'Description',
-        'sceneCount': 'Nombre de scènes'
-      };
-      return labelMap[col] || col.charAt(0).toUpperCase() + col.slice(1);
-    });
-    
-    // Build table rows safely
-    const tableRows = data.map(item => {
-      const cells = columns.map(col => {
-        const value = item[col];
-        const cellValue = value !== null && value !== undefined ? String(value) : '';
-        return `<td>${cellValue}</td>`;
-      }).join('');
-      return `<tr>${cells}</tr>`;
-    }).join('');
-    
-    const tableHTML = `
-      <html dir="rtl">
-        <head>
-          <meta charset="UTF-8">
-          <style>
-            body { font-family: 'Arial', sans-serif; direction: rtl; margin: 0; padding: 10px; }
-            h1 { text-align: center; margin-bottom: 10px; font-size: 18px; }
-            .date { text-align: center; color: #666; margin-bottom: 20px; font-size: 12px; }
-            table { width: 100%; border-collapse: collapse; }
-            th { background-color: #333; color: white; padding: 10px; text-align: right; border: 1px solid #ddd; font-size: 12px; }
-            td { padding: 8px; border: 1px solid #ddd; text-align: right; font-size: 11px; }
-            tr:nth-child(even) { background-color: #f9f9f9; }
-          </style>
-        </head>
-        <body>
-          <h1>${title}</h1>
-          <p class="date">التاريخ: ${new Date().toLocaleDateString('ar-SA')}</p>
-          <table>
-            <thead>
-              <tr>
-                ${headers.map(h => `<th>${h}</th>`).join('')}
-              </tr>
-            </thead>
-            <tbody>
-              ${tableRows}
-            </tbody>
-          </table>
-        </body>
-      </html>
-    `;
-    
-    const element = document.createElement('div');
-    element.innerHTML = tableHTML;
-    
-    const opt = {
-      margin: 10,
-      filename: `${filename}-${new Date().toISOString().split('T')[0]}.pdf`,
-      image: { type: 'png' as const, quality: 0.98 },
-      html2canvas: { scale: 2, useCORS: true },
-      jsPDF: { orientation: 'landscape' as const, unit: 'mm', format: 'a4' }
-    };
-    
-    // Use await for proper async handling
-    await html2pdf()
-      .set(opt)
-      .from(element)
-      .save();
-  } catch (error) {
-    console.error('PDF generation failed:', error);
-    throw error;
-  }
+  });
 }
-
 // ─── Sequence Detail Card ─────────────────────────────────────────────────────
 function SequenceDetailCard({ seq, index }: { seq: any; index: number }) {
   const [expanded, setExpanded] = useState(false);
@@ -117,207 +93,734 @@ function SequenceDetailCard({ seq, index }: { seq: any; index: number }) {
       { sequenceId: seq.id },
       { enabled: expanded }
     );
-
   const { data: seqProps = [], isLoading: loadingProps } =
     trpc.breakdown.getPropsForSequence.useQuery(
       { sequenceId: seq.id },
       { enabled: expanded }
     );
 
-  // Note: getLocationsForSequence n'existe pas, on peut l'ajouter plus tard si nécessaire
-
   return (
-    <Card
-      className={`cursor-pointer transition-colors ${
-        expanded ? "ring-2 ring-blue-400" : ""
-      }`}
-      onClick={() => setExpanded(!expanded)}
-    >
-      <CardContent className="p-4">
-        <div className="flex items-center justify-between">
-          <div className="min-w-0 flex-1">
-            <p className="font-semibold text-sm truncate">{seq.name}</p>
-            {seq.summary && (
-              <p className="text-xs text-gray-600 mt-1 line-clamp-2">
-                {seq.summary}
-              </p>
-            )}
-          </div>
-          <ChevronDown
-            size={16}
-            className={`shrink-0 transition-transform ml-2 ${
-              expanded ? "rotate-180" : ""
-            }`}
-          />
+    <Card className="p-4 hover:bg-gray-50 transition-colors">
+      <div
+        className="flex items-start justify-between cursor-pointer"
+        onClick={() => setExpanded(!expanded)}
+      >
+        <div className="flex-1">
+          <div className="font-semibold text-sm">#{index + 1} — {seq.name}</div>
+          {seq.summary && (
+            <div className="text-sm text-gray-600 mt-1 leading-relaxed">{seq.summary}</div>
+          )}
         </div>
+        <div className="flex items-center gap-2 ml-3 shrink-0">
+          <span className="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded">
+            Séquence
+          </span>
+          {expanded ? (
+            <ChevronUp className="w-4 h-4 text-gray-400" />
+          ) : (
+            <ChevronDown className="w-4 h-4 text-gray-400" />
+          )}
+        </div>
+      </div>
 
-        {expanded && (
-          <div className="mt-4 space-y-3 border-t pt-3">
-            {/* Personnages */}
+      {expanded && (
+        <div className="mt-4 pt-4 border-t space-y-4">
+          {/* Personnages */}
+          <div>
+            <div className="text-xs font-semibold text-gray-700 mb-2 flex items-center gap-1">
+              <Users className="w-3 h-3" />
+              Personnages
+            </div>
             {loadingChars ? (
-              <p className="text-xs text-gray-400">Chargement...</p>
-            ) : seqCharacters.length === 0 ? (
-              <p className="text-xs text-gray-400">Aucun personnage</p>
-            ) : (
-              <div>
-                <p className="text-xs font-semibold text-gray-700 mb-1">
-                  Personnages ({seqCharacters.length})
-                </p>
-                <div className="flex flex-wrap gap-1">
-                  {seqCharacters.map((char: any) => (
-                    <span
-                      key={char.id}
-                      className="inline-block px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded"
-                    >
-                      {char.name}
-                    </span>
-                  ))}
-                </div>
+              <div className="flex items-center gap-2 text-xs text-gray-500">
+                <Loader2 className="w-3 h-3 animate-spin" />
+                Chargement...
               </div>
-            )}
-
-
-
-            {/* Accessoires */}
-            {loadingProps ? (
-              <p className="text-xs text-gray-400">Chargement...</p>
-            ) : seqProps.length === 0 ? (
-              <p className="text-xs text-gray-400">Aucun accessoire</p>
+            ) : seqCharacters.length === 0 ? (
+              <div className="text-xs text-gray-400 italic">Aucun personnage associé</div>
             ) : (
-              <div>
-                <p className="text-xs font-semibold text-gray-700 mb-1">
-                  Accessoires nécessaires ({seqProps.length})
-                </p>
-                <div className="flex flex-wrap gap-1">
-                  {seqProps.map((prop: any) => (
-                    <span
-                      key={prop.id}
-                      className="inline-block px-2 py-1 bg-amber-100 text-amber-700 text-xs rounded"
-                    >
-                      {prop.name}
-                    </span>
-                  ))}
-                </div>
+              <div className="flex flex-wrap gap-2">
+                {seqCharacters.map((char: any) => (
+                  <div
+                    key={char.characterId}
+                    className="flex items-center gap-1 text-xs bg-blue-50 text-blue-800 px-2 py-1 rounded-full"
+                  >
+                    <CharacterIcon gender={char.gender} age={char.age} />
+                    <span>{char.characterName}</span>
+                  </div>
+                ))}
               </div>
             )}
           </div>
-        )}
-      </CardContent>
+
+          {/* Accessoires */}
+          <div>
+            <div className="text-xs font-semibold text-gray-700 mb-2 flex items-center gap-1">
+              <Package className="w-3 h-3" />
+              Accessoires nécessaires
+            </div>
+            {loadingProps ? (
+              <div className="flex items-center gap-2 text-xs text-gray-500">
+                <Loader2 className="w-3 h-3 animate-spin" />
+                Chargement...
+              </div>
+            ) : seqProps.length === 0 ? (
+              <div className="text-xs text-gray-400 italic">Aucun accessoire associé</div>
+            ) : (
+              <div className="flex flex-wrap gap-2">
+                {seqProps.map((prop: any) => (
+                  <span
+                    key={prop.propId}
+                    className="text-xs bg-amber-50 text-amber-800 px-2 py-1 rounded-full border border-amber-200"
+                  >
+                    {prop.propName}
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </Card>
   );
 }
 
-// ─── Structure Analysis Tab ─────────────────────────────────────────────────────
-function StructureAnalysisTab({ scenarioId }: { scenarioId: number }) {
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [analysis, setAnalysis] = useState<any>(null);
-  const { mutate: analyzeStructure } = trpc.breakdown.analyzeStructure.useMutation({
-    onSuccess: (data) => {
-      setAnalysis(data);
-      setIsAnalyzing(false);
-    },
-    onError: () => {
-      setIsAnalyzing(false);
-      alert('Erreur lors de l\'analyse de la structure');
-    },
-  });
+// ─── Storyboard Tab ───────────────────────────────────────────────────────────
+function StoryboardTab({ scenarioId }: { scenarioId: number }) {
+  const { data, isLoading, refetch } = trpc.breakdown.getSynopsis.useQuery({ scenarioId });
 
-  const handleAnalyze = () => {
-    setIsAnalyzing(true);
-    analyzeStructure({ scenarioId });
-  };
-
-  if (!analysis) {
+  if (isLoading) {
     return (
-      <div className="flex flex-col items-center justify-center py-12">
-        <Lightbulb className="h-12 w-12 text-amber-400 mb-4" />
-        <p className="text-sm text-gray-600 mb-4">Analysez la structure de votre scénario en 3 actes</p>
-        <Button onClick={handleAnalyze} disabled={isAnalyzing}>
-          {isAnalyzing ? 'Analyse en cours...' : 'Analyser la structure'}
+      <Card className="p-8 flex flex-col items-center justify-center gap-4 min-h-[300px]">
+        <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
+        <div className="text-gray-500 text-sm">Chargement du synopsis...</div>
+      </Card>
+    );
+  }
+
+  if (data?.generating) {
+    return (
+      <Card className="p-8 flex flex-col items-center justify-center gap-4 min-h-[300px]">
+        <Loader2 className="w-8 h-8 animate-spin text-purple-500" />
+        <div className="text-gray-700 font-medium">Génération du synopsis en cours...</div>
+        <div className="text-gray-500 text-sm text-center max-w-sm">
+          L'IA analyse le scénario et rédige un synopsis complet. Cela peut prendre quelques secondes.
+        </div>
+        <Button variant="outline" size="sm" onClick={() => refetch()}>
+          Actualiser
         </Button>
-      </div>
+      </Card>
+    );
+  }
+
+  if (!data?.synopsis) {
+    return (
+      <Card className="p-8 flex flex-col items-center justify-center gap-4 min-h-[300px]">
+        <BookOpen className="w-10 h-10 text-gray-300" />
+        <div className="text-gray-500 text-sm text-center max-w-sm">
+          Aucun synopsis disponible. Le synopsis sera généré automatiquement lors du prochain chargement.
+        </div>
+        <Button variant="outline" size="sm" onClick={() => refetch()}>
+          Générer le synopsis
+        </Button>
+      </Card>
     );
   }
 
   return (
     <div className="space-y-4">
-      <Button onClick={handleAnalyze} disabled={isAnalyzing} variant="outline" className="w-full">
-        {isAnalyzing ? 'Analyse en cours...' : 'Réanalyser'}
-      </Button>
+      <div className="flex items-center justify-between">
+        <h3 className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+          <BookOpen className="w-4 h-4" />
+          Synopsis complet
+        </h3>
+        <Button variant="ghost" size="sm" onClick={() => refetch()} className="text-xs text-gray-500">
+          Régénérer
+        </Button>
+      </div>
+      <Card className="p-6">
+        <div className="prose prose-sm max-w-none text-gray-800 leading-relaxed whitespace-pre-wrap">
+          {data.synopsis}
+        </div>
+      </Card>
+    </div>
+  );
+}// ─── Structure Analysis Tab ─────────────────────────────────────────────────────
+function StructureAnalysisTab({ scenarioId }: { scenarioId: number }) {
+  const [analysis, setAnalysis] = useState<any>(null);
 
-      {/* Acte I */}
-      {analysis.acte_i && (
-        <Card className="border-l-4 border-l-blue-500">
-          <CardContent className="p-4">
-            <h3 className="font-semibold text-blue-700 mb-2">Acte I – Exposition</h3>
-            <p className="text-sm text-gray-700 whitespace-pre-wrap">{analysis.acte_i}</p>
-          </CardContent>
+  const generateMutation = trpc.breakdown.analyzeStructure.useMutation({
+    onSuccess: (data) => {
+      setAnalysis(data.data);
+    },
+  });
+
+  if (!analysis) {
+    return (
+      <Card className="p-8 text-center">
+        <div className="flex flex-col items-center justify-center gap-4">
+          <Lightbulb className="w-12 h-12 text-gray-300" />
+          <div>
+            <h3 className="font-semibold text-gray-700 mb-1">Analyse de la structure narrative</h3>
+            <p className="text-sm text-gray-500 max-w-sm mx-auto">
+              Analysez votre scénario selon le modèle classique en 3 actes. Découvrez les obstacles, le climax, le dénouement et recevez des recommandations de correction.
+            </p>
+          </div>
+          <Button
+            onClick={() => generateMutation.mutate({ scenarioId })}
+            disabled={generateMutation.isPending}
+            className="mt-2 gap-2"
+          >
+            {generateMutation.isPending ? (
+              <><Loader2 className="w-4 h-4 animate-spin" /> Analyse en cours (30-60s)...</>
+            ) : (
+              <><Lightbulb className="w-4 h-4" /> Analyser la structure</>
+            )}
+          </Button>
+          {generateMutation.isError && (
+            <p className="text-sm text-red-500">{generateMutation.error?.message}</p>
+          )}
+        </div>
+      </Card>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      {/* ACTE I - EXPOSITION */}
+      <Card className="p-6 border-l-4 border-l-blue-500">
+        <div className="flex items-start justify-between mb-4">
+          <div>
+            <h3 className="text-lg font-bold text-gray-900">Acte I - Exposition</h3>
+            {analysis.acte1?.scenesRange && (
+              <p className="text-sm text-gray-500 mt-1">{analysis.acte1.scenesRange}</p>
+            )}
+          </div>
+        </div>
+        <div className="space-y-3 text-sm">
+          {analysis.acte1?.situationInitiale && (
+            <div>
+              <p className="font-semibold text-gray-700">Situation initiale :</p>
+              <p className="text-gray-600 mt-1">{analysis.acte1.situationInitiale}</p>
+            </div>
+          )}
+          {analysis.acte1?.protagoniste && (
+            <div>
+              <p className="font-semibold text-gray-700">Protagoniste :</p>
+              <p className="text-gray-600 mt-1">{analysis.acte1.protagoniste}</p>
+            </div>
+          )}
+          {analysis.acte1?.incidentPerturbateur && (
+            <div>
+              <p className="font-semibold text-gray-700">Incident perturbateur :</p>
+              <p className="text-gray-600 mt-1">{analysis.acte1.incidentPerturbateur}</p>
+            </div>
+          )}
+          {analysis.acte1?.analyse && (
+            <div>
+              <p className="font-semibold text-gray-700">Analyse :</p>
+              <p className="text-gray-600 mt-1">{analysis.acte1.analyse}</p>
+            </div>
+          )}
+        </div>
+      </Card>
+
+      {/* ACTE II - CONFRONTATION */}
+      <Card className="p-6 border-l-4 border-l-amber-500">
+        <div className="flex items-start justify-between mb-4">
+          <div>
+            <h3 className="text-lg font-bold text-gray-900">Acte II - Confrontation</h3>
+            {analysis.acte2?.scenesRange && (
+              <p className="text-sm text-gray-500 mt-1">{analysis.acte2.scenesRange}</p>
+            )}
+          </div>
+        </div>
+        <div className="space-y-3 text-sm">
+          {analysis.acte2?.developpement && (
+            <div>
+              <p className="font-semibold text-gray-700">Développement :</p>
+              <p className="text-gray-600 mt-1">{analysis.acte2.developpement}</p>
+            </div>
+          )}
+          {analysis.acte2?.monteeEnTension && (
+            <div>
+              <p className="font-semibold text-gray-700">Montée en tension :</p>
+              <p className="text-gray-600 mt-1">{analysis.acte2.monteeEnTension}</p>
+            </div>
+          )}
+          {analysis.acte2?.pointMilieu && (
+            <div>
+              <p className="font-semibold text-gray-700">Point de retournement (milieu) :</p>
+              <p className="text-gray-600 mt-1">{analysis.acte2.pointMilieu}</p>
+            </div>
+          )}
+          {analysis.acte2?.analyse && (
+            <div>
+              <p className="font-semibold text-gray-700">Analyse :</p>
+              <p className="text-gray-600 mt-1">{analysis.acte2.analyse}</p>
+            </div>
+          )}
+        </div>
+      </Card>
+
+      {/* ACTE III - RÉSOLUTION */}
+      <Card className="p-6 border-l-4 border-l-green-500">
+        <div className="flex items-start justify-between mb-4">
+          <div>
+            <h3 className="text-lg font-bold text-gray-900">Acte III - Résolution</h3>
+            {analysis.acte3?.scenesRange && (
+              <p className="text-sm text-gray-500 mt-1">{analysis.acte3.scenesRange}</p>
+            )}
+          </div>
+        </div>
+        <div className="space-y-3 text-sm">
+          {analysis.acte3?.climax && (
+            <div>
+              <p className="font-semibold text-gray-700">Climax :</p>
+              <p className="text-gray-600 mt-1">{analysis.acte3.climax}</p>
+            </div>
+          )}
+          {analysis.acte3?.denouement && (
+            <div>
+              <p className="font-semibold text-gray-700">Dénouement :</p>
+              <p className="text-gray-600 mt-1">{analysis.acte3.denouement}</p>
+            </div>
+          )}
+          {analysis.acte3?.analyse && (
+            <div>
+              <p className="font-semibold text-gray-700">Analyse :</p>
+              <p className="text-gray-600 mt-1">{analysis.acte3.analyse}</p>
+            </div>
+          )}
+        </div>
+      </Card>
+
+      {/* OBSTACLES */}
+      {analysis.obstacles && analysis.obstacles.length > 0 && (
+        <Card className="p-6 border-l-4 border-l-red-500">
+          <h3 className="text-lg font-bold text-gray-900 mb-4">Obstacles majeurs</h3>
+          <div className="space-y-3">
+            {analysis.obstacles.map((obstacle: any, idx: number) => (
+              <div key={idx} className="p-3 bg-red-50 rounded-lg">
+                <div className="flex items-start gap-3">
+                  <div className="flex-1 text-sm">
+                    <p className="font-semibold text-gray-900">
+                      Scène {obstacle.scene} - {obstacle.nature}
+                    </p>
+                    <p className="text-gray-700 mt-1">{obstacle.description}</p>
+                    {obstacle.impactDramatique && (
+                      <p className="text-gray-600 mt-2 italic">Impact : {obstacle.impactDramatique}</p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
         </Card>
       )}
 
-      {/* Acte II */}
-      {analysis.acte_ii && (
-        <Card className="border-l-4 border-l-amber-500">
-          <CardContent className="p-4">
-            <h3 className="font-semibold text-amber-700 mb-2">Acte II – Confrontation</h3>
-            <p className="text-sm text-gray-700 whitespace-pre-wrap">{analysis.acte_ii}</p>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Acte III */}
-      {analysis.acte_iii && (
-        <Card className="border-l-4 border-l-green-500">
-          <CardContent className="p-4">
-            <h3 className="font-semibold text-green-700 mb-2">Acte III – Résolution</h3>
-            <p className="text-sm text-gray-700 whitespace-pre-wrap">{analysis.acte_iii}</p>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Obstacles */}
-      {analysis.obstacles && (
-        <Card className="border-l-4 border-l-red-500">
-          <CardContent className="p-4">
-            <h3 className="font-semibold text-red-700 mb-2">Obstacles majeurs</h3>
-            <p className="text-sm text-gray-700 whitespace-pre-wrap">{analysis.obstacles}</p>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Climax */}
+      {/* CLIMAX */}
       {analysis.climax && (
-        <Card className="border-l-4 border-l-purple-500">
-          <CardContent className="p-4">
-            <h3 className="font-semibold text-purple-700 mb-2">Climax</h3>
-            <p className="text-sm text-gray-700 whitespace-pre-wrap">{analysis.climax}</p>
-          </CardContent>
+        <Card className="p-6 border-l-4 border-l-purple-500">
+          <h3 className="text-lg font-bold text-gray-900 mb-4">Climax</h3>
+          <div className="space-y-3 text-sm">
+            {analysis.climax.scene && (
+              <p>
+                <span className="font-semibold text-gray-700">Scène :</span> {analysis.climax.scene}
+              </p>
+            )}
+            {analysis.climax.description && (
+              <div>
+                <p className="font-semibold text-gray-700">Description :</p>
+                <p className="text-gray-600 mt-1">{analysis.climax.description}</p>
+              </div>
+            )}
+            {analysis.climax.pourquoiPointBascule && (
+              <div>
+                <p className="font-semibold text-gray-700">Point de bascule :</p>
+                <p className="text-gray-600 mt-1">{analysis.climax.pourquoiPointBascule}</p>
+              </div>
+            )}
+          </div>
         </Card>
       )}
 
-      {/* Dénouement */}
+      {/* DÉNOUEMENT */}
       {analysis.denouement && (
-        <Card className="border-l-4 border-l-indigo-500">
-          <CardContent className="p-4">
-            <h3 className="font-semibold text-indigo-700 mb-2">Dénouement</h3>
-            <p className="text-sm text-gray-700 whitespace-pre-wrap">{analysis.denouement}</p>
-          </CardContent>
+        <Card className="p-6 border-l-4 border-l-indigo-500">
+          <h3 className="text-lg font-bold text-gray-900 mb-4">Dénouement</h3>
+          <div className="space-y-3 text-sm">
+            {analysis.denouement.scene && (
+              <p>
+                <span className="font-semibold text-gray-700">Scène :</span> {analysis.denouement.scene}
+              </p>
+            )}
+            {analysis.denouement.description && (
+              <div>
+                <p className="font-semibold text-gray-700">Description :</p>
+                <p className="text-gray-600 mt-1">{analysis.denouement.description}</p>
+              </div>
+            )}
+            {analysis.denouement.coherenceAvecActe1 && (
+              <div>
+                <p className="font-semibold text-gray-700">Cohérence avec l'Acte I :</p>
+                <p className="text-gray-600 mt-1">{analysis.denouement.coherenceAvecActe1}</p>
+              </div>
+            )}
+          </div>
         </Card>
       )}
 
-      {/* Recommandations */}
+      {/* RECOMMANDATIONS */}
       {analysis.recommandations && (
-        <Card className="border-l-4 border-l-cyan-500 bg-cyan-50">
-          <CardContent className="p-4">
-            <h3 className="font-semibold text-cyan-700 mb-2">Recommandations structurelles</h3>
-            <p className="text-sm text-gray-700 whitespace-pre-wrap">{analysis.recommandations}</p>
-          </CardContent>
+        <Card className="p-6 bg-blue-50 border-l-4 border-l-blue-600">
+          <h3 className="text-lg font-bold text-gray-900 mb-4">Recommandations structurelles</h3>
+          <div className="space-y-4">
+            {analysis.recommandations.desequilibres && analysis.recommandations.desequilibres.length > 0 && (
+              <div>
+                <p className="font-semibold text-gray-700 mb-2">Déséquilibres détectés :</p>
+                <ul className="list-disc list-inside space-y-1">
+                  {analysis.recommandations.desequilibres.map((item: string, idx: number) => (
+                    <li key={idx} className="text-gray-600 text-sm">{item}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            {analysis.recommandations.pistes && analysis.recommandations.pistes.length > 0 && (
+              <div>
+                <p className="font-semibold text-gray-700 mb-2">Pistes de correction :</p>
+                <ul className="list-disc list-inside space-y-1">
+                  {analysis.recommandations.pistes.map((item: string, idx: number) => (
+                    <li key={idx} className="text-gray-600 text-sm">{item}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            {analysis.recommandations.forcesNarratives && analysis.recommandations.forcesNarratives.length > 0 && (
+              <div>
+                <p className="font-semibold text-green-700 mb-2">Forces narratives :</p>
+                <ul className="list-disc list-inside space-y-1">
+                  {analysis.recommandations.forcesNarratives.map((item: string, idx: number) => (
+                    <li key={idx} className="text-green-600 text-sm">{item}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            {analysis.recommandations.faiblesses && analysis.recommandations.faiblesses.length > 0 && (
+              <div>
+                <p className="font-semibold text-amber-700 mb-2">Faiblesses identifiées :</p>
+                <ul className="list-disc list-inside space-y-1">
+                  {analysis.recommandations.faiblesses.map((item: string, idx: number) => (
+                    <li key={idx} className="text-amber-600 text-sm">{item}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
+        </Card>
+      )}
+
+      {/* Bouton pour régénérer */}
+      <div className="flex justify-center pt-4">
+        <Button
+          variant="outline"
+          onClick={() => setAnalysis(null)}
+          className="gap-2"
+        >
+          <Lightbulb className="w-4 h-4" />
+          Nouvelle analyse
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+// ─── Technical Breakdown Tab ─────────────────────────────────────────────────────
+function TechnicalBreakdownTab({ scenarioId }: { scenarioId: number }) {  const [breakdown, setBreakdown] = useState<any>(null);
+
+  const generateMutation = trpc.breakdown.generateTechnicalBreakdown.useMutation({
+    onSuccess: (data) => {
+      setBreakdown(data.data);
+    },
+  });
+
+  if (!breakdown) {
+    return (
+      <Card className="p-8 text-center">
+        <div className="flex flex-col items-center justify-center gap-4">
+          <Layers className="w-12 h-12 text-gray-300" />
+          <div>
+            <h3 className="font-semibold text-gray-700 mb-1">Proposition de découpage technique</h3>
+            <p className="text-sm text-gray-500 max-w-sm mx-auto">
+              Générez une analyse professionnelle scène par scène avec estimation des jours de tournage,
+              complexité, plans et notes de production.
+            </p>
+          </div>
+          <Button
+            onClick={() => generateMutation.mutate({ scenarioId })}
+            disabled={generateMutation.isPending}
+            className="mt-2 gap-2"
+          >
+            {generateMutation.isPending ? (
+              <><Loader2 className="w-4 h-4 animate-spin" /> Analyse en cours (30-60s)...</>
+            ) : (
+              <><Layers className="w-4 h-4" /> Générer le découpage technique</>
+            )}
+          </Button>
+          {generateMutation.isError && (
+            <p className="text-sm text-red-500">{generateMutation.error?.message}</p>
+          )}
+        </div>
+      </Card>
+    );
+  }
+
+  const summary = breakdown.summary || {};
+  const scenes: any[] = breakdown.scenes || [];
+  const shootingDays: any[] = breakdown.shootingDays || [];
+  const notes = breakdown.productionNotes || {};
+
+  return (
+    <div className="space-y-6">
+      {/* Bouton régénérer */}
+      <div className="flex justify-end">
+        <Button variant="outline" size="sm" onClick={() => setBreakdown(null)} className="gap-2">
+          <Layers className="w-4 h-4" /> Régénérer
+        </Button>
+      </div>
+
+      {/* Résumé chiffres clés */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <Card className="p-4 text-center">
+          <div className="text-3xl font-bold text-blue-600">{summary.totalShootingDays ?? "—"}</div>
+          <div className="text-xs text-gray-500 mt-1">Jours de tournage</div>
+        </Card>
+        <Card className="p-4 text-center">
+          <div className="text-3xl font-bold text-green-600">{summary.averagePagesPerDay ?? "—"}</div>
+          <div className="text-xs text-gray-500 mt-1">Pages / jour</div>
+        </Card>
+        <Card className="p-4 text-center">
+          <div className="text-3xl font-bold text-orange-500">{summary.heavyDays ?? "—"}</div>
+          <div className="text-xs text-gray-500 mt-1">Journées lourdes</div>
+        </Card>
+        <Card className="p-4 text-center">
+          <div className="text-3xl font-bold text-gray-500">{summary.lightDays ?? "—"}</div>
+          <div className="text-xs text-gray-500 mt-1">Journées légères</div>
+        </Card>
+        <Card className="p-4 text-center">
+          <div className="text-xl font-bold">{summary.intScenes ?? "—"} INT / {summary.extScenes ?? "—"} EXT</div>
+          <div className="text-xs text-gray-500 mt-1">Intérieur / Extérieur</div>
+        </Card>
+        <Card className="p-4 text-center">
+          <div className="text-xl font-bold">{summary.dayScenes ?? "—"} JOUR / {summary.nightScenes ?? "—"} NUIT</div>
+          <div className="text-xs text-gray-500 mt-1">Jour / Nuit</div>
+        </Card>
+        <Card className="p-4 text-center">
+          <div className="text-2xl font-bold text-red-500">{summary.complexScenes ?? "—"}</div>
+          <div className="text-xs text-gray-500 mt-1">Scènes complexes</div>
+        </Card>
+        <Card className="p-4 text-center">
+          <div className="text-2xl font-bold text-green-500">{summary.simpleScenes ?? "—"}</div>
+          <div className="text-xs text-gray-500 mt-1">Scènes simples</div>
+        </Card>
+      </div>
+
+      {/* Plan de tournage par jour */}
+      {shootingDays.length > 0 && (
+        <Card className="p-6">
+          <h3 className="font-semibold text-lg mb-4 flex items-center gap-2">
+            <Calendar className="w-5 h-5 text-blue-500" /> Plan de tournage
+          </h3>
+          <div className="space-y-3">
+            {shootingDays.map((day: any) => (
+              <div
+                key={day.dayNumber}
+                className={`rounded-lg p-4 border-l-4 ${
+                  day.type === "lourde"
+                    ? "border-red-400 bg-red-50"
+                    : day.type === "standard"
+                    ? "border-blue-400 bg-blue-50"
+                    : "border-green-400 bg-green-50"
+                }`}
+              >
+                <div className="flex items-center justify-between mb-1">
+                  <span className="font-semibold text-sm">
+                    Jour {day.dayNumber} — {day.location}
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <Badge
+                      variant={
+                        day.type === "lourde"
+                          ? "destructive"
+                          : day.type === "standard"
+                          ? "default"
+                          : "secondary"
+                      }
+                    >
+                      {day.type}
+                    </Badge>
+                    <span className="text-xs text-gray-500">{day.estimatedPages} pages</span>
+                  </div>
+                </div>
+                <div className="text-sm text-gray-600">
+                  Scènes : {Array.isArray(day.scenes) ? day.scenes.join(", ") : day.scenes}
+                </div>
+                {day.notes && (
+                  <div className="text-xs text-gray-500 mt-1 italic">{day.notes}</div>
+                )}
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
+
+      {/* Analyse scène par scène */}
+      {scenes.length > 0 && (
+        <Card className="p-6">
+          <h3 className="font-semibold text-lg mb-4 flex items-center gap-2">
+            <Film className="w-5 h-5 text-purple-500" /> Analyse scène par scène
+          </h3>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b text-left text-gray-500 text-xs">
+                  <th className="pb-2 pr-3">#</th>
+                  <th className="pb-2 pr-3">Lieu</th>
+                  <th className="pb-2 pr-3">INT/EXT</th>
+                  <th className="pb-2 pr-3">J/N</th>
+                  <th className="pb-2 pr-3">Complexité</th>
+                  <th className="pb-2 pr-3">Plans</th>
+                  <th className="pb-2 pr-3">Heures</th>
+                  <th className="pb-2">Tags</th>
+                </tr>
+              </thead>
+              <tbody>
+                {scenes.map((scene: any) => (
+                  <tr key={scene.sceneNumber} className="border-b hover:bg-gray-50">
+                    <td className="py-2 pr-3 font-mono font-bold text-xs">{scene.sceneNumber}</td>
+                    <td className="py-2 pr-3 max-w-[140px] truncate text-xs">{scene.location}</td>
+                    <td className="py-2 pr-3">
+                      <Badge variant="outline" className="text-xs">{scene.intExt}</Badge>
+                    </td>
+                    <td className="py-2 pr-3">
+                      {scene.dayNight === "NUIT" ? (
+                        <Moon className="w-4 h-4 text-indigo-500" />
+                      ) : (
+                        <Sun className="w-4 h-4 text-yellow-500" />
+                      )}
+                    </td>
+                    <td className="py-2 pr-3">
+                      <Badge
+                        className={`text-xs ${
+                          scene.complexity === "lourde"
+                            ? "bg-red-100 text-red-700 hover:bg-red-100"
+                            : scene.complexity === "moyenne"
+                            ? "bg-orange-100 text-orange-700 hover:bg-orange-100"
+                            : "bg-green-100 text-green-700 hover:bg-green-100"
+                        }`}
+                      >
+                        {scene.complexity}
+                      </Badge>
+                    </td>
+                    <td className="py-2 pr-3 text-center text-xs">{scene.estimatedPlans}</td>
+                    <td className="py-2 pr-3 text-center text-xs">{scene.estimatedHours}h</td>
+                    <td className="py-2">
+                      <div className="flex gap-1 flex-wrap">
+                        {scene.hasDialogue && (
+                          <Badge variant="outline" className="text-xs">Dial.</Badge>
+                        )}
+                        {scene.hasAction && (
+                          <Badge variant="outline" className="text-xs">Action</Badge>
+                        )}
+                        {scene.hasFX && (
+                          <Badge variant="outline" className="text-xs text-purple-600">FX</Badge>
+                        )}
+                        {scene.hasCascade && (
+                          <Badge variant="outline" className="text-xs text-red-600">Cascade</Badge>
+                        )}
+                        {scene.hasFiguration && (
+                          <Badge variant="outline" className="text-xs text-blue-600">Figur.</Badge>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          {scenes.some((s: any) => s.notes) && (
+            <div className="mt-4 space-y-2">
+              <h4 className="text-sm font-semibold text-gray-700">Notes de scènes</h4>
+              {scenes.filter((s: any) => s.notes).map((scene: any) => (
+                <div key={scene.sceneNumber} className="text-xs text-gray-600 bg-gray-50 rounded p-2">
+                  <span className="font-mono font-bold">Scène {scene.sceneNumber}</span> — {scene.notes}
+                </div>
+              ))}
+            </div>
+          )}
+        </Card>
+      )}
+
+      {/* Notes de production */}
+      {(notes.feasibility || notes.mainRisks?.length || notes.optimizations?.length) && (
+        <Card className="p-6">
+          <h3 className="font-semibold text-lg mb-4 flex items-center gap-2">
+            <AlertTriangle className="w-5 h-5 text-orange-500" /> Analyse de production
+          </h3>
+          <div className="space-y-4">
+            {notes.feasibility && (
+              <div>
+                <h4 className="font-medium text-gray-700 mb-1 text-sm">Faisabilité</h4>
+                <p className="text-sm text-gray-600">{notes.feasibility}</p>
+              </div>
+            )}
+            {notes.mainRisks?.length > 0 && (
+              <div>
+                <h4 className="font-medium text-gray-700 mb-2 text-sm">Risques principaux</h4>
+                <ul className="space-y-1">
+                  {notes.mainRisks.map((r: string, i: number) => (
+                    <li key={i} className="flex items-start gap-2 text-sm text-gray-600">
+                      <AlertTriangle className="w-4 h-4 text-orange-400 mt-0.5 flex-shrink-0" />
+                      {r}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            {notes.optimizations?.length > 0 && (
+              <div>
+                <h4 className="font-medium text-gray-700 mb-2 text-sm">Optimisations possibles</h4>
+                <ul className="space-y-1">
+                  {notes.optimizations.map((o: string, i: number) => (
+                    <li key={i} className="flex items-start gap-2 text-sm text-gray-600">
+                      <CheckCircle2 className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
+                      {o}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            {notes.specialRequirements?.length > 0 && (
+              <div>
+                <h4 className="font-medium text-gray-700 mb-2 text-sm">Besoins spéciaux</h4>
+                <ul className="space-y-1">
+                  {notes.specialRequirements.map((r: string, i: number) => (
+                    <li key={i} className="flex items-start gap-2 text-sm text-gray-600">
+                      <Zap className="w-4 h-4 text-blue-500 mt-0.5 flex-shrink-0" />
+                      {r}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
         </Card>
       )}
     </div>
   );
 }
 
+// ─── Main Component ───────────────────────────────────────────────────────────
 export function BreakdownTabs({ scenarioId, onSceneSelect }: BreakdownTabsProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [newSequenceName, setNewSequenceName] = useState("");
@@ -356,384 +859,321 @@ export function BreakdownTabs({ scenarioId, onSceneSelect }: BreakdownTabsProps)
 
   const handleCreateSequence = async () => {
     if (!newSequenceName.trim()) return;
-    await createSequenceMutation.mutateAsync({
-      scenarioId,
-      name: newSequenceName,
-    });
+    await createSequenceMutation.mutateAsync({ scenarioId, name: newSequenceName });
     setNewSequenceName("");
     utils.breakdown.getSequences.invalidate({ scenarioId });
   };
 
   return (
-    <Tabs defaultValue="sequences" className="w-full">
-      <TabsList className="grid w-full grid-cols-7 mb-6">
-        <TabsTrigger value="sequences" className="text-xs sm:text-sm">
-          <span className="hidden sm:inline">Séquences</span>
-          <span className="sm:hidden">Séq.</span>
-        </TabsTrigger>
-        <TabsTrigger value="characters" className="text-xs sm:text-sm">
-          <span className="hidden sm:inline">Personnages</span>
-          <span className="sm:hidden">Pers.</span>
-        </TabsTrigger>
-        <TabsTrigger value="locations" className="text-xs sm:text-sm">
-          <span className="hidden sm:inline">Lieux</span>
-          <span className="sm:hidden">Lx.</span>
-        </TabsTrigger>
-        <TabsTrigger value="props" className="text-xs sm:text-sm">
-          <span className="hidden sm:inline">Accessoires</span>
-          <span className="sm:hidden">Acc.</span>
-        </TabsTrigger>
-        <TabsTrigger value="char-sequences" className="text-xs sm:text-sm">
-          <span className="hidden sm:inline">Pers. Séq.</span>
-          <span className="sm:hidden">PS</span>
-        </TabsTrigger>
-        <TabsTrigger value="prop-sequences" className="text-xs sm:text-sm">
-          <span className="hidden sm:inline">Acc. Séq.</span>
-          <span className="sm:hidden">AS</span>
-        </TabsTrigger>
-        <TabsTrigger value="structure" className="text-xs sm:text-sm">
-          <span className="hidden sm:inline">Structure</span>
-          <span className="sm:hidden">Str.</span>
-        </TabsTrigger>
-      </TabsList>
+    <div className="w-full">
+      <Tabs defaultValue="storyboard" className="w-full">
+        <TabsList className="grid w-full grid-cols-7 mb-6">
+          <TabsTrigger value="storyboard" className="flex items-center gap-1.5">
+            <BookOpen className="w-4 h-4" />
+            <span className="hidden sm:inline text-xs">Storyboard</span>
+          </TabsTrigger>
+          <TabsTrigger value="sequences" className="flex items-center gap-1.5">
+            <Film className="w-4 h-4" />
+            <span className="hidden sm:inline text-xs">Séquences</span>
+            {sequences.length > 0 && <Badge variant="secondary" className="text-xs ml-1 bg-blue-100 text-blue-700 border-blue-200">{sequences.length}</Badge>}
+          </TabsTrigger>
+          <TabsTrigger value="characters" className="flex items-center gap-1.5">
+            <Users className="w-4 h-4" />
+            <span className="hidden sm:inline text-xs">Personnages</span>
+            {characters.length > 0 && <Badge variant="secondary" className="text-xs ml-1 bg-blue-100 text-blue-700 border-blue-200">{characters.length}</Badge>}
+          </TabsTrigger>
+          <TabsTrigger value="locations" className="flex items-center gap-1.5">
+            <MapPin className="w-4 h-4" />
+            <span className="hidden sm:inline text-xs">Lieux</span>
+            {locations.length > 0 && <Badge variant="secondary" className="text-xs ml-1 bg-blue-100 text-blue-700 border-blue-200">{locations.length}</Badge>}
+          </TabsTrigger>
+          <TabsTrigger value="props" className="flex items-center gap-1.5">
+            <Package className="w-4 h-4" />
+            <span className="hidden sm:inline text-xs">Accessoires</span>
+            {props.length > 0 && <Badge variant="secondary" className="text-xs ml-1 bg-blue-100 text-blue-700 border-blue-200">{props.length}</Badge>}
+          </TabsTrigger>
+          <TabsTrigger value="breakdown" className="flex items-center gap-1.5">
+            <Layers className="w-4 h-4" />
+            <span className="hidden sm:inline text-xs">Découpage</span>
+          </TabsTrigger>
+          <TabsTrigger value="structure" className="flex items-center gap-1.5">
+            <Lightbulb className="w-4 h-4" />
+            <span className="hidden sm:inline text-xs">Structure</span>
+          </TabsTrigger>
+        </TabsList>
 
-      {/* Search bar (shared for Séquences, Personnages, Lieux, Accessoires) */}
-      {["sequences", "characters", "locations", "props"].includes(
-        document.querySelector('[role="tablist"]')?.getAttribute("data-active") || "sequences"
-      ) && (
-        <div className="mb-4 relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-          <Input
-            placeholder="Rechercher..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-9"
-          />
-        </div>
-      )}
+        {/* STORYBOARD */}
+        <TabsContent value="storyboard">
+          <StoryboardTab scenarioId={scenarioId} />
+        </TabsContent>
 
-      {/* SÉQUENCES */}
-      <TabsContent value="sequences">
-        <div className="mb-4 flex gap-2">
-          <Input
-            placeholder="Nouvelle séquence..."
-            value={newSequenceName}
-            onChange={(e) => setNewSequenceName(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") handleCreateSequence();
-            }}
-            className="flex-1"
-          />
-          <Button onClick={handleCreateSequence} size="sm">
-            Ajouter
-          </Button>
-        </div>
-        <div className="space-y-3">
-          {filteredSequences.map((seq, idx) => (
-            <SequenceDetailCard key={seq.id} seq={seq} index={idx} />
-          ))}
-        </div>
-      </TabsContent>
+        {/* Search bar (shared for Séquences, Personnages, Lieux, Accessoires) */}
+        <TabsContent value="sequences">
+          <div className="mb-4 flex items-center justify-between">
+            <h3 className="text-sm font-semibold text-gray-700">Total : <span className="text-blue-600">{sequences.length}</span> séquence{sequences.length !== 1 ? 's' : ''}</h3>
+          </div>
+          <div className="mb-4 relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <Input
+              placeholder="Rechercher une séquence..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-9"
+            />
+          </div>
+          <div className="flex gap-2 mb-4">
+            <Input
+              placeholder="Nom de la nouvelle séquence..."
+              value={newSequenceName}
+              onChange={(e) => setNewSequenceName(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleCreateSequence()}
+            />
+            <Button onClick={handleCreateSequence} size="sm" className="gap-1 shrink-0">
+              <Plus className="w-4 h-4" /> Ajouter
+            </Button>
+          </div>
+          {filteredSequences.length === 0 ? (
+            <Card className="p-8 text-center text-gray-400 text-sm">
+              Aucune séquence trouvée
+            </Card>
+          ) : (
+            <div className="space-y-3">
+              {filteredSequences.map((seq, index) => (
+                <SequenceDetailCard key={seq.id} seq={seq} index={index} />
+              ))}
+            </div>
+          )}
+        </TabsContent>
 
-      {/* PERSONNAGES */}
-      <TabsContent value="characters">
-        <div className="mb-4 flex items-center justify-between">
-          <h3 className="text-sm font-semibold text-gray-700">Total : <span className="text-blue-600">{characters.length}</span> personnage{characters.length !== 1 ? 's' : ''}</h3>
-          <Button
-            onClick={async () => { 
-              try { 
-                if (characters.length === 0) {
-                  alert('Aucun personnage à télécharger');
-                  return;
-                }
-                await downloadPDF(characters, 'personnages', ['name', 'gender', 'age', 'sceneCount'], 'Personnages'); 
-              } catch (err) { 
-                console.error('Download error:', err);
-                alert('Erreur lors du téléchargement du PDF: ' + (err instanceof Error ? err.message : String(err)));
-              } 
-            }}
-            size="sm"
-            variant="outline"
-            className="gap-2"
-          >
-            <Download size={16} />
-            Télécharger
-          </Button>
-        </div>
-        <div className="mb-4 relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-          <Input
-            placeholder="Rechercher un personnage..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-9"
-          />
-        </div>
-        {filteredCharacters.length === 0 ? (
-          <Card className="p-8 text-center text-gray-400 text-sm">
-            Aucun personnage trouvé
-          </Card>
-        ) : (
-          <div className="space-y-3">
-            {filteredCharacters.map((char: any) => (
-              <Card
-                key={char.id}
-                className={`p-4 cursor-pointer transition-colors hover:bg-gray-50 ${
-                  selectedCharacterId === char.id ? "ring-2 ring-blue-400" : ""
-                }`}
-                onClick={() =>
-                  setSelectedCharacterId(selectedCharacterId === char.id ? null : char.id)
-                }
-              >
-                <div className="flex items-start justify-between">
-                  <div>
-                    <p className="font-semibold text-sm">{char.name}</p>
-                    <p className="text-xs text-gray-500 mt-1">
-                      {char.gender && `Genre: ${char.gender}`}
-                      {char.age && ` • Âge: ${char.age}`}
-                    </p>
-                    <p className="text-xs text-gray-500 mt-1">
-                      {char.sceneCount} scène{(char.sceneCount ?? 0) > 1 ? "s" : ""}
-                    </p>
-                  </div>
-                </div>
-
-                {selectedCharacterId === char.id && characterSequences.length > 0 && (
-                  <div className="mt-3 pt-3 border-t">
-                    <p className="text-xs font-semibold text-gray-700 mb-2">
-                      Séquences ({characterSequences.length})
-                    </p>
-                    <div className="flex flex-wrap gap-1">
-                      {characterSequences.map((seq: any) => (
-                        <span
-                          key={seq.id}
-                          className="inline-block px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded cursor-pointer hover:bg-blue-200"
-                          onClick={() => onSceneSelect?.(seq.id)}
-                        >
-                          {seq.name}
+        {/* PERSONNAGES */}
+        <TabsContent value="characters">
+          <div className="mb-4 flex items-center justify-between">
+            <h3 className="text-sm font-semibold text-gray-700">Total : <span className="text-blue-600">{characters.length}</span> personnage{characters.length !== 1 ? 's' : ''}</h3>
+            <Button
+              onClick={async () => { try { await downloadPDF(characters, 'personnages', ['name', 'gender', 'age', 'sceneCount'], 'Personnages'); } catch (err) { console.error(err); } }}
+              size="sm"
+              variant="outline"
+              className="gap-2"
+            >
+              <Download size={16} />
+              Télécharger
+            </Button>
+          </div>
+          <div className="mb-4 relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <Input
+              placeholder="Rechercher un personnage..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-9"
+            />
+          </div>
+          {filteredCharacters.length === 0 ? (
+            <Card className="p-8 text-center text-gray-400 text-sm">
+              Aucun personnage trouvé
+            </Card>
+          ) : (
+            <div className="space-y-3">
+              {filteredCharacters.map((char: any) => (
+                <Card
+                  key={char.id}
+                  className={`p-4 cursor-pointer transition-colors hover:bg-gray-50 ${
+                    selectedCharacterId === char.id ? "ring-2 ring-blue-400" : ""
+                  }`}
+                  onClick={() =>
+                    setSelectedCharacterId(selectedCharacterId === char.id ? null : char.id)
+                  }
+                >
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-center gap-3">
+                      <CharacterIcon gender={char.gender} age={char.age} />
+                      <div>
+                        <div className="font-semibold text-sm">{char.name}</div>
+                        {char.description && (
+                          <div className="text-xs text-gray-500 mt-0.5 line-clamp-2">
+                            {char.description}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 ml-3 shrink-0">
+                      {char.sceneCount !== undefined && (
+                        <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded">
+                          {char.sceneCount} scène{char.sceneCount !== 1 ? "s" : ""}
                         </span>
-                      ))}
+                      )}
                     </div>
                   </div>
-                )}
-              </Card>
-            ))}
+                  {selectedCharacterId === char.id && characterSequences.length > 0 && (
+                    <div className="mt-3 pt-3 border-t">
+                      <div className="text-xs font-semibold text-gray-600 mb-2">Séquences :</div>
+                      <div className="flex flex-wrap gap-1">
+                        {characterSequences.map((seq: any) => (
+                          <span
+                            key={seq.sequenceId}
+                            className="text-xs bg-purple-50 text-purple-700 px-2 py-1 rounded"
+                          >
+                            {seq.sequenceName}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </Card>
+              ))}
+            </div>
+          )}
+        </TabsContent>
+
+        {/* LIEUX */}
+        <TabsContent value="locations">
+          <div className="mb-4 flex items-center justify-between">
+            <h3 className="text-sm font-semibold text-gray-700">Total : <span className="text-blue-600">{locations.length}</span> lieu{locations.length !== 1 ? 'x' : ''}</h3>
+            <Button
+              onClick={async () => { try { await downloadPDF(locations, 'lieux', ['name', 'type', 'sceneCount'], 'Lieux'); } catch (err) { console.error(err); } }}
+              size="sm"
+              variant="outline"
+              className="gap-2"
+            >
+              <Download size={16} />
+              Télécharger
+            </Button>
           </div>
-        )}
-      </TabsContent>
-
-      {/* LIEUX */}
-      <TabsContent value="locations">
-        <div className="mb-4 flex items-center justify-between">
-          <h3 className="text-sm font-semibold text-gray-700">Total : <span className="text-green-600">{locations.length}</span> lieu{locations.length !== 1 ? 'x' : ''}</h3>
-          <Button
-            onClick={async () => { 
-              try { 
-                if (locations.length === 0) {
-                  alert('Aucun lieu à télécharger');
-                  return;
-                }
-                await downloadPDF(locations, 'lieux', ['name', 'type', 'sceneCount'], 'Lieux'); 
-              } catch (err) { 
-                console.error('Download error:', err);
-                alert('Erreur lors du téléchargement du PDF: ' + (err instanceof Error ? err.message : String(err)));
-              } 
-            }}
-            size="sm"
-            variant="outline"
-            className="gap-2"
-          >
-            <Download size={16} />
-            Télécharger
-          </Button>
-        </div>
-        <div className="mb-4 relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-          <Input
-            placeholder="Rechercher un lieu..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-9"
-          />
-        </div>
-        {filteredLocations.length === 0 ? (
-          <Card className="p-8 text-center text-gray-400 text-sm">
-            Aucun lieu trouvé
-          </Card>
-        ) : (
-          <div className="space-y-3">
-            {filteredLocations.map((loc: any) => (
-              <Card
-                key={loc.id}
-                className="p-4 cursor-pointer transition-colors hover:bg-gray-50"
-              >
-                <div className="flex items-start justify-between">
-                  <div>
-                    <p className="font-semibold text-sm">{loc.name}</p>
-                    {loc.type && (
-                      <p className="text-xs text-gray-500 mt-1">Type: {loc.type}</p>
-                    )}
-                    <p className="text-xs text-gray-500 mt-1">
-                      {loc.sceneCount} scène{(loc.sceneCount ?? 0) > 1 ? "s" : ""}
-                    </p>
-                  </div>
-                </div>
-              </Card>
-            ))}
+          <div className="mb-4 relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <Input
+              placeholder="Rechercher un lieu..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-9"
+            />
           </div>
-        )}
-      </TabsContent>
-
-      {/* ACCESSOIRES */}
-      <TabsContent value="props">
-        <div className="mb-4 flex items-center justify-between">
-          <h3 className="text-sm font-semibold text-gray-700">Total : <span className="text-blue-600">{props.length}</span> accessoire{props.length !== 1 ? 's' : ''}</h3>
-          <Button
-            onClick={async () => { 
-              try { 
-                if (props.length === 0) {
-                  alert('Aucun accessoire à télécharger');
-                  return;
-                }
-                await downloadPDF(props, 'accessoires', ['name', 'description', 'sceneCount'], 'Accessoires'); 
-              } catch (err) { 
-                console.error('Download error:', err);
-                alert('Erreur lors du téléchargement du PDF: ' + (err instanceof Error ? err.message : String(err)));
-              } 
-            }}
-            size="sm"
-            variant="outline"
-            className="gap-2"
-          >
-            <Download size={16} />
-            Télécharger
-          </Button>
-        </div>
-        <div className="mb-4 relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-          <Input
-            placeholder="Rechercher un accessoire..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-9"
-          />
-        </div>
-        {filteredProps.length === 0 ? (
-          <Card className="p-8 text-center text-gray-400 text-sm">
-            Aucun accessoire trouvé
-          </Card>
-        ) : (
-          <div className="space-y-3">
-            {filteredProps.map((prop: any) => (
-              <Card
-                key={prop.id}
-                className={`p-4 cursor-pointer transition-colors hover:bg-gray-50 ${
-                  selectedPropId === prop.id ? "ring-2 ring-amber-400" : ""
-                }`}
-                onClick={() =>
-                  setSelectedPropId(selectedPropId === prop.id ? null : prop.id)
-                }
-              >
-                <div className="flex items-start justify-between">
-                  <div>
-                    <p className="font-semibold text-sm">{prop.name}</p>
-                    {prop.description && (
-                      <p className="text-xs text-gray-500 mt-1">{prop.description}</p>
-                    )}
-                    <p className="text-xs text-gray-500 mt-1">
-                      {prop.sceneCount} scène{(prop.sceneCount ?? 0) > 1 ? "s" : ""}
-                    </p>
-                  </div>
-                </div>
-
-                {selectedPropId === prop.id && propSequences.length > 0 && (
-                  <div className="mt-3 pt-3 border-t">
-                    <p className="text-xs font-semibold text-gray-700 mb-2">
-                      Séquences ({propSequences.length})
-                    </p>
-                    <div className="flex flex-wrap gap-1">
-                      {propSequences.map((seq: any) => (
-                        <span
-                          key={seq.id}
-                          className="inline-block px-2 py-1 bg-amber-100 text-amber-700 text-xs rounded cursor-pointer hover:bg-amber-200"
-                          onClick={() => onSceneSelect?.(seq.id)}
-                        >
-                          {seq.name}
+          {filteredLocations.length === 0 ? (
+            <Card className="p-8 text-center text-gray-400 text-sm">
+              Aucun lieu trouvé
+            </Card>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {filteredLocations.map((loc: any) => (
+                <Card key={loc.id} className="p-4">
+                  <div className="flex items-start gap-3">
+                    <MapPin className="w-5 h-5 text-green-500 mt-0.5 shrink-0" />
+                    <div>
+                      <div className="font-semibold text-sm">{loc.name}</div>
+                      {loc.type && (
+                        <span className="text-xs bg-green-50 text-green-700 px-2 py-0.5 rounded mt-1 inline-block">
+                          {loc.type}
                         </span>
-                      ))}
+                      )}
+                      {loc.sceneCount !== undefined && (
+                        <div className="text-xs text-gray-500 mt-1">
+                          {loc.sceneCount} scène{loc.sceneCount !== 1 ? "s" : ""}
+                        </div>
+                      )}
                     </div>
                   </div>
-                )}
-              </Card>
-            ))}
+                </Card>
+              ))}
+            </div>
+          )}
+        </TabsContent>
+
+        {/* ACCESSOIRES */}
+        <TabsContent value="props">
+          <div className="mb-4 flex items-center justify-between">
+            <h3 className="text-sm font-semibold text-gray-700">Total : <span className="text-blue-600">{props.length}</span> accessoire{props.length !== 1 ? 's' : ''}</h3>
+            <Button
+              onClick={async () => { try { await downloadPDF(props, 'accessoires', ['name', 'description', 'sceneCount'], 'Accessoires'); } catch (err) { console.error(err); } }}
+              size="sm"
+              variant="outline"
+              className="gap-2"
+            >
+              <Download size={16} />
+              Télécharger
+            </Button>
           </div>
-        )}
-      </TabsContent>
-
-      {/* PERSONNAGES PAR SÉQUENCE */}
-      <TabsContent value="char-sequences">
-        <div className="space-y-3">
-          {sequences.map((seq) => {
-            const seqChars = characters.filter((c: any) =>
-              c.name?.toLowerCase().includes(searchTerm.toLowerCase())
-            );
-            return (
-              <Card key={seq.id} className="p-4">
-                <p className="font-semibold text-sm mb-2">{seq.name}</p>
-                {seqChars.length === 0 ? (
-                  <p className="text-xs text-gray-400">Aucun personnage</p>
-                ) : (
-                  <div className="flex flex-wrap gap-1">
-                    {seqChars.map((char: any) => (
-                      <span
-                        key={char.id}
-                        className="inline-block px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded"
-                      >
-                        {char.name}
+          <div className="mb-4 relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <Input
+              placeholder="Rechercher un accessoire..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-9"
+            />
+          </div>
+          {filteredProps.length === 0 ? (
+            <Card className="p-8 text-center text-gray-400 text-sm">
+              Aucun accessoire trouvé
+            </Card>
+          ) : (
+            <div className="space-y-3">
+              {filteredProps.map((prop: any) => (
+                <Card
+                  key={prop.id}
+                  className={`p-4 cursor-pointer transition-colors hover:bg-gray-50 ${
+                    selectedPropId === prop.id ? "ring-2 ring-amber-400" : ""
+                  }`}
+                  onClick={() =>
+                    setSelectedPropId(selectedPropId === prop.id ? null : prop.id)
+                  }
+                >
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-center gap-3">
+                      <Package className="w-5 h-5 text-amber-500 shrink-0" />
+                      <div>
+                        <div className="font-semibold text-sm">{prop.name}</div>
+                        {prop.description && (
+                          <div className="text-xs text-gray-500 mt-0.5">{prop.description}</div>
+                        )}
+                      </div>
+                    </div>
+                    {prop.sceneCount !== undefined && (
+                      <span className="text-xs bg-amber-100 text-amber-700 px-2 py-1 rounded shrink-0">
+                        {prop.sceneCount} scène{prop.sceneCount !== 1 ? "s" : ""}
                       </span>
-                    ))}
+                    )}
                   </div>
-                )}
-              </Card>
-            );
-          })}
-        </div>
-      </TabsContent>
+                  {selectedPropId === prop.id && (
+                    <div className="mt-3 pt-3 border-t">
+                      {loadingPropSequences ? (
+                        <div className="flex items-center gap-2 text-xs text-gray-500">
+                          <Loader2 className="w-3 h-3 animate-spin" /> Chargement...
+                        </div>
+                      ) : propSequences.length === 0 ? (
+                        <div className="text-xs text-gray-400 italic">Aucune séquence associée</div>
+                      ) : (
+                        <div>
+                          <div className="text-xs font-semibold text-gray-600 mb-2">Séquences :</div>
+                          <div className="flex flex-wrap gap-1">
+                            {propSequences.map((seq: any) => (
+                              <span
+                                key={seq.sequenceId}
+                                className="text-xs bg-purple-50 text-purple-700 px-2 py-1 rounded"
+                              >
+                                {seq.sequenceName}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </Card>
+              ))}
+            </div>
+          )}
+        </TabsContent>
 
-      {/* ACCESSOIRES PAR SÉQUENCE */}
-      <TabsContent value="prop-sequences">
-        <div className="space-y-3">
-          {sequences.map((seq) => {
-            const seqProps = props.filter((p: any) =>
-              p.name?.toLowerCase().includes(searchTerm.toLowerCase())
-            );
-            return (
-              <Card key={seq.id} className="p-4">
-                <p className="font-semibold text-sm mb-2">{seq.name}</p>
-                {seqProps.length === 0 ? (
-                  <p className="text-xs text-gray-400">Aucun accessoire</p>
-                ) : (
-                  <div className="flex flex-wrap gap-1">
-                    {seqProps.map((prop: any) => (
-                      <span
-                        key={prop.id}
-                        className="inline-block px-2 py-1 bg-amber-100 text-amber-700 text-xs rounded"
-                      >
-                        {prop.name}
-                      </span>
-                    ))}
-                  </div>
-                )}
-              </Card>
-            );
-          })}
-        </div>
-      </TabsContent>
+        {/* DÉCOUPAGE TECHNIQUE */}
+        <TabsContent value="breakdown" className="space-y-4">
+          <TechnicalBreakdownTab scenarioId={scenarioId} />
+        </TabsContent>
 
-      {/* STRUCTURE */}
-      <TabsContent value="structure">
-        <StructureAnalysisTab scenarioId={scenarioId} />
-      </TabsContent>
-    </Tabs>
+        {/* CORRECTION STRUCTURE */}
+        <TabsContent value="structure" className="space-y-4">
+          <StructureAnalysisTab scenarioId={scenarioId} />
+        </TabsContent>
+      </Tabs>
+    </div>
   );
 }

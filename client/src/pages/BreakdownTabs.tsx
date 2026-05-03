@@ -674,17 +674,21 @@ export function BreakdownTabs({ scenarioId, onSceneSelect }: BreakdownTabsProps)
       <TabsContent value="char-sequences">
         <div className="space-y-3">
           {sequences.map((seq) => {
-            const seqChars = characters.filter((c: any) =>
+            // Get characters that appear in this sequence
+            const seqChars = characterSequences.filter(
+              (cs: any) => cs.sequenceId === seq.id
+            );
+            const filteredSeqChars = seqChars.filter((c: any) =>
               c.name?.toLowerCase().includes(searchTerm.toLowerCase())
             );
             return (
               <Card key={seq.id} className="p-4">
                 <p className="font-semibold text-sm mb-2">{seq.name}</p>
-                {seqChars.length === 0 ? (
+                {filteredSeqChars.length === 0 ? (
                   <p className="text-xs text-gray-400">Aucun personnage</p>
                 ) : (
                   <div className="flex flex-wrap gap-1">
-                    {seqChars.map((char: any) => (
+                    {filteredSeqChars.map((char: any) => (
                       <span
                         key={char.id}
                         className="inline-block px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded"
@@ -704,17 +708,21 @@ export function BreakdownTabs({ scenarioId, onSceneSelect }: BreakdownTabsProps)
       <TabsContent value="prop-sequences">
         <div className="space-y-3">
           {sequences.map((seq) => {
-            const seqProps = props.filter((p: any) =>
+            // Get props that appear in this sequence
+            const seqProps = propSequences.filter(
+              (ps: any) => ps.sequenceId === seq.id
+            );
+            const filteredSeqProps = seqProps.filter((p: any) =>
               p.name?.toLowerCase().includes(searchTerm.toLowerCase())
             );
             return (
               <Card key={seq.id} className="p-4">
                 <p className="font-semibold text-sm mb-2">{seq.name}</p>
-                {seqProps.length === 0 ? (
+                {filteredSeqProps.length === 0 ? (
                   <p className="text-xs text-gray-400">Aucun accessoire</p>
                 ) : (
                   <div className="flex flex-wrap gap-1">
-                    {seqProps.map((prop: any) => (
+                    {filteredSeqProps.map((prop: any) => (
                       <span
                         key={prop.id}
                         className="inline-block px-2 py-1 bg-amber-100 text-amber-700 text-xs rounded"

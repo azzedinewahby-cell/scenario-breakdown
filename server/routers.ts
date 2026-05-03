@@ -809,6 +809,130 @@ Règles:
         }
         return { success: true, data: parsedBreakdown };
       }),
+
+    // Analyze structure (3 acts, obstacles, climax, denouement, recommendations)
+    analyzeStructure: protectedProcedure
+      .input(z.object({ scenarioId: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        const scenario = await getScenarioById(input.scenarioId);
+        if (!scenario || scenario.userId !== ctx.user.id) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Scénario introuvable",
+          });
+        }
+        const scenes = await getScenesByScenarioId(input.scenarioId);
+        if (scenes.length === 0) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "Aucune scène trouvée pour ce scénario",
+          });
+        }
+
+        // Build detailed scenes text for LLM analysis
+        const scenesText = scenes
+          .map((s, i) => {
+            return `Scène ${i + 1}: ${s.intExt || "?"} ${s.location || "lieu inconnu"} - ${s.dayNight || "JOUR"}\nDescription: ${s.description || ""}`;
+          })
+          .join("\n\n");
+
+        const prompt = `Tu es un expert en dramaturgie et en analyse de scénarios. Analyse la structure narrative de ce scénario selon le modèle classique en 3 actes.
+
+TITRE: ${scenario.title}
+NOMBRE DE SCÈNES: ${scenes.length}
+
+SCÈNES:
+${scenesText.slice(0, 12000)}
+
+Génère une analyse structurelle complète en JSON avec cette structure:
+{
+  "acte1": {
+    "titre": "Exposition",
+    "scenesRange": "scènes X à Y",
+    "situationInitiale": "description de la situation de départ",
+    "protagoniste": "description du protagoniste et ses enjeux",
+    "incidentPerturbateur": "description de l'élément déclencheur",
+    "analyse": "analyse détaillée de cet acte"
+  },
+  "acte2": {
+    "titre": "Confrontation",
+    "scenesRange": "scènes X à Y",
+    "developpement": "description du développement de l'action",
+    "monteeEnTension": "description de la montée en tension",
+    "pointMilieu": "description du point de retournement au milieu",
+    "analyse": "analyse détaillée de cet acte"
+  },
+  "acte3": {
+    "titre": "Résolution",
+    "scenesRange": "scènes X à Y",
+    "climax": "description du climax",
+    "denouement": "description du dénouement",
+    "analyse": "analyse détaillée de cet acte"
+  },
+  "obstacles": [
+    {
+      "scene": "numéro de scène",
+      "nature": "obstacle externe/interne",
+      "description": "description de l'obstacle",
+      "impactDramatique": "impact sur la narration"
+    }
+  ],
+  "climax": {
+    "scene": "numéro de scène",
+    "description": "description du moment de tension maximale",
+    "pourquoiPointBascule": "explication de pourquoi c'est le point de bascule"
+  },
+  "denouement": {
+    "scene": "numéro de scène",
+    "description": "description de la résolution finale",
+    "coherenceAvecActe1": "évaluation de la cohérence avec les enjeux posés en Acte I"
+  },
+  "recommandations": {
+    "desequilibres": ["déséquilibre 1", "déséquilibre 2"],
+    "pistes": ["piste de correction 1", "piste de correction 2"],
+    "forcesNarratives": ["force narrative 1", "force narrative 2"],
+    "faiblesses": ["faiblesse 1", "faiblesse 2"]
+  }
+}
+
+Règles:
+- Sois précis dans les numéros de scènes
+- Identifie au minimum 3-5 obstacles majeurs
+- Évalue la longueur relative de chaque acte (Acte I: ~25%, Acte II: ~50%, Acte III: ~25%)
+- Détecte les déséquilibres structurels (acte trop court, climax mal positionné, etc.)
+- Propose des corrections concrètes et réalisables
+- Réponds UNIQUEMENT avec le JSON valide`;
+
+        const response = await invokeLLM({
+          messages: [
+            {
+              role: "system",
+              content: "Tu es un expert en dramaturgie et en analyse de scénarios. Réponds uniquement en JSON valide.",
+            },
+            { role: "user", content: prompt },
+          ],
+          response_format: { type: "json_object" },
+        });
+
+        const rawContent = response?.choices?.[0]?.message?.content;
+        const raw = typeof rawContent === "string" ? rawContent : null;
+        if (!raw)
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: "Erreur LLM",
+          });
+
+        let parsedAnalysis: any;
+        try {
+          parsedAnalysis = JSON.parse(raw);
+        } catch {
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: "Réponse LLM invalide",
+          });
+        }
+        return { success: true, data: parsedAnalysis };
+      }),
   }),
   budget: router({
     // Get existing budget for a scenario

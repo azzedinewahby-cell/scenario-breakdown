@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import {
   Users, MapPin, Package, Film, Search, Plus, BookOpen,
   ChevronDown, ChevronUp, Loader2, Layers, Sun, Moon,
-  AlertTriangle, CheckCircle2, Calendar, Zap, Download
+  AlertTriangle, CheckCircle2, Calendar, Zap, Download, Lightbulb
 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { CharacterIcon } from "@/components/CharacterIcon";
@@ -18,62 +18,71 @@ interface BreakdownTabsProps {
 }
 
 // ─── Download CSV Helper ─────────────────────────────────────────────────────
-async function downloadPDF(data: any[], filename: string, columns: string[], title: string = 'Liste') {
-  try {
-    const html2pdf = (await import('html2pdf.js')).default;
-    
-    const headers = columns.map(col => col.charAt(0).toUpperCase() + col.slice(1));
-    const tableHTML = `
-      <html dir="rtl">
-        <head>
-          <meta charset="UTF-8">
-          <style>
-            body { font-family: 'Arial', sans-serif; direction: rtl; }
-            h1 { text-align: center; margin-bottom: 10px; }
-            .date { text-align: center; color: #666; margin-bottom: 20px; font-size: 12px; }
-            table { width: 100%; border-collapse: collapse; }
-            th { background-color: #333; color: white; padding: 10px; text-align: right; border: 1px solid #ddd; }
-            td { padding: 8px; border: 1px solid #ddd; text-align: right; }
-            tr:nth-child(even) { background-color: #f9f9f9; }
-          </style>
-        </head>
-        <body>
-          <h1>${title}</h1>
-          <p class="date">التاريخ: ${new Date().toLocaleDateString('ar-SA')}</p>
-          <table>
-            <thead>
-              <tr>
-                ${headers.map(h => `<th>${h}</th>`).join('')}
-              </tr>
-            </thead>
-            <tbody>
-              ${data.map(item => `
-                <tr>
-                  ${columns.map(col => `<td>${item[col] || ''}</td>`).join('')}
-                </tr>
-              `).join('')}
-            </tbody>
-          </table>
-        </body>
-      </html>
-    `;
-    
-    const element = document.createElement('div');
-    element.innerHTML = tableHTML;
-    
-    const opt = {
-      margin: 10,
-      filename: `${filename}-${new Date().toISOString().split('T')[0]}.pdf`,
-      image: { type: 'png' as const, quality: 0.98 },
-      html2canvas: { scale: 2 },
-      jsPDF: { orientation: 'landscape' as const, unit: 'mm', format: 'a4' }
-    };
-    
-    html2pdf().set(opt).from(element).save();
-  } catch (error) {
-    console.error('PDF generation failed:', error);
-    alert('Erreur lors de la génération du PDF');
-  }
+async function downloadPDF(data: any[], filename: string, columns: string[], title: string = 'Liste'): Promise<void> {
+  return new Promise((resolve, reject) => {
+    try {
+      import('html2pdf.js').then((module) => {
+        const html2pdf = module.default;
+        
+        const headers = columns.map(col => col.charAt(0).toUpperCase() + col.slice(1));
+        const tableHTML = `
+          <html dir="rtl">
+            <head>
+              <meta charset="UTF-8">
+              <style>
+                body { font-family: 'Arial', sans-serif; direction: rtl; }
+                h1 { text-align: center; margin-bottom: 10px; }
+                .date { text-align: center; color: #666; margin-bottom: 20px; font-size: 12px; }
+                table { width: 100%; border-collapse: collapse; }
+                th { background-color: #333; color: white; padding: 10px; text-align: right; border: 1px solid #ddd; }
+                td { padding: 8px; border: 1px solid #ddd; text-align: right; }
+                tr:nth-child(even) { background-color: #f9f9f9; }
+              </style>
+            </head>
+            <body>
+              <h1>${title}</h1>
+              <p class="date">التاريخ: ${new Date().toLocaleDateString('ar-SA')}</p>
+              <table>
+                <thead>
+                  <tr>
+                    ${headers.map(h => `<th>${h}</th>`).join('')}
+                  </tr>
+                </thead>
+                <tbody>
+                  ${data.map(item => `
+                    <tr>
+                      ${columns.map(col => `<td>${item[col] || ''}</td>`).join('')}
+                    </tr>
+                  `).join('')}
+                </tbody>
+              </table>
+            </body>
+          </html>
+        `;
+        
+        const element = document.createElement('div');
+        element.innerHTML = tableHTML;
+        
+        const opt = {
+          margin: 10,
+          filename: `${filename}-${new Date().toISOString().split('T')[0]}.pdf`,
+          image: { type: 'png' as const, quality: 0.98 },
+          html2canvas: { scale: 2 },
+          jsPDF: { orientation: 'landscape' as const, unit: 'mm', format: 'a4' }
+        };
+        
+        html2pdf()
+          .set(opt)
+          .from(element)
+          .save()
+          .then(() => resolve())
+          .catch((error: any) => reject(error));
+      }).catch((error) => reject(error));
+    } catch (error) {
+      console.error('PDF generation failed:', error);
+      reject(error);
+    }
+  });
 }
 // ─── Sequence Detail Card ─────────────────────────────────────────────────────
 function SequenceDetailCard({ seq, index }: { seq: any; index: number }) {
@@ -236,11 +245,298 @@ function StoryboardTab({ scenarioId }: { scenarioId: number }) {
       </Card>
     </div>
   );
+}// ─── Structure Analysis Tab ─────────────────────────────────────────────────────
+function StructureAnalysisTab({ scenarioId }: { scenarioId: number }) {
+  const [analysis, setAnalysis] = useState<any>(null);
+
+  const generateMutation = trpc.breakdown.analyzeStructure.useMutation({
+    onSuccess: (data) => {
+      setAnalysis(data.data);
+    },
+  });
+
+  if (!analysis) {
+    return (
+      <Card className="p-8 text-center">
+        <div className="flex flex-col items-center justify-center gap-4">
+          <Lightbulb className="w-12 h-12 text-gray-300" />
+          <div>
+            <h3 className="font-semibold text-gray-700 mb-1">Analyse de la structure narrative</h3>
+            <p className="text-sm text-gray-500 max-w-sm mx-auto">
+              Analysez votre scénario selon le modèle classique en 3 actes. Découvrez les obstacles, le climax, le dénouement et recevez des recommandations de correction.
+            </p>
+          </div>
+          <Button
+            onClick={() => generateMutation.mutate({ scenarioId })}
+            disabled={generateMutation.isPending}
+            className="mt-2 gap-2"
+          >
+            {generateMutation.isPending ? (
+              <><Loader2 className="w-4 h-4 animate-spin" /> Analyse en cours (30-60s)...</>
+            ) : (
+              <><Lightbulb className="w-4 h-4" /> Analyser la structure</>
+            )}
+          </Button>
+          {generateMutation.isError && (
+            <p className="text-sm text-red-500">{generateMutation.error?.message}</p>
+          )}
+        </div>
+      </Card>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      {/* ACTE I - EXPOSITION */}
+      <Card className="p-6 border-l-4 border-l-blue-500">
+        <div className="flex items-start justify-between mb-4">
+          <div>
+            <h3 className="text-lg font-bold text-gray-900">Acte I - Exposition</h3>
+            {analysis.acte1?.scenesRange && (
+              <p className="text-sm text-gray-500 mt-1">{analysis.acte1.scenesRange}</p>
+            )}
+          </div>
+        </div>
+        <div className="space-y-3 text-sm">
+          {analysis.acte1?.situationInitiale && (
+            <div>
+              <p className="font-semibold text-gray-700">Situation initiale :</p>
+              <p className="text-gray-600 mt-1">{analysis.acte1.situationInitiale}</p>
+            </div>
+          )}
+          {analysis.acte1?.protagoniste && (
+            <div>
+              <p className="font-semibold text-gray-700">Protagoniste :</p>
+              <p className="text-gray-600 mt-1">{analysis.acte1.protagoniste}</p>
+            </div>
+          )}
+          {analysis.acte1?.incidentPerturbateur && (
+            <div>
+              <p className="font-semibold text-gray-700">Incident perturbateur :</p>
+              <p className="text-gray-600 mt-1">{analysis.acte1.incidentPerturbateur}</p>
+            </div>
+          )}
+          {analysis.acte1?.analyse && (
+            <div>
+              <p className="font-semibold text-gray-700">Analyse :</p>
+              <p className="text-gray-600 mt-1">{analysis.acte1.analyse}</p>
+            </div>
+          )}
+        </div>
+      </Card>
+
+      {/* ACTE II - CONFRONTATION */}
+      <Card className="p-6 border-l-4 border-l-amber-500">
+        <div className="flex items-start justify-between mb-4">
+          <div>
+            <h3 className="text-lg font-bold text-gray-900">Acte II - Confrontation</h3>
+            {analysis.acte2?.scenesRange && (
+              <p className="text-sm text-gray-500 mt-1">{analysis.acte2.scenesRange}</p>
+            )}
+          </div>
+        </div>
+        <div className="space-y-3 text-sm">
+          {analysis.acte2?.developpement && (
+            <div>
+              <p className="font-semibold text-gray-700">Développement :</p>
+              <p className="text-gray-600 mt-1">{analysis.acte2.developpement}</p>
+            </div>
+          )}
+          {analysis.acte2?.monteeEnTension && (
+            <div>
+              <p className="font-semibold text-gray-700">Montée en tension :</p>
+              <p className="text-gray-600 mt-1">{analysis.acte2.monteeEnTension}</p>
+            </div>
+          )}
+          {analysis.acte2?.pointMilieu && (
+            <div>
+              <p className="font-semibold text-gray-700">Point de retournement (milieu) :</p>
+              <p className="text-gray-600 mt-1">{analysis.acte2.pointMilieu}</p>
+            </div>
+          )}
+          {analysis.acte2?.analyse && (
+            <div>
+              <p className="font-semibold text-gray-700">Analyse :</p>
+              <p className="text-gray-600 mt-1">{analysis.acte2.analyse}</p>
+            </div>
+          )}
+        </div>
+      </Card>
+
+      {/* ACTE III - RÉSOLUTION */}
+      <Card className="p-6 border-l-4 border-l-green-500">
+        <div className="flex items-start justify-between mb-4">
+          <div>
+            <h3 className="text-lg font-bold text-gray-900">Acte III - Résolution</h3>
+            {analysis.acte3?.scenesRange && (
+              <p className="text-sm text-gray-500 mt-1">{analysis.acte3.scenesRange}</p>
+            )}
+          </div>
+        </div>
+        <div className="space-y-3 text-sm">
+          {analysis.acte3?.climax && (
+            <div>
+              <p className="font-semibold text-gray-700">Climax :</p>
+              <p className="text-gray-600 mt-1">{analysis.acte3.climax}</p>
+            </div>
+          )}
+          {analysis.acte3?.denouement && (
+            <div>
+              <p className="font-semibold text-gray-700">Dénouement :</p>
+              <p className="text-gray-600 mt-1">{analysis.acte3.denouement}</p>
+            </div>
+          )}
+          {analysis.acte3?.analyse && (
+            <div>
+              <p className="font-semibold text-gray-700">Analyse :</p>
+              <p className="text-gray-600 mt-1">{analysis.acte3.analyse}</p>
+            </div>
+          )}
+        </div>
+      </Card>
+
+      {/* OBSTACLES */}
+      {analysis.obstacles && analysis.obstacles.length > 0 && (
+        <Card className="p-6 border-l-4 border-l-red-500">
+          <h3 className="text-lg font-bold text-gray-900 mb-4">Obstacles majeurs</h3>
+          <div className="space-y-3">
+            {analysis.obstacles.map((obstacle: any, idx: number) => (
+              <div key={idx} className="p-3 bg-red-50 rounded-lg">
+                <div className="flex items-start gap-3">
+                  <div className="flex-1 text-sm">
+                    <p className="font-semibold text-gray-900">
+                      Scène {obstacle.scene} - {obstacle.nature}
+                    </p>
+                    <p className="text-gray-700 mt-1">{obstacle.description}</p>
+                    {obstacle.impactDramatique && (
+                      <p className="text-gray-600 mt-2 italic">Impact : {obstacle.impactDramatique}</p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
+
+      {/* CLIMAX */}
+      {analysis.climax && (
+        <Card className="p-6 border-l-4 border-l-purple-500">
+          <h3 className="text-lg font-bold text-gray-900 mb-4">Climax</h3>
+          <div className="space-y-3 text-sm">
+            {analysis.climax.scene && (
+              <p>
+                <span className="font-semibold text-gray-700">Scène :</span> {analysis.climax.scene}
+              </p>
+            )}
+            {analysis.climax.description && (
+              <div>
+                <p className="font-semibold text-gray-700">Description :</p>
+                <p className="text-gray-600 mt-1">{analysis.climax.description}</p>
+              </div>
+            )}
+            {analysis.climax.pourquoiPointBascule && (
+              <div>
+                <p className="font-semibold text-gray-700">Point de bascule :</p>
+                <p className="text-gray-600 mt-1">{analysis.climax.pourquoiPointBascule}</p>
+              </div>
+            )}
+          </div>
+        </Card>
+      )}
+
+      {/* DÉNOUEMENT */}
+      {analysis.denouement && (
+        <Card className="p-6 border-l-4 border-l-indigo-500">
+          <h3 className="text-lg font-bold text-gray-900 mb-4">Dénouement</h3>
+          <div className="space-y-3 text-sm">
+            {analysis.denouement.scene && (
+              <p>
+                <span className="font-semibold text-gray-700">Scène :</span> {analysis.denouement.scene}
+              </p>
+            )}
+            {analysis.denouement.description && (
+              <div>
+                <p className="font-semibold text-gray-700">Description :</p>
+                <p className="text-gray-600 mt-1">{analysis.denouement.description}</p>
+              </div>
+            )}
+            {analysis.denouement.coherenceAvecActe1 && (
+              <div>
+                <p className="font-semibold text-gray-700">Cohérence avec l'Acte I :</p>
+                <p className="text-gray-600 mt-1">{analysis.denouement.coherenceAvecActe1}</p>
+              </div>
+            )}
+          </div>
+        </Card>
+      )}
+
+      {/* RECOMMANDATIONS */}
+      {analysis.recommandations && (
+        <Card className="p-6 bg-blue-50 border-l-4 border-l-blue-600">
+          <h3 className="text-lg font-bold text-gray-900 mb-4">Recommandations structurelles</h3>
+          <div className="space-y-4">
+            {analysis.recommandations.desequilibres && analysis.recommandations.desequilibres.length > 0 && (
+              <div>
+                <p className="font-semibold text-gray-700 mb-2">Déséquilibres détectés :</p>
+                <ul className="list-disc list-inside space-y-1">
+                  {analysis.recommandations.desequilibres.map((item: string, idx: number) => (
+                    <li key={idx} className="text-gray-600 text-sm">{item}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            {analysis.recommandations.pistes && analysis.recommandations.pistes.length > 0 && (
+              <div>
+                <p className="font-semibold text-gray-700 mb-2">Pistes de correction :</p>
+                <ul className="list-disc list-inside space-y-1">
+                  {analysis.recommandations.pistes.map((item: string, idx: number) => (
+                    <li key={idx} className="text-gray-600 text-sm">{item}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            {analysis.recommandations.forcesNarratives && analysis.recommandations.forcesNarratives.length > 0 && (
+              <div>
+                <p className="font-semibold text-green-700 mb-2">Forces narratives :</p>
+                <ul className="list-disc list-inside space-y-1">
+                  {analysis.recommandations.forcesNarratives.map((item: string, idx: number) => (
+                    <li key={idx} className="text-green-600 text-sm">{item}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            {analysis.recommandations.faiblesses && analysis.recommandations.faiblesses.length > 0 && (
+              <div>
+                <p className="font-semibold text-amber-700 mb-2">Faiblesses identifiées :</p>
+                <ul className="list-disc list-inside space-y-1">
+                  {analysis.recommandations.faiblesses.map((item: string, idx: number) => (
+                    <li key={idx} className="text-amber-600 text-sm">{item}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
+        </Card>
+      )}
+
+      {/* Bouton pour régénérer */}
+      <div className="flex justify-center pt-4">
+        <Button
+          variant="outline"
+          onClick={() => setAnalysis(null)}
+          className="gap-2"
+        >
+          <Lightbulb className="w-4 h-4" />
+          Nouvelle analyse
+        </Button>
+      </div>
+    </div>
+  );
 }
 
-// ─── Technical Breakdown Tab ──────────────────────────────────────────────────
-function TechnicalBreakdownTab({ scenarioId }: { scenarioId: number }) {
-  const [breakdown, setBreakdown] = useState<any>(null);
+// ─── Technical Breakdown Tab ─────────────────────────────────────────────────────
+function TechnicalBreakdownTab({ scenarioId }: { scenarioId: number }) {  const [breakdown, setBreakdown] = useState<any>(null);
 
   const generateMutation = trpc.breakdown.generateTechnicalBreakdown.useMutation({
     onSuccess: (data) => {
@@ -571,7 +867,7 @@ export function BreakdownTabs({ scenarioId, onSceneSelect }: BreakdownTabsProps)
   return (
     <div className="w-full">
       <Tabs defaultValue="storyboard" className="w-full">
-        <TabsList className="grid w-full grid-cols-6 mb-6">
+        <TabsList className="grid w-full grid-cols-7 mb-6">
           <TabsTrigger value="storyboard" className="flex items-center gap-1.5">
             <BookOpen className="w-4 h-4" />
             <span className="hidden sm:inline text-xs">Storyboard</span>
@@ -599,6 +895,10 @@ export function BreakdownTabs({ scenarioId, onSceneSelect }: BreakdownTabsProps)
           <TabsTrigger value="breakdown" className="flex items-center gap-1.5">
             <Layers className="w-4 h-4" />
             <span className="hidden sm:inline text-xs">Découpage</span>
+          </TabsTrigger>
+          <TabsTrigger value="structure" className="flex items-center gap-1.5">
+            <Lightbulb className="w-4 h-4" />
+            <span className="hidden sm:inline text-xs">Structure</span>
           </TabsTrigger>
         </TabsList>
 
@@ -867,6 +1167,11 @@ export function BreakdownTabs({ scenarioId, onSceneSelect }: BreakdownTabsProps)
         {/* DÉCOUPAGE TECHNIQUE */}
         <TabsContent value="breakdown" className="space-y-4">
           <TechnicalBreakdownTab scenarioId={scenarioId} />
+        </TabsContent>
+
+        {/* CORRECTION STRUCTURE */}
+        <TabsContent value="structure" className="space-y-4">
+          <StructureAnalysisTab scenarioId={scenarioId} />
         </TabsContent>
       </Tabs>
     </div>

@@ -346,7 +346,16 @@
 
 
 ## Modifications Dépouillement PDF
-- [ ] Intégrer la liste des accessoires dans le PDF du dépouillement
-- [ ] Intégrer la liste des lieux dans le PDF du dépouillement
-- [ ] Intégrer la liste des personnages dans le PDF du dépouillement
-- [ ] Créer un PDF unique avec toutes les sections (séquences, personnages, lieux, accessoires)
+- [x] Intégrer la liste des accessoires dans le PDF du dépouillement - pdfGenerator.ts + routers.ts
+- [x] Intégrer la liste des lieux dans le PDF du dépouillement - déjà présent
+- [x] Intégrer la liste des personnages dans le PDF du dépouillement - déjà présent
+- [x] Créer un PDF unique avec toutes les sections (séquences, personnages, lieux, accessoires) - complet
+
+
+## Nouvelles demandes (session actuelle - Correction structure)
+- [x] Backend: créer une route tRPC pour analyser la structure du scénario (3 actes, obstacles, climax, dénouement)
+- [x] Backend: implémenter l'analyse structurelle via LLM avec prompt détaillé
+- [x] Frontend: créer l'onglet "Correction structure" dans BreakdownTabs
+- [x] Frontend: afficher les résultats de l'analyse (5 sections : 3 actes, obstacles, climax, dénouement, recommandations)
+- [x] Frontend: utiliser des cards pour chaque section avec bordures colorées
+- [x] Frontend: intégrer l'onglet à la navigation existante (7 onglets au total)

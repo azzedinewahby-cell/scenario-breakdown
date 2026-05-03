@@ -42,7 +42,7 @@ import { generateBreakdownHtml } from "./pdfGenerator";
 import { invokeLLM } from "./_core/llm";
 import { searchBySiret, searchBySiren, formatAddress } from "./siretService";
 import { getDb } from "./db";
-import { budgets } from "../drizzle/schema";
+import { budgets, props } from "../drizzle/schema";
 import { eq } from "drizzle-orm";
 // ─── Budget helpers ───────────────────────────────────────────────────────────
 async function getBudgetForScenario(scenarioId: number) {
@@ -369,6 +369,17 @@ export const appRouter = router({
           )
         );
 
+        // Get props (accessories) for this scenario
+        const db = await getDb();
+        if (!db) return { html: "", fileName: "" };
+        const propsData = await db
+          .select()
+          .from(props)
+          .where(eq(props.scenarioId, input.scenarioId));
+        const uniqueProps = Array.from(
+          new Set(propsData.map((p: any) => p.name as string).filter((n: string): n is string => n !== null))
+        );
+
         const totalDialogues = pdfScenes.reduce(
           (sum, s) => sum + s.dialogues.length,
           0
@@ -392,11 +403,13 @@ export const appRouter = router({
           scenes: pdfScenes,
           characters: charactersData.map(c => c.name ?? ""),
           uniqueLocations,
+          props: uniqueProps as string[],
           stats: {
             totalScenes: pdfScenes.length,
             totalCharacters: charactersData.length,
             totalLocations: uniqueLocations.length,
             totalDialogues,
+            totalProps: uniqueProps.length,
           },
         });
 

@@ -22,11 +22,13 @@ interface PdfBreakdownData {
   scenes: PdfScene[];
   characters: string[];
   uniqueLocations: string[];
+  props: string[];
   stats: {
     totalScenes: number;
     totalCharacters: number;
     totalLocations: number;
     totalDialogues: number;
+    totalProps: number;
   };
 }
 
@@ -69,6 +71,13 @@ export function generateBreakdownHtml(data: PdfBreakdownData): string {
           .map(l => `<span class="badge loc">${escapeHtml(l)}</span>`)
           .join("")
       : "<span class='empty'>Aucun lieu</span>";
+
+  const propsHtml =
+    data.props.length > 0
+      ? data.props
+          .map(p => `<span class="badge prop">${escapeHtml(p)}</span>`)
+          .join("")
+      : "<span class='empty'>Aucun accessoire</span>";
 
   return `<!DOCTYPE html>
 <html lang="fr">
@@ -154,6 +163,7 @@ export function generateBreakdownHtml(data: PdfBreakdownData): string {
       border: 1px solid #e0e0e0;
     }
     .badge.loc { background: #f0f4ff; border-color: #c8d8f0; color: #2a4a80; }
+    .badge.prop { background: #fff4e6; border-color: #f0d8b0; color: #8a5a00; }
 
     /* Sequences table */
     .seq-table {
@@ -253,6 +263,12 @@ export function generateBreakdownHtml(data: PdfBreakdownData): string {
   <div class="section">
     <div class="section-title">Lieux &amp; Décors (${data.uniqueLocations.length})</div>
     <div class="badges">${locationsHtml}</div>
+  </div>
+
+  <!-- ACCESSOIRES -->
+  <div class="section">
+    <div class="section-title">Accessoires (${data.stats.totalProps})</div>
+    <div class="badges">${propsHtml}</div>
   </div>
 
   <!-- SÉQUENCES -->

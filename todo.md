@@ -343,3 +343,10 @@
 - [x] Ajouter bouton télécharger liste accessoires (PDF avec support arabe) - BreakdownTabs.tsx
 - [x] Ajouter bouton télécharger liste lieux (PDF avec support arabe) - BreakdownTabs.tsx
 - [x] Ajouter bouton télécharger liste personnages (PDF avec support arabe) - BreakdownTabs.tsx
+
+
+## Modifications Dépouillement PDF
+- [ ] Intégrer la liste des accessoires dans le PDF du dépouillement
+- [ ] Intégrer la liste des lieux dans le PDF du dépouillement
+- [ ] Intégrer la liste des personnages dans le PDF du dépouillement
+- [ ] Créer un PDF unique avec toutes les sections (séquences, personnages, lieux, accessoires)

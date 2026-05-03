@@ -47,7 +47,7 @@ function HistoryContent() {
       <div className="flex items-end justify-between">
         <div>
           <h1 className="text-2xl font-serif font-semibold tracking-tight text-foreground">
-            Historique
+            Scénario
           </h1>
           <p className="text-sm text-muted-foreground mt-1">
             Retrouvez tous vos scénarios importés

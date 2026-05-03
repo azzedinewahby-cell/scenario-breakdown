@@ -37,7 +37,7 @@ import { Button } from "./ui/button";
 const menuItems = [
   { icon: LayoutDashboard, label: "Tableau de bord", path: "/" },
   { icon: Upload, label: "Importer", path: "/upload" },
-  { icon: History, label: "Historique", path: "/history" },
+  { icon: History, label: "Scénario", path: "/history" },
 ];
 
 const SIDEBAR_WIDTH_KEY = "sidebar-width";

@@ -22,6 +22,7 @@ import {
   AlertCircle,
   Upload,
   History,
+  RefreshCw,
 } from "lucide-react";
 import { useLocation } from "wouter";
 import { toast } from "sonner";
@@ -38,6 +39,16 @@ function HistoryContent() {
     },
     onError: () => {
       toast.error("Erreur lors de la suppression.");
+    },
+  });
+  const reprocessMutation = trpc.scenario.reprocess.useMutation({
+    onSuccess: () => {
+      utils.scenario.list.invalidate();
+      utils.dashboard.stats.invalidate();
+      toast.success("Redépouillement lancé. Veuillez patienter...");
+    },
+    onError: () => {
+      toast.error("Erreur lors du redépouillement.");
     },
   });
 
@@ -163,6 +174,41 @@ function HistoryContent() {
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
                   <StatusBadge status={s.status} />
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-muted-foreground hover:text-blue-600 opacity-0 group-hover:opacity-100 transition-opacity"
+                        disabled={reprocessMutation.isPending}
+                      >
+                        {reprocessMutation.isPending ? (
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        ) : (
+                          <RefreshCw className="h-3.5 w-3.5" />
+                        )}
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>
+                          Redépouillement du scénario ?
+                        </AlertDialogTitle>
+                        <AlertDialogDescription>
+                          Cela supprimera toutes les données de dépouillement actuelles (personnages, lieux, accessoires, séquences) et relancera l'extraction de zéro. Cette action peut prendre quelques minutes.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Annuler</AlertDialogCancel>
+                        <AlertDialogAction
+                          onClick={() => reprocessMutation.mutate({ scenarioId: s.id })}
+                          className="bg-blue-600 text-white hover:bg-blue-700"
+                        >
+                          Redépouillement
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
                   <AlertDialog>
                     <AlertDialogTrigger asChild>
                       <Button

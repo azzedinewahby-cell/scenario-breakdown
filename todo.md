@@ -359,3 +359,12 @@
 - [x] Frontend: afficher les résultats de l'analyse (5 sections : 3 actes, obstacles, climax, dénouement, recommandations)
 - [x] Frontend: utiliser des cards pour chaque section avec bordures colorées
 - [x] Frontend: intégrer l'onglet à la navigation existante (7 onglets au total)
+
+
+## Nouvelles demandes (session actuelle - Redépouillement)
+- [x] Backend: créer une route tRPC pour réinitialiser et refaire le dépouillement complet
+- [x] Backend: supprimer les données existantes (personnages, lieux, accessoires, séquences)
+- [x] Backend: relancer le parsing LLM pour extraire les données de zéro
+- [x] Frontend: ajouter un bouton "Redépouillement" dans la page Historique
+- [x] Frontend: afficher une confirmation avant de relancer le redépouillement
+- [x] Frontend: afficher un spinner pendant le traitement

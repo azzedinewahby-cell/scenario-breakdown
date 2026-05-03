@@ -174,6 +174,69 @@ export const appRouter = router({
         return scenario;
       }),
 
+    // Reprocess a scenario (delete all breakdown data and reparse from scratch)
+    reprocess: protectedProcedure
+      .input(z.object({ scenarioId: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        const scenario = await getScenarioById(input.scenarioId);
+        if (!scenario || scenario.userId !== ctx.user.id) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Scénario introuvable",
+          });
+        }
+
+        // Delete all breakdown data
+        const db = await getDb();
+        if (!db) {
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: "Erreur de base de données",
+          });
+        }
+
+        const { scenes, sceneCharacters, dialogues, characters, props, sceneProps, sequences, sequenceScenes } = await import("../drizzle/schema");
+        const { eq } = await import("drizzle-orm");
+
+        // Get all scene IDs for this scenario
+        const scenesData = await getScenesByScenarioId(input.scenarioId);
+        const sceneIds = scenesData.map(s => s.id);
+
+        // Delete in order: dialogues, sceneCharacters, sceneProps, sequenceScenes, scenes, characters, props, sequences
+        if (sceneIds.length > 0) {
+          await db.delete(dialogues).where(eq(dialogues.sceneId, sceneIds[0]));
+          await db.delete(sceneCharacters).where(eq(sceneCharacters.sceneId, sceneIds[0]));
+          await db.delete(sceneProps).where(eq(sceneProps.sceneId, sceneIds[0]));
+        }
+
+        // Delete sequences and their associations
+        const seqsData = await getSequences(input.scenarioId);
+        for (const seq of seqsData) {
+          await db.delete(sequenceScenes).where(eq(sequenceScenes.sequenceId, seq.id));
+        }
+        await db.delete(sequences).where(eq(sequences.scenarioId, input.scenarioId));
+
+        // Delete scenes
+        await db.delete(scenes).where(eq(scenes.scenarioId, input.scenarioId));
+
+        // Delete characters
+        await db.delete(characters).where(eq(characters.scenarioId, input.scenarioId));
+
+        // Delete props
+        await db.delete(props).where(eq(props.scenarioId, input.scenarioId));
+
+        // Reset scenario status and clear synopsis
+        await updateScenarioStatus(input.scenarioId, "processing");
+        await updateScenarioSynopsis(input.scenarioId, "");
+
+        // Reprocess the scenario
+        processScenario(input.scenarioId, scenario.fileUrl, scenario.fileName).catch(err => {
+          console.error(`[Scenario] Reprocess error for ${input.scenarioId}:`, err);
+        });
+
+        return { success: true, status: "processing" };
+      }),
+
     // Get full breakdown data for a scenario
     breakdown: protectedProcedure
       .input(z.object({ scenarioId: z.number() }))

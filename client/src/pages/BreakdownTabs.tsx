@@ -21,21 +21,38 @@ interface BreakdownTabsProps {
 async function downloadPDF(data: any[], filename: string, columns: string[], title: string = 'Liste'): Promise<void> {
   return new Promise((resolve, reject) => {
     try {
+      // Validate data
+      if (!data || data.length === 0) {
+        reject(new Error('Aucune donnée à télécharger'));
+        return;
+      }
+
       import('html2pdf.js').then((module) => {
         const html2pdf = module.default;
         
-        const headers = columns.map(col => col.charAt(0).toUpperCase() + col.slice(1));
+        const headers = columns.map(col => {
+          const labelMap: Record<string, string> = {
+            'name': 'Nom',
+            'gender': 'Genre',
+            'age': 'Âge',
+            'type': 'Type',
+            'description': 'Description',
+            'sceneCount': 'Nombre de scènes'
+          };
+          return labelMap[col] || col.charAt(0).toUpperCase() + col.slice(1);
+        });
+        
         const tableHTML = `
           <html dir="rtl">
             <head>
               <meta charset="UTF-8">
               <style>
-                body { font-family: 'Arial', sans-serif; direction: rtl; }
-                h1 { text-align: center; margin-bottom: 10px; }
+                body { font-family: 'Arial', sans-serif; direction: rtl; margin: 0; padding: 10px; }
+                h1 { text-align: center; margin-bottom: 10px; font-size: 18px; }
                 .date { text-align: center; color: #666; margin-bottom: 20px; font-size: 12px; }
                 table { width: 100%; border-collapse: collapse; }
-                th { background-color: #333; color: white; padding: 10px; text-align: right; border: 1px solid #ddd; }
-                td { padding: 8px; border: 1px solid #ddd; text-align: right; }
+                th { background-color: #333; color: white; padding: 10px; text-align: right; border: 1px solid #ddd; font-size: 12px; }
+                td { padding: 8px; border: 1px solid #ddd; text-align: right; font-size: 11px; }
                 tr:nth-child(even) { background-color: #f9f9f9; }
               </style>
             </head>
@@ -51,7 +68,10 @@ async function downloadPDF(data: any[], filename: string, columns: string[], tit
                 <tbody>
                   ${data.map(item => `
                     <tr>
-                      ${columns.map(col => `<td>${item[col] || ''}</td>`).join('')}
+                      ${columns.map(col => {
+                        const value = item[col];
+                        return `<td>${value !== null && value !== undefined ? String(value) : ''}</td>`;
+                      }).join('')}
                     </tr>
                   `).join('')}
                 </tbody>
@@ -67,7 +87,7 @@ async function downloadPDF(data: any[], filename: string, columns: string[], tit
           margin: 10,
           filename: `${filename}-${new Date().toISOString().split('T')[0]}.pdf`,
           image: { type: 'png' as const, quality: 0.98 },
-          html2canvas: { scale: 2 },
+          html2canvas: { scale: 2, useCORS: true },
           jsPDF: { orientation: 'landscape' as const, unit: 'mm', format: 'a4' }
         };
         
@@ -76,8 +96,14 @@ async function downloadPDF(data: any[], filename: string, columns: string[], tit
           .from(element)
           .save()
           .then(() => resolve())
-          .catch((error: any) => reject(error));
-      }).catch((error) => reject(error));
+          .catch((error: any) => {
+            console.error('PDF save error:', error);
+            reject(error);
+          });
+      }).catch((error) => {
+        console.error('html2pdf import error:', error);
+        reject(error);
+      });
     } catch (error) {
       console.error('PDF generation failed:', error);
       reject(error);
@@ -1083,7 +1109,18 @@ export function BreakdownTabs({ scenarioId, onSceneSelect }: BreakdownTabsProps)
           <div className="mb-4 flex items-center justify-between">
             <h3 className="text-sm font-semibold text-gray-700">Total : <span className="text-blue-600">{props.length}</span> accessoire{props.length !== 1 ? 's' : ''}</h3>
             <Button
-              onClick={async () => { try { await downloadPDF(props, 'accessoires', ['name', 'description', 'sceneCount'], 'Accessoires'); } catch (err) { console.error(err); } }}
+              onClick={async () => { 
+                try { 
+                  if (props.length === 0) {
+                    alert('Aucun accessoire à télécharger');
+                    return;
+                  }
+                  await downloadPDF(props, 'accessoires', ['name', 'description', 'sceneCount'], 'Accessoires'); 
+                } catch (err) { 
+                  console.error('Download error:', err);
+                  alert('Erreur lors du téléchargement du PDF: ' + (err instanceof Error ? err.message : String(err)));
+                } 
+              }}
               size="sm"
               variant="outline"
               className="gap-2"

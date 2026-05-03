@@ -368,3 +368,7 @@
 - [x] Frontend: ajouter un bouton "Redépouillement" dans la page Historique
 - [x] Frontend: afficher une confirmation avant de relancer le redépouillement
 - [x] Frontend: afficher un spinner pendant le traitement
+
+
+## Corrections (session actuelle)
+- [x] Corriger le bouton "Télécharger" pour les accessoires (améliorer la gestion d'erreurs et la validation des données)

@@ -39,6 +39,11 @@ export function registerGoogleOAuth(app: Express) {
 
   app.get("/api/auth/google/callback", async (req: Request, res: Response) => {
     const code = req.query.code as string;
+    const googleError = req.query.error as string;
+    if (googleError) {
+      console.error("[Google OAuth] Erreur Google:", googleError, req.query.error_description);
+      return res.redirect(`/login?error=google_failed&detail=${encodeURIComponent(googleError)}`);
+    }
     const clientId = process.env.GOOGLE_CLIENT_ID;
     const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
     if (!code || !clientId || !clientSecret) return res.redirect("/login?error=google_failed");

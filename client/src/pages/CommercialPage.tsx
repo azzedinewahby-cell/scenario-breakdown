@@ -8,6 +8,7 @@ import QuotesTab from "./commercial/QuotesTab";
 import InvoicesTab from "./commercial/InvoicesTab";
 import CreditsTab from "./commercial/CreditsTab";
 import SettingsTab from "./commercial/SettingsTab";
+import BulkInvoiceTab from "./commercial/BulkInvoiceTab";
 
 export default function CommercialPage() {
   const [activeTab, setActiveTab] = useState("clients");
@@ -27,7 +28,7 @@ export default function CommercialPage() {
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-6 mb-8 bg-white border border-slate-200 rounded-lg p-1">
+          <TabsList className="grid w-full grid-cols-7 mb-8 bg-white border border-slate-200 rounded-lg p-1">
             <TabsTrigger value="clients" className="flex items-center gap-2">
               <span className="hidden sm:inline">Clients</span>
               <span className="sm:hidden">👥</span>
@@ -43,6 +44,10 @@ export default function CommercialPage() {
             <TabsTrigger value="invoices" className="flex items-center gap-2">
               <span className="hidden sm:inline">Factures</span>
               <span className="sm:hidden">💰</span>
+            </TabsTrigger>
+            <TabsTrigger value="bulk" className="flex items-center gap-2">
+              <span className="hidden sm:inline">Lot CSV</span>
+              <span className="sm:hidden">📥</span>
             </TabsTrigger>
             <TabsTrigger value="credits" className="flex items-center gap-2">
               <span className="hidden sm:inline">Avoirs</span>
@@ -69,6 +74,10 @@ export default function CommercialPage() {
 
           <TabsContent value="invoices" className="space-y-4">
             <InvoicesTab />
+          </TabsContent>
+
+          <TabsContent value="bulk" className="space-y-4">
+            <BulkInvoiceTab />
           </TabsContent>
 
           <TabsContent value="credits" className="space-y-4">

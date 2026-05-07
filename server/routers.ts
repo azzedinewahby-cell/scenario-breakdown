@@ -1558,6 +1558,113 @@ Règles importantes:
           const { deleteInvoiceLine } = await import("./db");
           return await deleteInvoiceLine(input.lineId);
         }),
+
+      // ─── Bulk invoice generation from CSV/JSON data ─────────────────────
+      bulkCreate: protectedProcedure
+        .input(
+          z.object({
+            rows: z.array(
+              z.object({
+                client: z.string().min(1),
+                clientEmail: z.string().optional(),
+                clientAddress: z.string().optional(),
+                clientSiret: z.string().optional(),
+                prestation: z.string().min(1),
+                quantite: z.number().positive(),
+                prixUnitaireHT: z.number().nonnegative(),
+                tauxTVA: z.number().min(0).max(100).default(20),
+                date: z.string().optional(),
+                paymentTerms: z.string().optional(),
+              })
+            ),
+          })
+        )
+        .mutation(async ({ ctx, input }) => {
+          const {
+            createInvoice, generateNextNumber, createInvoiceLine,
+            getClientsByUserId, createClient, updateInvoice,
+            getProductsByUserId, createProduct,
+          } = await import("./db");
+
+          const userId = ctx.user.id;
+          // Group rows by client
+          const grouped = new Map<string, typeof input.rows>();
+          for (const row of input.rows) {
+            const key = row.client.trim().toLowerCase();
+            if (!grouped.has(key)) grouped.set(key, []);
+            grouped.get(key)!.push(row);
+          }
+
+          const existingClients = await getClientsByUserId(userId);
+          const existingProducts = await getProductsByUserId(userId);
+          const results: Array<{ client: string; invoiceNumber: string; totalHT: number; totalVAT: number; totalTTC: number; lines: number }> = [];
+          const errors: Array<{ client: string; error: string }> = [];
+
+          for (const [clientKey, rows] of grouped.entries()) {
+            try {
+              const firstRow = rows[0];
+              // Find or create client
+              let client = existingClients.find(c => c.nom.trim().toLowerCase() === clientKey);
+              if (!client) {
+                const newClientId = await createClient({
+                  userId, type: "entreprise" as const,
+                  nom: firstRow.client.trim(),
+                  email: firstRow.clientEmail ?? null,
+                  adresse: firstRow.clientAddress ?? null,
+                  siret: firstRow.clientSiret ?? null,
+                });
+                client = { id: Number(newClientId), userId, type: "entreprise" as const, nom: firstRow.client.trim(),
+                  email: firstRow.clientEmail ?? null, adresse: firstRow.clientAddress ?? null,
+                  siret: firstRow.clientSiret ?? null, telephone: null, codePostal: null, ville: null, pays: null,
+                  tvaIntracom: null, createdAt: new Date(), updatedAt: new Date() } as any;
+                existingClients.push(client!);
+              }
+
+              // Create invoice
+              const invoiceNumber = await generateNextNumber("FA", userId);
+              const dueDate = new Date();
+              dueDate.setDate(dueDate.getDate() + 30);
+              const invoiceId = await createInvoice({
+                userId, clientId: client!.id, number: invoiceNumber,
+                dueDate, status: "brouillon" as const,
+                paymentMethod: firstRow.paymentTerms ?? "30 jours fin de mois",
+              });
+
+              // Add lines
+              let totalHT = 0, totalVAT = 0;
+              for (const row of rows) {
+                // Find or create product
+                let product = existingProducts.find(p => p.nom.trim().toLowerCase() === row.prestation.trim().toLowerCase());
+                if (!product) {
+                  const productId = await createProduct({
+                    userId, nom: row.prestation.trim(), prixHT: row.prixUnitaireHT, tauxTVA: row.tauxTVA, unite: "unité",
+                  });
+                  product = { id: Number(productId), userId, nom: row.prestation.trim(), description: null,
+                    prixHT: row.prixUnitaireHT, tauxTVA: row.tauxTVA, unite: "unité",
+                    createdAt: new Date(), updatedAt: new Date() } as any;
+                  existingProducts.push(product!);
+                }
+                const lineHT = row.quantite * row.prixUnitaireHT;
+                const lineVAT = lineHT * (row.tauxTVA / 100);
+                totalHT += lineHT;
+                totalVAT += lineVAT;
+                await createInvoiceLine({
+                  invoiceId: Number(invoiceId), productId: product!.id,
+                  quantity: row.quantite, unitPriceHT: row.prixUnitaireHT,
+                  vatRate: row.tauxTVA, lineTotal: lineHT,
+                });
+              }
+
+              const totalTTC = totalHT + totalVAT;
+              await updateInvoice(Number(invoiceId), { totalHT, totalVAT, totalTTC });
+              results.push({ client: firstRow.client, invoiceNumber, totalHT, totalVAT, totalTTC, lines: rows.length });
+            } catch (e: any) {
+              errors.push({ client: clientKey, error: e?.message ?? String(e) });
+            }
+          }
+
+          return { results, errors, totalInvoices: results.length };
+        }),
     }),
 
     // Credits (Avoirs)

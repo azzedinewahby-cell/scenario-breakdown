@@ -38,6 +38,8 @@ export type InvokeParams = {
   output_schema?: OutputSchema;
   responseFormat?: ResponseFormat;
   response_format?: ResponseFormat;
+  /** Model speed/quality preference. "fast" = Haiku 4.5, "smart" = Sonnet 4.6 (default: "fast") */
+  speed?: "fast" | "smart";
 };
 
 export type ToolCall = { id: string; type: "function"; function: { name: string; arguments: string } };
@@ -56,7 +58,8 @@ export type InvokeResult = {
 };
 
 const ANTHROPIC_API_URL = "https://api.anthropic.com/v1/messages";
-const MODEL = "claude-sonnet-4-6"; // Bon rapport qualité/prix pour le dépouillement
+const MODEL_FAST = "claude-haiku-4-5-20251001";  // 3-5x plus rapide pour l'extraction
+const MODEL_SMART = "claude-sonnet-4-6";          // Pour la rédaction (synopsis)
 
 const contentToText = (content: MessageContent | MessageContent[]): string => {
   if (typeof content === "string") return content;
@@ -89,8 +92,9 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
     systemPrompt += "\n\nRAPPEL: Ta réponse doit commencer par { et contenir UNIQUEMENT du JSON valide.";
   }
 
+  const model = params.speed === "smart" ? MODEL_SMART : MODEL_FAST;
   const payload: Record<string, unknown> = {
-    model: MODEL,
+    model,
     max_tokens: params.maxTokens ?? params.max_tokens ?? 16384,
     messages: otherMessages,
   };
@@ -137,7 +141,7 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
   return {
     id: data.id ?? "claude-response",
     created: Math.floor(Date.now() / 1000),
-    model: data.model ?? MODEL,
+    model: data.model ?? model,
     choices: [{
       index: 0,
       message: { role: "assistant", content: cleanText },

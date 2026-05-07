@@ -1959,6 +1959,7 @@ async function generateSynopsis(scenarioId: number) {
 
     const { invokeLLM } = await import("./_core/llm");
     const resp = await invokeLLM({
+      speed: "smart", // Sonnet pour un synopsis bien écrit
       messages: [
         {
           role: "system",

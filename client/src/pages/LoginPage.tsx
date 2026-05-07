@@ -47,6 +47,13 @@ export default function LoginPage() {
   const utils = trpc.useUtils();
   const urlParams = new URLSearchParams(window.location.search);
   const oauthError = urlParams.get("error");
+  const errorMessages: Record<string, string> = {
+    google_not_configured: "Google OAuth non configuré (clés manquantes).",
+    facebook_not_configured: "Facebook OAuth non configuré (clés manquantes).",
+    google_failed: "Connexion Google échouée. Vérifie que ton email est dans les utilisateurs test.",
+    facebook_failed: "Connexion Facebook échouée.",
+  };
+  const errorMessage = oauthError ? (errorMessages[oauthError] ?? "Connexion échouée.") : null;
 
   const [loginEmail, setLoginEmail] = useState("");
   const [loginPassword, setLoginPassword] = useState("");
@@ -77,9 +84,9 @@ export default function LoginPage() {
           <p className="text-muted-foreground text-sm text-center">Outil de dépouillement de scénario</p>
         </div>
 
-        {oauthError && (
+        {errorMessage && (
           <div className="text-sm text-destructive text-center bg-destructive/10 rounded-md p-2">
-            Connexion échouée. Réessaie ou utilise email/mot de passe.
+            {errorMessage}
           </div>
         )}
 

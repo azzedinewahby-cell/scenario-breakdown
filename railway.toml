@@ -1,8 +1,8 @@
 [build]
 builder = "NIXPACKS"
-buildCommand = "npm install --legacy-peer-deps && npm run build"
+buildCommand = "pnpm install --frozen-lockfile && pnpm run build"
 
 [deploy]
-startCommand = "node scripts/init-db.mjs && npm run start"
+startCommand = "node scripts/init-db.mjs && pnpm run start"
 healthcheckPath = "/"
 restartPolicyType = "ON_FAILURE"

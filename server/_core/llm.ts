@@ -19,11 +19,7 @@ export type Tool = {
   function: { name: string; description?: string; parameters?: Record<string, unknown> };
 };
 
-export type ToolChoicePrimitive = "none" | "auto" | "required";
-export type ToolChoiceByName = { name: string };
-export type ToolChoiceExplicit = { type: "function"; function: { name: string } };
-export type ToolChoice = ToolChoicePrimitive | ToolChoiceByName | ToolChoiceExplicit;
-
+export type ToolChoice = "none" | "auto" | "required" | { name: string } | { type: "function"; function: { name: string } };
 export type JsonSchema = { name: string; schema: Record<string, unknown>; strict?: boolean };
 export type OutputSchema = JsonSchema;
 export type ResponseFormat =
@@ -46,6 +42,7 @@ export type InvokeParams = {
 
 export type ToolCall = { id: string; type: "function"; function: { name: string; arguments: string } };
 
+// Conserve le format de réponse OpenAI pour compatibilité avec le reste du code
 export type InvokeResult = {
   id: string;
   created: number;
@@ -58,73 +55,88 @@ export type InvokeResult = {
   usage?: { prompt_tokens: number; completion_tokens: number; total_tokens: number };
 };
 
-const normalizeContent = (content: MessageContent | MessageContent[]): string => {
+const ANTHROPIC_API_URL = "https://api.anthropic.com/v1/messages";
+const MODEL = "claude-sonnet-4-6"; // Bon rapport qualité/prix pour le dépouillement
+
+const contentToText = (content: MessageContent | MessageContent[]): string => {
   if (typeof content === "string") return content;
   if (Array.isArray(content)) {
     return content.map(c => (typeof c === "string" ? c : c.type === "text" ? c.text : "")).join("\n");
   }
-  if (content.type === "text") return content.text;
-  return "";
+  return content.type === "text" ? content.text : "";
 };
-
-const normalizeMessage = (msg: Message) => ({
-  role: msg.role,
-  content: normalizeContent(msg.content),
-  ...(msg.name ? { name: msg.name } : {}),
-  ...(msg.tool_call_id ? { tool_call_id: msg.tool_call_id } : {}),
-});
-
-const normalizeToolChoice = (tc?: ToolChoice, tools?: Tool[]) => {
-  if (!tc) return undefined;
-  if (tc === "none" || tc === "auto") return tc;
-  if (tc === "required" && tools?.length === 1) return { type: "function", function: { name: tools[0].function.name } };
-  if ("name" in tc) return { type: "function", function: { name: tc.name } };
-  return tc;
-};
-
-const normalizeResponseFormat = ({ responseFormat, response_format, outputSchema, output_schema }: {
-  responseFormat?: ResponseFormat; response_format?: ResponseFormat;
-  outputSchema?: OutputSchema; output_schema?: OutputSchema;
-}) => {
-  const fmt = responseFormat || response_format;
-  if (fmt) return fmt;
-  const schema = outputSchema || output_schema;
-  if (!schema) return undefined;
-  return { type: "json_schema" as const, json_schema: { name: schema.name, schema: schema.schema, strict: schema.strict } };
-};
-
-// Gemini via OpenAI-compatible endpoint
-const GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions";
 
 export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
-  const apiKey = ENV.geminiApiKey;
-  if (!apiKey) throw new Error("GEMINI_API_KEY is not configured");
+  const apiKey = ENV.anthropicApiKey;
+  if (!apiKey) throw new Error("ANTHROPIC_API_KEY non configurée");
 
-  const { messages, tools, toolChoice, tool_choice, outputSchema, output_schema, responseFormat, response_format } = params;
+  // Sépare le message system des autres
+  const systemMessages = params.messages.filter(m => m.role === "system").map(m => contentToText(m.content));
+  const otherMessages = params.messages
+    .filter(m => m.role === "user" || m.role === "assistant")
+    .map(m => ({ role: m.role as "user" | "assistant", content: contentToText(m.content) }));
+
+  // Si une réponse JSON est demandée, on instruit Claude dans le system prompt
+  let systemPrompt = systemMessages.join("\n\n");
+  const fmt = params.responseFormat || params.response_format;
+  const schema = params.outputSchema || params.output_schema;
+  if (fmt?.type === "json_object" || fmt?.type === "json_schema" || schema) {
+    const schemaObj = (fmt as any)?.json_schema?.schema ?? schema?.schema;
+    systemPrompt += "\n\nIMPORTANT: Réponds UNIQUEMENT avec un objet JSON valide, sans markdown, sans backticks, sans texte avant ou après. ";
+    if (schemaObj) {
+      systemPrompt += `Le JSON doit suivre ce schéma: ${JSON.stringify(schemaObj)}`;
+    }
+  }
 
   const payload: Record<string, unknown> = {
-    model: "gemini-2.5-flash",
-    messages: messages.map(normalizeMessage),
-    max_tokens: 32768,
+    model: MODEL,
+    max_tokens: params.maxTokens ?? params.max_tokens ?? 8192,
+    messages: otherMessages,
   };
+  if (systemPrompt.trim()) payload.system = systemPrompt;
 
-  if (tools?.length) payload.tools = tools;
-  const tc = normalizeToolChoice(toolChoice || tool_choice, tools);
-  if (tc) payload.tool_choice = tc;
-
-  const fmt = normalizeResponseFormat({ responseFormat, response_format, outputSchema, output_schema });
-  if (fmt) payload.response_format = fmt;
-
-  const response = await fetch(GEMINI_API_URL, {
+  const response = await fetch(ANTHROPIC_API_URL, {
     method: "POST",
-    headers: { "content-type": "application/json", authorization: `Bearer ${apiKey}` },
+    headers: {
+      "content-type": "application/json",
+      "x-api-key": apiKey,
+      "anthropic-version": "2023-06-01",
+    },
     body: JSON.stringify(payload),
   });
 
   if (!response.ok) {
     const err = await response.text();
-    throw new Error(`LLM invoke failed: ${response.status} ${response.statusText} – ${err}`);
+    throw new Error(`Claude API failed: ${response.status} ${response.statusText} – ${err}`);
   }
 
-  return (await response.json()) as InvokeResult;
+  const data = await response.json() as any;
+  // Extrait le texte de la réponse Claude
+  const textContent = (data.content ?? [])
+    .filter((b: any) => b.type === "text")
+    .map((b: any) => b.text)
+    .join("\n");
+
+  // Si réponse JSON attendue, nettoie les éventuels backticks markdown
+  let cleanText = textContent;
+  if (fmt?.type === "json_object" || fmt?.type === "json_schema" || schema) {
+    cleanText = cleanText.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/i, "").trim();
+  }
+
+  // Retourne en format OpenAI pour compatibilité
+  return {
+    id: data.id ?? "claude-response",
+    created: Math.floor(Date.now() / 1000),
+    model: data.model ?? MODEL,
+    choices: [{
+      index: 0,
+      message: { role: "assistant", content: cleanText },
+      finish_reason: data.stop_reason ?? "stop",
+    }],
+    usage: data.usage ? {
+      prompt_tokens: data.usage.input_tokens ?? 0,
+      completion_tokens: data.usage.output_tokens ?? 0,
+      total_tokens: (data.usage.input_tokens ?? 0) + (data.usage.output_tokens ?? 0),
+    } : undefined,
+  };
 }

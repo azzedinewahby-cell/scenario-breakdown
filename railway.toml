@@ -3,6 +3,5 @@ builder = "NIXPACKS"
 buildCommand = "pnpm install --frozen-lockfile && pnpm run build"
 
 [deploy]
-startCommand = "node scripts/init-db.mjs && pnpm run start"
-healthcheckPath = "/"
+startCommand = "node scripts/init-db.mjs && NODE_ENV=production node dist/index.js"
 restartPolicyType = "ON_FAILURE"

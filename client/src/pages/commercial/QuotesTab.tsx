@@ -2,7 +2,7 @@ import { useState } from "react";
 import { trpc } from "@/lib/trpc";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, Eye, Download, Trash2 } from "lucide-react";
+import { Plus, Eye, Download, Trash2, FileCheck2 } from "lucide-react";
 import QuoteForm from "./QuoteForm";
 
 export default function QuotesTab() {
@@ -17,6 +17,15 @@ export default function QuotesTab() {
   });
   const deleteMutation = trpc.commercial.quotes.delete.useMutation({
     onSuccess: () => refetch(),
+  });
+
+  const utils = trpc.useUtils();
+  const convertMutation = trpc.commercial.invoices.fromQuote.useMutation({
+    onSuccess: (data) => {
+      alert(`Facture ${data.invoiceNumber} créée avec succès !`);
+      utils.commercial.invoices.list.invalidate();
+    },
+    onError: (e) => alert("Erreur : " + e.message),
   });
 
   if (isLoading) {
@@ -60,18 +69,22 @@ export default function QuotesTab() {
                   <p className="text-sm text-slate-600">Total: {quote.totalTTC ? (quote.totalTTC / 100).toFixed(2) : "0.00"}€ TTC</p>
                 </div>
                 <div className="flex gap-2">
-                  <Button variant="outline" size="sm" className="gap-1">
-                    <Eye size={14} />
-                  </Button>
-                  <Button variant="outline" size="sm" className="gap-1">
-                    <Download size={14} />
+                  <Button variant="default" size="sm" className="gap-1"
+                    onClick={() => {
+                      if (confirm(`Convertir le devis ${quote.number} en facture ?`)) {
+                        convertMutation.mutate({ quoteId: quote.id });
+                      }
+                    }}
+                    disabled={convertMutation.isPending}
+                    title="Convertir en facture">
+                    <FileCheck2 size={14} /> Facturer
                   </Button>
                   <Button
                     variant="destructive"
                     size="sm"
                     onClick={() => deleteMutation.mutate({ quoteId: quote.id })}
                     className="gap-1"
-                  >
+                    title="Supprimer">
                     <Trash2 size={14} />
                   </Button>
                 </div>

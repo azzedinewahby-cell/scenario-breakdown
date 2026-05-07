@@ -22,6 +22,29 @@ export default function InvoicesTab() {
 
   const createMutation = trpc.commercial.invoices.create.useMutation();
 
+  const generatePdfMutation = trpc.commercial.invoices.generatePdf.useMutation({
+    onSuccess: (data) => {
+      const byteChars = atob(data.pdfBase64);
+      const bytes = new Uint8Array(byteChars.length);
+      for (let i = 0; i < byteChars.length; i++) bytes[i] = byteChars.charCodeAt(i);
+      const blob = new Blob([bytes], { type: "application/pdf" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url; a.download = data.filename; a.click();
+      URL.revokeObjectURL(url);
+    },
+    onError: (e) => alert("Erreur PDF : " + e.message),
+  });
+
+  const deleteMutation = trpc.commercial.invoices.delete.useMutation();
+  const utils = trpc.useUtils();
+
+  const handleDelete = async (invoiceId: number) => {
+    if (!confirm("Supprimer cette facture ?")) return;
+    await deleteMutation.mutateAsync({ invoiceId });
+    utils.commercial.invoices.list.invalidate();
+  };
+
   const handleCreate = async () => {
     if (!formData.clientId || !formData.quoteId) {
       alert("Veuillez sélectionner un client et un devis");
@@ -168,13 +191,15 @@ export default function InvoicesTab() {
                   </p>
                 </div>
                 <div className="flex gap-2">
-                  <Button variant="outline" size="sm" className="gap-1">
-                    <Eye size={14} />
-                  </Button>
-                  <Button variant="outline" size="sm" className="gap-1">
+                  <Button variant="outline" size="sm" className="gap-1"
+                    onClick={() => generatePdfMutation.mutate({ invoiceId: invoice.id })}
+                    disabled={generatePdfMutation.isPending}
+                    title="Télécharger le PDF">
                     <Download size={14} />
                   </Button>
-                  <Button variant="destructive" size="sm" className="gap-1">
+                  <Button variant="destructive" size="sm" className="gap-1"
+                    onClick={() => handleDelete(invoice.id)}
+                    title="Supprimer">
                     <Trash2 size={14} />
                   </Button>
                 </div>

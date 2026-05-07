@@ -1665,6 +1665,114 @@ Règles importantes:
 
           return { results, errors, totalInvoices: results.length };
         }),
+
+      // ─── PDF Export ─────────────────────────────────────────────────────
+      generatePdf: protectedProcedure
+        .input(z.object({ invoiceId: z.number() }))
+        .mutation(async ({ ctx, input }) => {
+          const { getInvoiceById, getInvoiceLines, getClientById, getCompanySettingsByUserId, getProductById } = await import("./db");
+          const { generateDocumentPdf } = await import("./_core/pdfGenerator");
+          const invoice = await getInvoiceById(input.invoiceId);
+          if (!invoice || invoice.userId !== ctx.user.id) throw new TRPCError({ code: "NOT_FOUND", message: "Facture introuvable" });
+          const client = await getClientById(invoice.clientId);
+          const company = await getCompanySettingsByUserId(ctx.user.id);
+          const lines = await getInvoiceLines(input.invoiceId);
+          if (!client || !company) throw new TRPCError({ code: "BAD_REQUEST", message: "Configurez vos paramètres entreprise et le client avant l'export" });
+          const linesWithProducts = await Promise.all(lines.map(async l => {
+            const prod = await getProductById(l.productId);
+            return {
+              productName: prod?.nom ?? `Produit #${l.productId}`,
+              description: prod?.description ?? null,
+              quantity: l.quantity ?? 1,
+              unitPriceHT: l.unitPriceHT ?? 0,
+              vatRate: l.vatRate ?? 20,
+              lineTotal: l.lineTotal ?? 0,
+            };
+          }));
+          const pdfBuffer = await generateDocumentPdf({
+            type: "facture",
+            number: invoice.number,
+            issueDate: invoice.issueDate,
+            dueDate: invoice.dueDate,
+            status: invoice.status,
+            client, company, lines: linesWithProducts,
+            totalHT: invoice.totalHT ?? 0, totalVAT: invoice.totalVAT ?? 0, totalTTC: invoice.totalTTC ?? 0,
+            paymentMethod: invoice.paymentMethod ?? null,
+          });
+          return { pdfBase64: pdfBuffer.toString("base64"), filename: `Facture_${invoice.number}.pdf` };
+        }),
+
+      // ─── Convertir un devis en facture ──────────────────────────────────
+      fromQuote: protectedProcedure
+        .input(z.object({ quoteId: z.number() }))
+        .mutation(async ({ ctx, input }) => {
+          const { getQuoteById, getQuoteLines, createInvoice, createInvoiceLine, generateNextNumber, updateInvoice } = await import("./db");
+          const quote = await getQuoteById(input.quoteId);
+          if (!quote || quote.userId !== ctx.user.id) throw new TRPCError({ code: "NOT_FOUND", message: "Devis introuvable" });
+          const lines = await getQuoteLines(input.quoteId);
+          const invoiceNumber = await generateNextNumber("FA", ctx.user.id);
+          const dueDate = new Date();
+          dueDate.setDate(dueDate.getDate() + 30);
+          const invoiceId = await createInvoice({
+            userId: ctx.user.id, clientId: quote.clientId, quoteId: quote.id,
+            number: invoiceNumber, dueDate, status: "brouillon" as const,
+          });
+          let totalHT = 0, totalVAT = 0;
+          for (const line of lines) {
+            const lineHT = (line.quantity ?? 0) * (line.unitPriceHT ?? 0);
+            const lineVAT = lineHT * ((line.vatRate ?? 20) / 100);
+            totalHT += lineHT;
+            totalVAT += lineVAT;
+            await createInvoiceLine({
+              invoiceId: Number(invoiceId), productId: line.productId,
+              quantity: line.quantity ?? 1, unitPriceHT: line.unitPriceHT ?? 0,
+              vatRate: line.vatRate ?? 20, lineTotal: lineHT,
+            });
+          }
+          await updateInvoice(Number(invoiceId), { totalHT, totalVAT, totalTTC: totalHT + totalVAT });
+          return { invoiceId: Number(invoiceId), invoiceNumber };
+        }),
+
+      // ─── Tableau de bord financier ──────────────────────────────────────
+      dashboard: protectedProcedure.query(async ({ ctx }) => {
+        const { getInvoicesByUserId } = await import("./db");
+        const all = await getInvoicesByUserId(ctx.user.id);
+        const now = new Date();
+        const thisMonth = now.getMonth();
+        const thisYear = now.getFullYear();
+        const stats = {
+          totalCAYear: 0,
+          totalCAMonth: 0,
+          totalUnpaid: 0,
+          totalOverdue: 0,
+          countTotal: all.length,
+          countPaid: 0,
+          countUnpaid: 0,
+          countOverdue: 0,
+          recentInvoices: all.slice(0, 5),
+          monthlyRevenue: Array.from({ length: 12 }, (_, i) => ({ month: i, total: 0 })),
+        };
+        for (const inv of all) {
+          const issueDate = new Date(inv.issueDate);
+          const ttc = inv.totalTTC ?? 0;
+          if (inv.status === "payée") {
+            stats.countPaid++;
+            if (issueDate.getFullYear() === thisYear) {
+              stats.totalCAYear += ttc;
+              stats.monthlyRevenue[issueDate.getMonth()].total += ttc;
+              if (issueDate.getMonth() === thisMonth) stats.totalCAMonth += ttc;
+            }
+          } else {
+            stats.countUnpaid++;
+            stats.totalUnpaid += ttc;
+            if (inv.dueDate && new Date(inv.dueDate) < now) {
+              stats.countOverdue++;
+              stats.totalOverdue += ttc;
+            }
+          }
+        }
+        return stats;
+      }),
     }),
 
     // Credits (Avoirs)

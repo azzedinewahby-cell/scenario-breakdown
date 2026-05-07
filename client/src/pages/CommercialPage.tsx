@@ -9,9 +9,10 @@ import InvoicesTab from "./commercial/InvoicesTab";
 import CreditsTab from "./commercial/CreditsTab";
 import SettingsTab from "./commercial/SettingsTab";
 import BulkInvoiceTab from "./commercial/BulkInvoiceTab";
+import DashboardTab from "./commercial/DashboardTab";
 
 export default function CommercialPage() {
-  const [activeTab, setActiveTab] = useState("clients");
+  const [activeTab, setActiveTab] = useState("dashboard");
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-8">
@@ -28,7 +29,11 @@ export default function CommercialPage() {
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-7 mb-8 bg-white border border-slate-200 rounded-lg p-1">
+          <TabsList className="grid w-full grid-cols-8 mb-8 bg-white border border-slate-200 rounded-lg p-1">
+            <TabsTrigger value="dashboard" className="flex items-center gap-2">
+              <span className="hidden sm:inline">Tableau</span>
+              <span className="sm:hidden">📊</span>
+            </TabsTrigger>
             <TabsTrigger value="clients" className="flex items-center gap-2">
               <span className="hidden sm:inline">Clients</span>
               <span className="sm:hidden">👥</span>
@@ -60,6 +65,10 @@ export default function CommercialPage() {
           </TabsList>
 
           {/* Tab Contents */}
+          <TabsContent value="dashboard" className="space-y-4">
+            <DashboardTab />
+          </TabsContent>
+
           <TabsContent value="clients" className="space-y-4">
             <ClientsTab />
           </TabsContent>

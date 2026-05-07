@@ -39,7 +39,7 @@ async function createSessionAndRedirect(
 export function registerGoogleOAuth(app: Express) {
   const clientId = process.env.GOOGLE_CLIENT_ID;
   const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
-  if (!clientId || !clientSecret) return;
+  if (!clientId || !clientSecret) { app.get("/api/auth/google", (_, res) => res.redirect("/login?error=google_not_configured")); return; }
 
   app.get("/api/auth/google", (_req, res) => {
     const params = new URLSearchParams({
@@ -96,7 +96,7 @@ export function registerGoogleOAuth(app: Express) {
 export function registerFacebookOAuth(app: Express) {
   const appId = process.env.FACEBOOK_APP_ID;
   const appSecret = process.env.FACEBOOK_APP_SECRET;
-  if (!appId || !appSecret) return;
+  if (!appId || !appSecret) { app.get("/api/auth/facebook", (_, res) => res.redirect("/login?error=facebook_not_configured")); return; }
 
   app.get("/api/auth/facebook", (_req, res) => {
     const params = new URLSearchParams({
@@ -142,5 +142,15 @@ export function registerFacebookOAuth(app: Express) {
       console.error("[Facebook OAuth]", e);
       res.redirect("/login?error=facebook_failed");
     }
+  });
+}
+
+export function registerDebugRoute(app: Express) {
+  if (process.env.NODE_ENV === "production") return;
+  app.get("/api/debug/env", (_req, res) => {
+    res.json({
+      hasGoogleId: !!process.env.GOOGLE_CLIENT_ID,
+      hasFacebookId: !!process.env.FACEBOOK_APP_ID,
+    });
   });
 }

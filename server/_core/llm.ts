@@ -82,10 +82,11 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
   const schema = params.outputSchema || params.output_schema;
   if (fmt?.type === "json_object" || fmt?.type === "json_schema" || schema) {
     const schemaObj = (fmt as any)?.json_schema?.schema ?? schema?.schema;
-    systemPrompt += "\n\nIMPORTANT: Réponds UNIQUEMENT avec un objet JSON valide, sans markdown, sans backticks, sans texte avant ou après. ";
+    systemPrompt = "Tu es un assistant qui répond UNIQUEMENT en JSON valide. Pas de markdown, pas de backticks, pas de texte avant ou après. Commence ta réponse directement par { et termine par }.\n\n" + systemPrompt;
     if (schemaObj) {
-      systemPrompt += `Le JSON doit suivre ce schéma: ${JSON.stringify(schemaObj)}`;
+      systemPrompt += `\n\nLe JSON doit suivre ce schéma: ${JSON.stringify(schemaObj)}`;
     }
+    systemPrompt += "\n\nRAPPEL: Ta réponse doit commencer par { et contenir UNIQUEMENT du JSON valide.";
   }
 
   const payload: Record<string, unknown> = {
@@ -95,12 +96,7 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
   };
   if (systemPrompt.trim()) payload.system = systemPrompt;
 
-  // Technique du "prefill" Claude : si JSON attendu, on commence la réponse par "{"
-  // pour forcer Claude à continuer en JSON (très fiable)
   const expectsJson = fmt?.type === "json_object" || fmt?.type === "json_schema" || !!schema;
-  if (expectsJson) {
-    (payload.messages as any[]).push({ role: "assistant", content: "{" });
-  }
 
   const response = await fetch(ANTHROPIC_API_URL, {
     method: "POST",
@@ -118,21 +114,23 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
   }
 
   const data = await response.json() as any;
-  // Extrait le texte de la réponse Claude
   const textContent = (data.content ?? [])
     .filter((b: any) => b.type === "text")
     .map((b: any) => b.text)
     .join("\n");
 
-  // Si réponse JSON attendue, reconstruit le JSON complet (préfixé par "{")
+  // Extraction robuste du JSON s'il est attendu
   let cleanText = textContent;
   if (expectsJson) {
-    cleanText = "{" + textContent;
-    // Nettoie les éventuels backticks markdown
-    cleanText = cleanText.replace(/^```(?:json)?\s*/i, "").replace(/\s*```\s*$/i, "").trim();
-    // Coupe au dernier "}" en cas de texte parasite après
+    // Retire les backticks markdown
+    cleanText = cleanText.replace(/```(?:json)?\s*/gi, "").replace(/\s*```/g, "");
+    // Trouve le premier { et le dernier } pour extraire le JSON même s'il y a du texte autour
+    const firstBrace = cleanText.indexOf("{");
     const lastBrace = cleanText.lastIndexOf("}");
-    if (lastBrace > 0) cleanText = cleanText.substring(0, lastBrace + 1);
+    if (firstBrace !== -1 && lastBrace > firstBrace) {
+      cleanText = cleanText.substring(firstBrace, lastBrace + 1);
+    }
+    cleanText = cleanText.trim();
   }
 
   // Retourne en format OpenAI pour compatibilité

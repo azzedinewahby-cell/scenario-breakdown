@@ -3,6 +3,6 @@ builder = "NIXPACKS"
 buildCommand = "pnpm install && pnpm run build"
 
 [deploy]
-startCommand = "pnpm run start"
+startCommand = "node scripts/init-db.mjs && pnpm run start"
 healthcheckPath = "/"
 restartPolicyType = "ON_FAILURE"

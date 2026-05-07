@@ -330,6 +330,7 @@ export const companySettings = mysqlTable("company_settings", {
   id: int("id").autoincrement().primaryKey(),
   userId: int("userId").notNull().unique(),
   companyName: varchar("companyName", { length: 256 }).notNull(),
+  tradeName: varchar("tradeName", { length: 256 }),
   siret: varchar("siret", { length: 14 }),
   vatNumber: varchar("vatNumber", { length: 32 }),
   address: text("address"),

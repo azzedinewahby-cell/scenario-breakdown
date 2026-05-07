@@ -69,11 +69,19 @@ export async function generateDocumentPdf(input: GeneratePdfInput): Promise<Buff
   doc.fontSize(28).fillColor(COLORS.accent).font("Helvetica-Bold").text(docTitle, 50, 50);
   doc.fontSize(11).fillColor(COLORS.muted).font("Helvetica").text(`N° ${number}`, 50, 85);
 
-  // Company name top right
+  // Company name top right - tradeName en grand, dénomination légale en petit
+  const displayName = (company as any).tradeName || company.companyName;
+  const legalName = (company as any).tradeName ? company.companyName : null;
+
   doc.fontSize(16).fillColor(COLORS.primary).font("Helvetica-Bold")
-     .text(company.companyName ?? "", 300, 50, { align: "right", width: 245 });
+     .text(displayName, 300, 50, { align: "right", width: 245 });
+  let companyY = 72;
+  if (legalName) {
+    doc.fontSize(8).fillColor(COLORS.muted).font("Helvetica-Oblique")
+       .text(`(${legalName})`, 300, companyY, { align: "right", width: 245 });
+    companyY += 12;
+  }
   doc.fontSize(9).fillColor(COLORS.muted).font("Helvetica");
-  let companyY = 75;
   if (company.address) {
     doc.text(company.address, 300, companyY, { align: "right", width: 245 });
     companyY += doc.heightOfString(company.address, { width: 245 }) + 2;

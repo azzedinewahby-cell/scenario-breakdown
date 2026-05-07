@@ -1303,6 +1303,7 @@ Règles importantes:
         if (!settings) {
           await createOrUpdateCompanySettings(ctx.user.id, {
             companyName: "CRE'ARTEURS",
+            tradeName: "LA KABINE PRODUCTION",
             siret: "53534086300021",
             vatNumber: "",
             address: "72 avenue Henri Ginoux\n92120 MONTROUGE\nFrance",
@@ -1326,6 +1327,7 @@ Règles importantes:
         .input(
           z.object({
             companyName: z.string(),
+            tradeName: z.string().optional(),
             siret: z.string().optional(),
             vatNumber: z.string().optional(),
             address: z.string().optional(),

@@ -11,6 +11,7 @@ import { Loader2, CheckCircle, AlertCircle } from "lucide-react";
 export default function SettingsTab() {
   const [formData, setFormData] = useState({
     companyName: "",
+    tradeName: "",
     siret: "",
     vatNumber: "",
     address: "",
@@ -41,6 +42,7 @@ export default function SettingsTab() {
       setFormData(prev => ({
         ...prev,
         companyName: settingsQuery.data?.companyName || "",
+        tradeName: (settingsQuery.data as any)?.tradeName || "",
         siret: settingsQuery.data?.siret || "",
         vatNumber: settingsQuery.data?.vatNumber || "",
         address: settingsQuery.data?.address || "",
@@ -126,15 +128,28 @@ export default function SettingsTab() {
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="companyName">Nom de l'entreprise *</Label>
+              <Label htmlFor="companyName">Dénomination légale *</Label>
               <Input
                 id="companyName"
                 name="companyName"
                 value={formData.companyName}
                 onChange={handleChange}
-                placeholder="Votre entreprise"
+                placeholder="Ex: LES CRE'ARTEURS"
                 required
               />
+              <p className="text-xs text-muted-foreground mt-1">Nom légal (statuts, INSEE, RIB)</p>
+            </div>
+
+            <div>
+              <Label htmlFor="tradeName">Nom commercial</Label>
+              <Input
+                id="tradeName"
+                name="tradeName"
+                value={formData.tradeName}
+                onChange={handleChange}
+                placeholder="Ex: LA KABINE PRODUCTION"
+              />
+              <p className="text-xs text-muted-foreground mt-1">Affiché en grand sur les factures</p>
             </div>
 
             <div>

@@ -69,6 +69,7 @@ try {
     "ALTER TABLE `scenarios` ADD COLUMN IF NOT EXISTS `synopsis` text",
     "ALTER TABLE `characters` ADD COLUMN IF NOT EXISTS `gender` enum('male','female','unknown') DEFAULT 'unknown'",
     "ALTER TABLE `characters` ADD COLUMN IF NOT EXISTS `age` enum('adult','child','unknown') DEFAULT 'adult'",
+    "ALTER TABLE `company_settings` ADD COLUMN IF NOT EXISTS `tradeName` varchar(256)",
   ];
   for (const sql of extras) {
     try { await conn.execute(sql); } catch {}

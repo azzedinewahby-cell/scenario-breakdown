@@ -97,16 +97,47 @@ export async function fetchAndExtractText(
   const ext = fileName.split(".").pop()?.toLowerCase() ?? "";
 
   if (ext === "pdf") {
-    return null; // PDF handled directly by LLM
+    // Extract PDF text using pdf-parse
+    let pdfBuffer: Buffer;
+    if (fileUrl.startsWith("/uploads/")) {
+      const fs = await import("fs/promises");
+      const path = await import("path");
+      const uploadDir = process.env.UPLOAD_DIR ?? "./uploads";
+      const localFile = fileUrl.replace(/^\/uploads\//, "");
+      pdfBuffer = await fs.readFile(path.resolve(uploadDir, localFile));
+    } else {
+      const response = await fetch(fileUrl);
+      pdfBuffer = Buffer.from(await response.arrayBuffer());
+    }
+    try {
+      const pdfParse = (await import("pdf-parse")).default;
+      const data = await pdfParse(pdfBuffer);
+      return data.text;
+    } catch (e) {
+      console.error("[PDF] extraction failed:", e);
+      return null;
+    }
   }
 
-  const response = await fetch(fileUrl);
-  if (!response.ok) {
-    throw new Error(`Failed to fetch file: ${response.status} ${response.statusText}`);
+  // Lire le fichier directement depuis le disque local
+  // (fileUrl est de la forme "/uploads/xxx" depuis storage local)
+  let buffer: Buffer;
+  if (fileUrl.startsWith("/uploads/")) {
+    const fs = await import("fs/promises");
+    const path = await import("path");
+    const uploadDir = process.env.UPLOAD_DIR ?? "./uploads";
+    const fileName = fileUrl.replace(/^\/uploads\//, "");
+    const filePath = path.resolve(uploadDir, fileName);
+    buffer = await fs.readFile(filePath);
+  } else {
+    // URL absolue (rétro-compat)
+    const response = await fetch(fileUrl);
+    if (!response.ok) {
+      throw new Error(`Failed to fetch file: ${response.status} ${response.statusText}`);
+    }
+    const arrayBuffer = await response.arrayBuffer();
+    buffer = Buffer.from(arrayBuffer);
   }
-
-  const arrayBuffer = await response.arrayBuffer();
-  const buffer = Buffer.from(arrayBuffer);
 
   if (ext === "docx") {
     return extractTextFromDocx(buffer);

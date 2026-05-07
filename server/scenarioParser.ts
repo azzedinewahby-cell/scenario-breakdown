@@ -66,14 +66,25 @@ Numérote les scènes séquentiellement si elles ne sont pas numérotées dans l
   ];
 
   if (isPdf) {
-    // PDF: send directly as file_url for LLM to read
-    userContent.push({
-      type: "file_url" as const,
-      file_url: {
-        url: fileUrl,
-        mime_type: "application/pdf" as const,
-      },
-    });
+    // PDF: extraire le texte localement (Claude API lit aussi les PDFs en text)
+    const extractedText = await fetchAndExtractText(fileUrl, fileName);
+    if (extractedText) {
+      userContent.push({
+        type: "text" as const,
+        text: `Voici le contenu du scénario PDF :\n\n${extractedText}`,
+      });
+    } else {
+      // Fallback: send as base64 PDF (Claude API supports it)
+      const fs = await import("fs/promises");
+      const path = await import("path");
+      const uploadDir = process.env.UPLOAD_DIR ?? "./uploads";
+      const localFile = fileUrl.replace(/^\/uploads\//, "");
+      const buffer = await fs.readFile(path.resolve(uploadDir, localFile));
+      userContent.push({
+        type: "text" as const,
+        text: `Voici le contenu du scénario PDF (lu en binaire) :\n\n${buffer.toString("utf-8").substring(0, 100000)}`,
+      });
+    }
   } else {
     // DOCX/FDX: extract text first, then send as text
     const extractedText = await fetchAndExtractText(fileUrl, fileName);

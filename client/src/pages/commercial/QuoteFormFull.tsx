@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { trpc } from "@/lib/trpc";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -20,11 +20,19 @@ type LineDraft = {
 type Props = {
   onSuccess: () => void;
   onCancel: () => void;
+  /** Si fourni, mode édition d'un devis existant */
+  editQuoteId?: number;
 };
 
-export default function QuoteFormFull({ onSuccess, onCancel }: Props) {
+export default function QuoteFormFull({ onSuccess, onCancel, editQuoteId }: Props) {
   const { data: clients } = trpc.commercial.clients.list.useQuery();
   const { data: products } = trpc.commercial.products.list.useQuery();
+  const { data: existingQuote } = trpc.commercial.quotes.get.useQuery(
+    { quoteId: editQuoteId! },
+    { enabled: !!editQuoteId }
+  );
+
+  const isEdit = !!editQuoteId;
 
   // Mode client : existant ou nouveau
   const [clientMode, setClientMode] = useState<"existing" | "new">("existing");
@@ -42,6 +50,29 @@ export default function QuoteFormFull({ onSuccess, onCancel }: Props) {
   const [lines, setLines] = useState<LineDraft[]>([
     { id: crypto.randomUUID(), productId: null, productName: "", description: "", quantity: 1, unitPriceHT: 0, vatRate: 20 },
   ]);
+
+  // Charger les données existantes en mode édition
+  useEffect(() => {
+    if (existingQuote && products) {
+      setClientId(String(existingQuote.clientId));
+      setClientMode("existing");
+      if (existingQuote.paymentTerms) setPaymentTerms(existingQuote.paymentTerms);
+      if (existingQuote.lines && existingQuote.lines.length > 0) {
+        setLines(existingQuote.lines.map((l: any) => {
+          const prod = products.find(p => p.id === l.productId);
+          return {
+            id: crypto.randomUUID(),
+            productId: l.productId,
+            productName: prod?.name ?? "",
+            description: prod?.description ?? "",
+            quantity: l.quantity ?? 1,
+            unitPriceHT: l.unitPriceHT ?? 0,
+            vatRate: l.vatRate ?? 20,
+          };
+        }));
+      }
+    }
+  }, [existingQuote, products]);
 
   // Calculs
   const totals = useMemo(() => {
@@ -87,6 +118,16 @@ export default function QuoteFormFull({ onSuccess, onCancel }: Props) {
     onError: (e) => alert("Erreur : " + e.message),
   });
 
+  const updateMutation = trpc.commercial.quotes.updateWithLines.useMutation({
+    onSuccess: () => {
+      alert("Devis mis à jour !");
+      utils.commercial.quotes.list.invalidate();
+      utils.commercial.products.list.invalidate();
+      onSuccess();
+    },
+    onError: (e) => alert("Erreur : " + e.message),
+  });
+
   const handleSubmit = () => {
     // Validation
     if (clientMode === "existing" && !clientId) {
@@ -100,11 +141,7 @@ export default function QuoteFormFull({ onSuccess, onCancel }: Props) {
       alert("Ajoute au moins une ligne avec un nom et une quantité"); return;
     }
 
-    createMutation.mutate({
-      clientId: clientMode === "existing" ? parseInt(clientId) : undefined,
-      newClient: clientMode === "new" ? newClient : undefined,
-      validityDays,
-      paymentTerms,
+    const payload = {
       lines: validLines.map(l => ({
         productId: l.productId ?? undefined,
         newProduct: !l.productId ? {
@@ -118,13 +155,29 @@ export default function QuoteFormFull({ onSuccess, onCancel }: Props) {
         unitPriceHT: l.unitPriceHT,
         vatRate: l.vatRate,
       })),
-    });
+      validityDays,
+      paymentTerms,
+    };
+
+    if (isEdit) {
+      updateMutation.mutate({
+        ...payload,
+        quoteId: editQuoteId!,
+        clientId: parseInt(clientId),
+      });
+    } else {
+      createMutation.mutate({
+        ...payload,
+        clientId: clientMode === "existing" ? parseInt(clientId) : undefined,
+        newClient: clientMode === "new" ? newClient : undefined,
+      });
+    }
   };
 
   return (
     <Card className="p-6 bg-white border border-slate-200 space-y-6">
       <div className="flex justify-between items-center">
-        <h3 className="text-lg font-semibold">Nouveau devis</h3>
+        <h3 className="text-lg font-semibold">{isEdit ? `Modifier le devis` : "Nouveau devis"}</h3>
         <Button variant="ghost" size="sm" onClick={onCancel}><X size={16} /></Button>
       </div>
 
@@ -310,8 +363,8 @@ export default function QuoteFormFull({ onSuccess, onCancel }: Props) {
       {/* ACTIONS */}
       <div className="flex justify-end gap-2 pt-4 border-t">
         <Button variant="outline" onClick={onCancel}>Annuler</Button>
-        <Button onClick={handleSubmit} disabled={createMutation.isPending}>
-          {createMutation.isPending ? "Création…" : "Créer le devis"}
+        <Button onClick={handleSubmit} disabled={createMutation.isPending || updateMutation.isPending}>
+          {(createMutation.isPending || updateMutation.isPending) ? "Enregistrement…" : (isEdit ? "Mettre à jour" : "Créer le devis")}
         </Button>
       </div>
     </Card>

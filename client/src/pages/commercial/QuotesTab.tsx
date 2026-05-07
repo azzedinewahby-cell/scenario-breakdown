@@ -2,19 +2,14 @@ import { useState } from "react";
 import { trpc } from "@/lib/trpc";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, Eye, Download, Trash2, FileCheck2 } from "lucide-react";
+import { Plus, Eye, Download, Trash2, FileCheck2, Pencil } from "lucide-react";
 import QuoteFormFull from "./QuoteFormFull";
 
 export default function QuotesTab() {
   const [showForm, setShowForm] = useState(false);
+  const [editQuoteId, setEditQuoteId] = useState<number | undefined>();
 
   const { data: quotes, isLoading, refetch } = trpc.commercial.quotes.list.useQuery();
-  const createMutation = trpc.commercial.quotes.create.useMutation({
-    onSuccess: () => {
-      refetch();
-      setShowForm(false);
-    },
-  });
   const deleteMutation = trpc.commercial.quotes.delete.useMutation({
     onSuccess: () => refetch(),
   });
@@ -28,6 +23,35 @@ export default function QuotesTab() {
     onError: (e) => alert("Erreur : " + e.message),
   });
 
+  const generatePdfMutation = trpc.commercial.quotes.generatePdf.useMutation({
+    onSuccess: (data) => {
+      const byteChars = atob(data.pdfBase64);
+      const bytes = new Uint8Array(byteChars.length);
+      for (let i = 0; i < byteChars.length; i++) bytes[i] = byteChars.charCodeAt(i);
+      const blob = new Blob([bytes], { type: "application/pdf" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url; a.download = data.filename; a.click();
+      URL.revokeObjectURL(url);
+    },
+    onError: (e) => alert("Erreur PDF : " + e.message),
+  });
+
+  const handleEdit = (quoteId: number) => {
+    setEditQuoteId(quoteId);
+    setShowForm(true);
+  };
+
+  const handleNew = () => {
+    setEditQuoteId(undefined);
+    setShowForm(true);
+  };
+
+  const handleClose = () => {
+    setShowForm(false);
+    setEditQuoteId(undefined);
+  };
+
   if (isLoading) {
     return <div className="text-center py-8">Chargement des devis...</div>;
   }
@@ -36,7 +60,7 @@ export default function QuotesTab() {
     <div className="space-y-4">
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold text-slate-900">Devis ({quotes?.length || 0})</h2>
-        <Button onClick={() => setShowForm(!showForm)} className="gap-2">
+        <Button onClick={handleNew} className="gap-2">
           <Plus size={16} />
           Nouveau devis
         </Button>
@@ -44,8 +68,9 @@ export default function QuotesTab() {
 
       {showForm && (
         <QuoteFormFull
-          onSuccess={() => { refetch(); setShowForm(false); }}
-          onCancel={() => setShowForm(false)}
+          editQuoteId={editQuoteId}
+          onSuccess={() => { refetch(); handleClose(); }}
+          onCancel={handleClose}
         />
       )}
 
@@ -64,6 +89,17 @@ export default function QuotesTab() {
                   <p className="text-sm text-slate-600">Total: {quote.totalTTC ? (quote.totalTTC / 100).toFixed(2) : "0.00"}€ TTC</p>
                 </div>
                 <div className="flex gap-2">
+                  <Button variant="outline" size="sm" className="gap-1"
+                    onClick={() => handleEdit(quote.id)}
+                    title="Modifier">
+                    <Pencil size={14} />
+                  </Button>
+                  <Button variant="outline" size="sm" className="gap-1"
+                    onClick={() => generatePdfMutation.mutate({ quoteId: quote.id })}
+                    disabled={generatePdfMutation.isPending}
+                    title="Télécharger le PDF">
+                    <Download size={14} />
+                  </Button>
                   <Button variant="default" size="sm" className="gap-1"
                     onClick={() => {
                       if (confirm(`Convertir le devis ${quote.number} en facture ?`)) {
@@ -77,7 +113,11 @@ export default function QuotesTab() {
                   <Button
                     variant="destructive"
                     size="sm"
-                    onClick={() => deleteMutation.mutate({ quoteId: quote.id })}
+                    onClick={() => {
+                      if (confirm(`Supprimer le devis ${quote.number} ?`)) {
+                        deleteMutation.mutate({ quoteId: quote.id });
+                      }
+                    }}
                     className="gap-1"
                     title="Supprimer">
                     <Trash2 size={14} />

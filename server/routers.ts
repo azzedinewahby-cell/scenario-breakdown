@@ -1594,6 +1594,120 @@ Règles importantes:
           const { deleteQuoteLine } = await import("./db");
           return await deleteQuoteLine(input.lineId);
         }),
+
+      // ─── PDF Export ─────────────────────────────────────────────────────
+      generatePdf: protectedProcedure
+        .input(z.object({ quoteId: z.number() }))
+        .mutation(async ({ ctx, input }) => {
+          const { getQuoteById, getQuoteLines, getClientById, getCompanySettingsByUserId, getProductById } = await import("./db");
+          const { generateDocumentPdf } = await import("./_core/pdfGenerator");
+          const quote = await getQuoteById(input.quoteId);
+          if (!quote || quote.userId !== ctx.user.id) throw new TRPCError({ code: "NOT_FOUND", message: "Devis introuvable" });
+          const client = await getClientById(quote.clientId);
+          const company = await getCompanySettingsByUserId(ctx.user.id);
+          const lines = await getQuoteLines(input.quoteId);
+          if (!client || !company) throw new TRPCError({ code: "BAD_REQUEST", message: "Configurez vos paramètres entreprise et le client" });
+          const linesWithProducts = await Promise.all(lines.map(async l => {
+            const prod = await getProductById(l.productId);
+            return {
+              productName: prod?.name ?? `Produit #${l.productId}`,
+              description: prod?.description ?? null,
+              quantity: l.quantity ?? 1,
+              unitPriceHT: l.unitPriceHT ?? 0,
+              vatRate: l.vatRate ?? 20,
+              lineTotal: l.lineTotal ?? 0,
+            };
+          }));
+          const pdfBuffer = await generateDocumentPdf({
+            type: "devis",
+            number: quote.number,
+            issueDate: quote.issueDate,
+            dueDate: quote.validityDate,
+            status: quote.status,
+            client, company, lines: linesWithProducts,
+            totalHT: quote.totalHT ?? 0, totalVAT: quote.totalVAT ?? 0, totalTTC: quote.totalTTC ?? 0,
+            paymentMethod: quote.paymentTerms ?? null,
+          });
+          return { pdfBase64: pdfBuffer.toString("base64"), filename: `Devis_${quote.number}.pdf` };
+        }),
+
+      // ─── Mise à jour complète d'un devis (avec lignes) ──────────────────
+      updateWithLines: protectedProcedure
+        .input(z.object({
+          quoteId: z.number(),
+          clientId: z.number(),
+          validityDays: z.number().default(30),
+          paymentTerms: z.string().optional(),
+          lines: z.array(z.object({
+            productId: z.number().optional(),
+            newProduct: z.object({
+              name: z.string().min(1),
+              description: z.string().optional(),
+              priceHT: z.number().nonnegative(),
+              vatRate: z.number().min(0).max(100).default(20),
+              unit: z.enum(["heure", "jour", "forfait"]).default("forfait"),
+            }).optional(),
+            quantity: z.number().positive(),
+            unitPriceHT: z.number().nonnegative(),
+            vatRate: z.number().min(0).max(100).default(20),
+          })).min(1),
+        }))
+        .mutation(async ({ ctx, input }) => {
+          const {
+            getQuoteById, getQuoteLines, deleteQuoteLine,
+            updateQuote, createQuoteLine, createProduct,
+          } = await import("./db");
+          const quote = await getQuoteById(input.quoteId);
+          if (!quote || quote.userId !== ctx.user.id) throw new TRPCError({ code: "NOT_FOUND", message: "Devis introuvable" });
+
+          // Supprimer toutes les lignes existantes
+          const existingLines = await getQuoteLines(input.quoteId);
+          for (const line of existingLines) {
+            await deleteQuoteLine(line.id);
+          }
+
+          // Recréer les lignes
+          let totalHT = 0, totalVAT = 0;
+          for (let i = 0; i < input.lines.length; i++) {
+            const line = input.lines[i];
+            let productId = line.productId;
+            if (!productId && line.newProduct) {
+              const result = await createProduct({
+                userId: ctx.user.id,
+                name: line.newProduct.name,
+                description: line.newProduct.description ?? null,
+                priceHT: line.newProduct.priceHT,
+                vatRate: line.newProduct.vatRate,
+                unit: line.newProduct.unit,
+              });
+              productId = (result as any)[0]?.insertId ?? Number(result);
+            }
+            if (!productId) continue;
+            const lineHT = line.quantity * line.unitPriceHT;
+            const lineVAT = lineHT * (line.vatRate / 100);
+            totalHT += lineHT;
+            totalVAT += lineVAT;
+            await createQuoteLine({
+              quoteId: input.quoteId, productId,
+              quantity: line.quantity,
+              unitPriceHT: line.unitPriceHT,
+              vatRate: line.vatRate,
+              lineTotal: lineHT,
+              orderIndex: i,
+            });
+          }
+
+          // Mettre à jour le devis
+          const validityDate = new Date();
+          validityDate.setDate(validityDate.getDate() + input.validityDays);
+          await updateQuote(input.quoteId, {
+            clientId: input.clientId,
+            validityDate,
+            paymentTerms: input.paymentTerms ?? "30 jours fin de mois",
+            totalHT, totalVAT, totalTTC: totalHT + totalVAT,
+          });
+          return { quoteId: input.quoteId };
+        }),
     }),
 
     // Invoices (Factures)

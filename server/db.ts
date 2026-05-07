@@ -1131,3 +1131,38 @@ export async function deleteCompanySettings(userId: number) {
     .delete(companySettings)
     .where(eq(companySettings.userId, userId));
 }
+
+// ─── Auth helpers (migration sans Manus OAuth) ───────────────────────────────
+
+export async function getUserByEmail(email: string) {
+  const db = await getDb();
+  if (!db) return undefined;
+  // email is stored as openId for compatibility
+  const result = await db.select().from(users).where(eq(users.email, email)).limit(1);
+  return result.length > 0 ? result[0] : undefined;
+}
+
+export async function createUserWithPassword(email: string, name: string, passwordHash: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.insert(users).values({
+    openId: email,
+    email,
+    name,
+    loginMethod: "email",
+    lastSignedIn: new Date(),
+  });
+  // Store password hash in a separate simple way using openId field trick
+  // We actually store it in the name field temporarily — no, let's use a proper approach
+  // Since we can't add a column without migration, store hash encoded in loginMethod
+  await db.update(users).set({ loginMethod: `email:${passwordHash}` }).where(eq(users.openId, email));
+  return getUserByOpenId(email);
+}
+
+export async function getPasswordHash(openId: string): Promise<string | null> {
+  const db = await getDb();
+  if (!db) return null;
+  const result = await db.select({ loginMethod: users.loginMethod }).from(users).where(eq(users.openId, openId)).limit(1);
+  if (!result[0]?.loginMethod?.startsWith("email:")) return null;
+  return result[0].loginMethod.replace("email:", "");
+}

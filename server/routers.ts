@@ -6,6 +6,7 @@ import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { storagePut } from "./storage";
 import { nanoid } from "nanoid";
+import { getUserByEmail, createUserWithPassword, getPasswordHash } from "./db";
 import {
   createScenario,
   getScenarioById,
@@ -96,6 +97,49 @@ export const appRouter = router({
   system: systemRouter,
   auth: router({
     me: publicProcedure.query(opts => opts.ctx.user),
+
+    login: publicProcedure
+      .input(z.object({ email: z.string().email(), password: z.string().min(6) }))
+      .mutation(async ({ ctx, input }) => {
+        const { createHash } = await import("crypto");
+        const user = await getUserByEmail(input.email);
+        if (!user) throw new TRPCError({ code: "UNAUTHORIZED", message: "Email ou mot de passe incorrect" });
+        const hash = await getPasswordHash(user.openId);
+        const inputHash = createHash("sha256").update(input.password).digest("hex");
+        if (!hash || hash !== inputHash) throw new TRPCError({ code: "UNAUTHORIZED", message: "Email ou mot de passe incorrect" });
+        const { SignJWT } = await import("jose");
+        const { ENV } = await import("./_core/env");
+        const secret = new TextEncoder().encode(ENV.cookieSecret);
+        const token = await new SignJWT({ openId: user.openId, name: user.name ?? "" })
+          .setProtectedHeader({ alg: "HS256" })
+          .setExpirationTime("1y")
+          .sign(secret);
+        const cookieOptions = getSessionCookieOptions(ctx.req);
+        ctx.res.cookie(COOKIE_NAME, token, { ...cookieOptions, maxAge: 365 * 24 * 60 * 60 * 1000 });
+        return { success: true, user };
+      }),
+
+    register: publicProcedure
+      .input(z.object({ email: z.string().email(), password: z.string().min(6), name: z.string().min(1) }))
+      .mutation(async ({ ctx, input }) => {
+        const { createHash } = await import("crypto");
+        const existing = await getUserByEmail(input.email);
+        if (existing) throw new TRPCError({ code: "CONFLICT", message: "Cet email est déjà utilisé" });
+        const passwordHash = createHash("sha256").update(input.password).digest("hex");
+        const user = await createUserWithPassword(input.email, input.name, passwordHash);
+        if (!user) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Erreur lors de la création du compte" });
+        const { SignJWT } = await import("jose");
+        const { ENV } = await import("./_core/env");
+        const secret = new TextEncoder().encode(ENV.cookieSecret);
+        const token = await new SignJWT({ openId: user.openId, name: user.name ?? "" })
+          .setProtectedHeader({ alg: "HS256" })
+          .setExpirationTime("1y")
+          .sign(secret);
+        const cookieOptions = getSessionCookieOptions(ctx.req);
+        ctx.res.cookie(COOKIE_NAME, token, { ...cookieOptions, maxAge: 365 * 24 * 60 * 60 * 1000 });
+        return { success: true, user };
+      }),
+
     logout: publicProcedure.mutation(({ ctx }) => {
       const cookieOptions = getSessionCookieOptions(ctx.req);
       ctx.res.clearCookie(COOKIE_NAME, { ...cookieOptions, maxAge: -1 });

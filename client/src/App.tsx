@@ -14,10 +14,12 @@ import DistributionPage from "./pages/DistributionPage";
 import FinancementPage from "./pages/FinancementPage";
 import RapportPage from "./pages/RapportPage";
 import CommercialPage from "./pages/CommercialPage";
+import LoginPage from "./pages/LoginPage";
 
 function Router() {
   return (
     <Switch>
+      <Route path="/login" component={LoginPage} />
       <Route path="/" component={Home} />
       <Route path="/upload" component={UploadPage} />
       <Route path="/history" component={HistoryPage} />

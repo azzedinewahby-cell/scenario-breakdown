@@ -1,4 +1,4 @@
-import { SignJWT } from "jose";
+import { signJWT } from "./jwt";
 import { COOKIE_NAME, ONE_YEAR_MS } from "@shared/const";
 import type { Express, Request, Response } from "express";
 import { getSessionCookieOptions } from "./cookies";
@@ -10,11 +10,7 @@ async function createSessionAndRedirect(
   openId: string, name: string, email: string | null, loginMethod: string
 ) {
   await db.upsertUser({ openId, name, email, loginMethod, lastSignedIn: new Date() });
-  const secret = new TextEncoder().encode(ENV.cookieSecret);
-  const token = await new SignJWT({ openId, name })
-    .setProtectedHeader({ alg: "HS256" })
-    .setExpirationTime("1y")
-    .sign(secret);
+  const token = signJWT({ openId, name }, ENV.cookieSecret);
   const cookieOptions = getSessionCookieOptions(req);
   res.cookie(COOKIE_NAME, token, { ...cookieOptions, maxAge: ONE_YEAR_MS });
   res.redirect(302, "/");

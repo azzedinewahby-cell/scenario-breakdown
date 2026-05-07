@@ -1,7 +1,7 @@
 import type { CreateExpressContextOptions } from "@trpc/server/adapters/express";
 import type { User } from "../../drizzle/schema";
 import { COOKIE_NAME } from "@shared/const";
-import { jwtVerify } from "jose";
+import { verifyJWT } from "./jwt";
 import { ENV } from "./env";
 import * as db from "../db";
 
@@ -15,17 +15,14 @@ async function getUserFromRequest(req: CreateExpressContextOptions["req"]): Prom
   try {
     const rawCookie = req.headers.cookie ?? "";
     const cookies = Object.fromEntries(
-      rawCookie.split(";").map(c => c.trim().split("=").map(decodeURIComponent))
+      rawCookie.split(";").map(c => { const [k, ...v] = c.trim().split("="); return [decodeURIComponent(k), decodeURIComponent(v.join("="))]; })
     );
     const token = cookies[COOKIE_NAME];
     if (!token) return null;
-
-    const secret = new TextEncoder().encode(ENV.cookieSecret);
-    const { payload } = await jwtVerify(token, secret);
+    const payload = verifyJWT(token, ENV.cookieSecret);
     const openId = payload.openId as string | undefined;
     if (!openId) return null;
-
-    return await db.getUserByOpenId(openId);
+    return await db.getUserByOpenId(openId) ?? null;
   } catch {
     return null;
   }

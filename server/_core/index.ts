@@ -1,7 +1,4 @@
 import "dotenv/config";
-// Polyfill globalThis.crypto pour jose v6 (Node 18+)
-import { webcrypto } from "crypto";
-if (!globalThis.crypto) (globalThis as any).crypto = webcrypto;
 import express from "express";
 import { createServer } from "http";
 import net from "net";

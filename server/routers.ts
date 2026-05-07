@@ -110,13 +110,9 @@ export const appRouter = router({
         const hash = await getPasswordHash(user.openId);
         const inputHash = createHash("sha256").update(input.password).digest("hex");
         if (!hash || hash !== inputHash) throw new TRPCError({ code: "UNAUTHORIZED", message: "Email ou mot de passe incorrect" });
-        const { SignJWT } = await import("jose");
+        const { signJWT } = await import("./_core/jwt");
         const { ENV } = await import("./_core/env");
-        const secret = new TextEncoder().encode(ENV.cookieSecret);
-        const token = await new SignJWT({ openId: user.openId, name: user.name ?? "" })
-          .setProtectedHeader({ alg: "HS256" })
-          .setExpirationTime("1y")
-          .sign(secret);
+        const token = signJWT({ openId: user.openId, name: user.name ?? "" }, ENV.cookieSecret);
         const cookieOptions = getSessionCookieOptions(ctx.req);
         ctx.res.cookie(COOKIE_NAME, token, { ...cookieOptions, maxAge: 365 * 24 * 60 * 60 * 1000 });
         return { success: true, user };
@@ -135,13 +131,9 @@ export const appRouter = router({
         const passwordHash = createHash("sha256").update(input.password).digest("hex");
         const user = await createUserWithPassword(input.email, input.name, passwordHash);
         if (!user) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Erreur lors de la création du compte" });
-        const { SignJWT } = await import("jose");
+        const { signJWT } = await import("./_core/jwt");
         const { ENV } = await import("./_core/env");
-        const secret = new TextEncoder().encode(ENV.cookieSecret);
-        const token = await new SignJWT({ openId: user.openId, name: user.name ?? "" })
-          .setProtectedHeader({ alg: "HS256" })
-          .setExpirationTime("1y")
-          .sign(secret);
+        const token = signJWT({ openId: user.openId, name: user.name ?? "" }, ENV.cookieSecret);
         const cookieOptions = getSessionCookieOptions(ctx.req);
         ctx.res.cookie(COOKIE_NAME, token, { ...cookieOptions, maxAge: 365 * 24 * 60 * 60 * 1000 });
         return { success: true, user };

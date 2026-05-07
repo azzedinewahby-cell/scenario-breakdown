@@ -90,10 +90,17 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
 
   const payload: Record<string, unknown> = {
     model: MODEL,
-    max_tokens: params.maxTokens ?? params.max_tokens ?? 8192,
+    max_tokens: params.maxTokens ?? params.max_tokens ?? 16384,
     messages: otherMessages,
   };
   if (systemPrompt.trim()) payload.system = systemPrompt;
+
+  // Technique du "prefill" Claude : si JSON attendu, on commence la réponse par "{"
+  // pour forcer Claude à continuer en JSON (très fiable)
+  const expectsJson = fmt?.type === "json_object" || fmt?.type === "json_schema" || !!schema;
+  if (expectsJson) {
+    (payload.messages as any[]).push({ role: "assistant", content: "{" });
+  }
 
   const response = await fetch(ANTHROPIC_API_URL, {
     method: "POST",
@@ -117,10 +124,15 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
     .map((b: any) => b.text)
     .join("\n");
 
-  // Si réponse JSON attendue, nettoie les éventuels backticks markdown
+  // Si réponse JSON attendue, reconstruit le JSON complet (préfixé par "{")
   let cleanText = textContent;
-  if (fmt?.type === "json_object" || fmt?.type === "json_schema" || schema) {
-    cleanText = cleanText.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/i, "").trim();
+  if (expectsJson) {
+    cleanText = "{" + textContent;
+    // Nettoie les éventuels backticks markdown
+    cleanText = cleanText.replace(/^```(?:json)?\s*/i, "").replace(/\s*```\s*$/i, "").trim();
+    // Coupe au dernier "}" en cas de texte parasite après
+    const lastBrace = cleanText.lastIndexOf("}");
+    if (lastBrace > 0) cleanText = cleanText.substring(0, lastBrace + 1);
   }
 
   // Retourne en format OpenAI pour compatibilité

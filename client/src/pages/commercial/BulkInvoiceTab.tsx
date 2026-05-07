@@ -244,9 +244,9 @@ export default function BulkInvoiceTab() {
                     <TableCell className="font-mono">{r.invoiceNumber}</TableCell>
                     <TableCell className="font-medium">{r.client}</TableCell>
                     <TableCell className="text-right">{r.lines}</TableCell>
-                    <TableCell className="text-right">{r.totalHT.toFixed(2)} €</TableCell>
-                    <TableCell className="text-right">{r.totalVAT.toFixed(2)} €</TableCell>
-                    <TableCell className="text-right font-bold">{r.totalTTC.toFixed(2)} €</TableCell>
+                    <TableCell className="text-right">{(r.totalHT / 100).toFixed(2)} €</TableCell>
+                    <TableCell className="text-right">{(r.totalVAT / 100).toFixed(2)} €</TableCell>
+                    <TableCell className="text-right font-bold">{(r.totalTTC / 100).toFixed(2)} €</TableCell>
                   </TableRow>
                 ))}
               </TableBody>

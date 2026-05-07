@@ -38,9 +38,8 @@ const COLORS = {
 };
 
 function formatCurrency(cents: number): string {
-  // Stored in cents (or directly in euros - we'll handle both)
-  // If value > 1000000, assume it's in cents
-  const value = cents > 100000 ? cents / 100 : cents;
+  // Tous les montants sont stockés en centimes (entiers)
+  const value = (cents ?? 0) / 100;
   return value.toLocaleString("fr-FR", { style: "currency", currency: "EUR" });
 }
 

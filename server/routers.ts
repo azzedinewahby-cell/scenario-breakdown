@@ -1676,23 +1676,24 @@ Règles importantes:
                 userId: ctx.user.id,
                 name: line.newProduct.name,
                 description: line.newProduct.description ?? null,
-                priceHT: line.newProduct.priceHT,
+                priceHT: Math.round(line.newProduct.priceHT * 100),
                 vatRate: line.newProduct.vatRate,
                 unit: line.newProduct.unit,
               });
               productId = (result as any)[0]?.insertId ?? Number(result);
             }
             if (!productId) continue;
-            const lineHT = line.quantity * line.unitPriceHT;
-            const lineVAT = lineHT * (line.vatRate / 100);
-            totalHT += lineHT;
-            totalVAT += lineVAT;
+            const unitPriceCents = Math.round(line.unitPriceHT * 100);
+            const lineHTCents = Math.round(line.quantity * unitPriceCents);
+            const lineVATCents = Math.round(lineHTCents * (line.vatRate / 100));
+            totalHT += lineHTCents;
+            totalVAT += lineVATCents;
             await createQuoteLine({
               quoteId: input.quoteId, productId,
               quantity: line.quantity,
-              unitPriceHT: line.unitPriceHT,
+              unitPriceHT: unitPriceCents,
               vatRate: line.vatRate,
-              lineTotal: lineHT,
+              lineTotal: lineHTCents,
               orderIndex: i,
             });
           }
@@ -1879,21 +1880,22 @@ Règles importantes:
                 let product = existingProducts.find(p => p.name.trim().toLowerCase() === row.prestation.trim().toLowerCase());
                 if (!product) {
                   const productId = await createProduct({
-                    userId, name: row.prestation.trim(), priceHT: row.prixUnitaireHT, vatRate: row.tauxTVA, unit: "forfait",
+                    userId, name: row.prestation.trim(), priceHT: Math.round(row.prixUnitaireHT * 100), vatRate: row.tauxTVA, unit: "forfait",
                   });
                   product = { id: Number(productId), userId, nom: row.prestation.trim(), description: null,
                     prixHT: row.prixUnitaireHT, tauxTVA: row.tauxTVA, unite: "unité",
                     createdAt: new Date(), updatedAt: new Date() } as any;
                   existingProducts.push(product!);
                 }
-                const lineHT = row.quantite * row.prixUnitaireHT;
-                const lineVAT = lineHT * (row.tauxTVA / 100);
-                totalHT += lineHT;
-                totalVAT += lineVAT;
+                const unitPriceCents = Math.round(row.prixUnitaireHT * 100);
+                const lineHTCents = Math.round(row.quantite * unitPriceCents);
+                const lineVATCents = Math.round(lineHTCents * (row.tauxTVA / 100));
+                totalHT += lineHTCents;
+                totalVAT += lineVATCents;
                 await createInvoiceLine({
                   invoiceId: Number(invoiceId), productId: product!.id,
-                  quantity: row.quantite, unitPriceHT: row.prixUnitaireHT,
-                  vatRate: row.tauxTVA, lineTotal: lineHT,
+                  quantity: row.quantite, unitPriceHT: unitPriceCents,
+                  vatRate: row.tauxTVA, lineTotal: lineHTCents,
                 });
               }
 
@@ -1961,14 +1963,15 @@ Règles importantes:
           });
           let totalHT = 0, totalVAT = 0;
           for (const line of lines) {
-            const lineHT = (line.quantity ?? 0) * (line.unitPriceHT ?? 0);
-            const lineVAT = lineHT * ((line.vatRate ?? 20) / 100);
-            totalHT += lineHT;
-            totalVAT += lineVAT;
+            // Les lignes du devis sont déjà en centimes
+            const lineHTCents = (line.quantity ?? 0) * (line.unitPriceHT ?? 0);
+            const lineVATCents = Math.round(lineHTCents * ((line.vatRate ?? 20) / 100));
+            totalHT += lineHTCents;
+            totalVAT += lineVATCents;
             await createInvoiceLine({
               invoiceId: Number(invoiceId), productId: line.productId,
               quantity: line.quantity ?? 1, unitPriceHT: line.unitPriceHT ?? 0,
-              vatRate: line.vatRate ?? 20, lineTotal: lineHT,
+              vatRate: line.vatRate ?? 20, lineTotal: lineHTCents,
             });
           }
           await updateInvoice(Number(invoiceId), { totalHT, totalVAT, totalTTC: totalHT + totalVAT });

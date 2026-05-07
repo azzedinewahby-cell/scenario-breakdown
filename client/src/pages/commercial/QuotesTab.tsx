@@ -3,7 +3,7 @@ import { trpc } from "@/lib/trpc";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Plus, Eye, Download, Trash2, FileCheck2 } from "lucide-react";
-import QuoteForm from "./QuoteForm";
+import QuoteFormFull from "./QuoteFormFull";
 
 export default function QuotesTab() {
   const [showForm, setShowForm] = useState(false);
@@ -43,15 +43,10 @@ export default function QuotesTab() {
       </div>
 
       {showForm && (
-        <Card className="p-6 bg-white border border-slate-200">
-          <QuoteForm
-            onSubmit={async (data) => {
-              await createMutation.mutateAsync(data);
-            }}
-            onCancel={() => setShowForm(false)}
-            isLoading={createMutation.isPending}
-          />
-        </Card>
+        <QuoteFormFull
+          onSuccess={() => { refetch(); setShowForm(false); }}
+          onCancel={() => setShowForm(false)}
+        />
       )}
 
       {!quotes || quotes.length === 0 ? (

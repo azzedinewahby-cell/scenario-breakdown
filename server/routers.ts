@@ -1410,6 +1410,113 @@ Règles importantes:
         const { getQuotesByUserId } = await import("./db");
         return await getQuotesByUserId(ctx.user.id);
       }),
+
+      // Création complète : client (existant ou nouveau) + lignes en une fois
+      createWithLines: protectedProcedure
+        .input(z.object({
+          // Client existant OU nouveau client
+          clientId: z.number().optional(),
+          newClient: z.object({
+            type: z.enum(["entreprise", "particulier"]).default("entreprise"),
+            nom: z.string().min(1),
+            email: z.string().optional(),
+            telephone: z.string().optional(),
+            adresse: z.string().optional(),
+            codePostal: z.string().optional(),
+            ville: z.string().optional(),
+            siret: z.string().optional(),
+            tvaIntracom: z.string().optional(),
+          }).optional(),
+          // Devis
+          validityDays: z.number().default(30),
+          paymentTerms: z.string().optional(),
+          notes: z.string().optional(),
+          // Lignes
+          lines: z.array(z.object({
+            productId: z.number().optional(),
+            newProduct: z.object({
+              nom: z.string().min(1),
+              description: z.string().optional(),
+              prixHT: z.number().nonnegative(),
+              tauxTVA: z.number().min(0).max(100).default(20),
+              unite: z.string().default("unité"),
+            }).optional(),
+            quantity: z.number().positive(),
+            unitPriceHT: z.number().nonnegative(),
+            vatRate: z.number().min(0).max(100).default(20),
+          })).min(1, "Au moins une ligne est requise"),
+        }))
+        .mutation(async ({ ctx, input }) => {
+          const {
+            createQuote, createQuoteLine, generateNextNumber, updateQuote,
+            createClient, createProduct,
+          } = await import("./db");
+          const userId = ctx.user.id;
+
+          // 1. Résoudre le client
+          let clientId = input.clientId;
+          if (!clientId && input.newClient) {
+            const result = await createClient({
+              userId,
+              type: input.newClient.type,
+              nom: input.newClient.nom,
+              email: input.newClient.email ?? null,
+              telephone: input.newClient.telephone ?? null,
+              adresse: input.newClient.adresse ?? null,
+              codePostal: input.newClient.codePostal ?? null,
+              ville: input.newClient.ville ?? null,
+              siret: input.newClient.siret ?? null,
+              tvaIntracom: input.newClient.tvaIntracom ?? null,
+            });
+            clientId = (result as any)[0]?.insertId ?? Number(result);
+          }
+          if (!clientId) throw new TRPCError({ code: "BAD_REQUEST", message: "Client requis" });
+
+          // 2. Créer le devis
+          const number = await generateNextNumber("DV", userId);
+          const validityDate = new Date();
+          validityDate.setDate(validityDate.getDate() + input.validityDays);
+          const quoteResult = await createQuote({
+            userId, clientId, number, validityDate,
+            paymentTerms: input.paymentTerms ?? "30 jours fin de mois",
+            status: "brouillon" as const,
+          });
+          const quoteId = (quoteResult as any)[0]?.insertId ?? Number(quoteResult);
+
+          // 3. Créer les lignes (avec création produit si besoin)
+          let totalHT = 0, totalVAT = 0;
+          for (let i = 0; i < input.lines.length; i++) {
+            const line = input.lines[i];
+            let productId = line.productId;
+            if (!productId && line.newProduct) {
+              const result = await createProduct({
+                userId,
+                nom: line.newProduct.nom,
+                description: line.newProduct.description ?? null,
+                prixHT: line.newProduct.prixHT,
+                tauxTVA: line.newProduct.tauxTVA,
+                unite: line.newProduct.unite,
+              });
+              productId = (result as any)[0]?.insertId ?? Number(result);
+            }
+            if (!productId) continue;
+            const lineHT = line.quantity * line.unitPriceHT;
+            const lineVAT = lineHT * (line.vatRate / 100);
+            totalHT += lineHT;
+            totalVAT += lineVAT;
+            await createQuoteLine({
+              quoteId, productId,
+              quantity: line.quantity,
+              unitPriceHT: line.unitPriceHT,
+              vatRate: line.vatRate,
+              lineTotal: lineHT,
+              orderIndex: i,
+            });
+          }
+          await updateQuote(quoteId, { totalHT, totalVAT, totalTTC: totalHT + totalVAT });
+          return { quoteId, number };
+        }),
+
       create: protectedProcedure
         .input(
           z.object({

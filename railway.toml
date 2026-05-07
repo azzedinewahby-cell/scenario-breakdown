@@ -1,8 +1,8 @@
 [build]
 builder = "NIXPACKS"
-buildCommand = "pnpm run build"
+buildCommand = "npm install --legacy-peer-deps && npm run build"
 
 [deploy]
-startCommand = "node scripts/init-db.mjs && pnpm run start"
+startCommand = "node scripts/init-db.mjs && npm run start"
 healthcheckPath = "/"
 restartPolicyType = "ON_FAILURE"

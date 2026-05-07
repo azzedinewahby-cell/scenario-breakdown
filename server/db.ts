@@ -46,15 +46,23 @@ import { ENV } from "./_core/env";
 let _db: ReturnType<typeof drizzle> | null = null;
 
 export async function getDb() {
-  if (!_db && process.env.DATABASE_URL) {
-    try {
-      _db = drizzle(process.env.DATABASE_URL);
-    } catch (error) {
-      console.warn("[Database] Failed to connect:", error);
-      _db = null;
-    }
+  if (_db) return _db;
+  const url = process.env.DATABASE_URL;
+  if (!url) {
+    console.error("[Database] DATABASE_URL non défini !");
+    return null;
   }
-  return _db;
+  try {
+    const mysql = await import("mysql2/promise");
+    const connection = await mysql.createConnection(url);
+    _db = drizzle(connection);
+    console.log("[Database] ✅ Connecté");
+    return _db;
+  } catch (error: any) {
+    console.error("[Database] ❌ Erreur connexion:", error?.message ?? error);
+    _db = null;
+    return null;
+  }
 }
 
 // ─── Users ───────────────────────────────────────────────────────────────────

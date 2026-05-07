@@ -99,7 +99,10 @@ export const appRouter = router({
     me: publicProcedure.query(opts => opts.ctx.user),
 
     login: publicProcedure
-      .input(z.object({ email: z.string().email(), password: z.string().min(6) }))
+      .input(z.object({
+        email: z.string().email(),
+        password: z.string().min(6),
+      }))
       .mutation(async ({ ctx, input }) => {
         const { createHash } = await import("crypto");
         const user = await getUserByEmail(input.email);
@@ -120,7 +123,11 @@ export const appRouter = router({
       }),
 
     register: publicProcedure
-      .input(z.object({ email: z.string().email(), password: z.string().min(6), name: z.string().min(1) }))
+      .input(z.object({
+        email: z.string().email(),
+        password: z.string().min(6),
+        name: z.string().min(1),
+      }))
       .mutation(async ({ ctx, input }) => {
         const { createHash } = await import("crypto");
         const existing = await getUserByEmail(input.email);

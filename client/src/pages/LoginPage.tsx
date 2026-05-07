@@ -65,12 +65,30 @@ export default function LoginPage() {
 
   const loginMutation = trpc.auth.login.useMutation({
     onSuccess: async () => { await utils.auth.me.invalidate(); setLocation("/"); },
-    onError: (err) => setLoginError(err.message),
+    onError: (err) => {
+      try {
+        const parsed = JSON.parse(err.message);
+        if (Array.isArray(parsed) && parsed[0]?.message) {
+          setLoginError(parsed[0].message);
+        } else {
+          setLoginError(err.message);
+        }
+      } catch { setLoginError(err.message); }
+    },
   });
 
   const registerMutation = trpc.auth.register.useMutation({
     onSuccess: async () => { await utils.auth.me.invalidate(); setLocation("/"); },
-    onError: (err) => setRegError(err.message),
+    onError: (err) => {
+      try {
+        const parsed = JSON.parse(err.message);
+        if (Array.isArray(parsed) && parsed[0]?.message) {
+          setRegError(parsed[0].message);
+        } else {
+          setRegError(err.message);
+        }
+      } catch { setRegError(err.message); }
+    },
   });
 
   return (

@@ -1418,14 +1418,12 @@ Règles importantes:
           clientId: z.number().optional(),
           newClient: z.object({
             type: z.enum(["entreprise", "particulier"]).default("entreprise"),
-            nom: z.string().min(1),
+            name: z.string().min(1),
             email: z.string().optional(),
-            telephone: z.string().optional(),
-            adresse: z.string().optional(),
-            codePostal: z.string().optional(),
-            ville: z.string().optional(),
+            phone: z.string().optional(),
+            address: z.string().optional(),
             siret: z.string().optional(),
-            tvaIntracom: z.string().optional(),
+            vatNumber: z.string().optional(),
           }).optional(),
           // Devis
           validityDays: z.number().default(30),
@@ -1435,11 +1433,11 @@ Règles importantes:
           lines: z.array(z.object({
             productId: z.number().optional(),
             newProduct: z.object({
-              nom: z.string().min(1),
+              name: z.string().min(1),
               description: z.string().optional(),
-              prixHT: z.number().nonnegative(),
-              tauxTVA: z.number().min(0).max(100).default(20),
-              unite: z.string().default("unité"),
+              priceHT: z.number().nonnegative(),
+              vatRate: z.number().min(0).max(100).default(20),
+              unit: z.enum(["heure", "jour", "forfait"]).default("forfait"),
             }).optional(),
             quantity: z.number().positive(),
             unitPriceHT: z.number().nonnegative(),
@@ -1459,14 +1457,12 @@ Règles importantes:
             const result = await createClient({
               userId,
               type: input.newClient.type,
-              nom: input.newClient.nom,
+              name: input.newClient.name,
               email: input.newClient.email ?? null,
-              telephone: input.newClient.telephone ?? null,
-              adresse: input.newClient.adresse ?? null,
-              codePostal: input.newClient.codePostal ?? null,
-              ville: input.newClient.ville ?? null,
+              phone: input.newClient.phone ?? null,
+              address: input.newClient.address ?? null,
               siret: input.newClient.siret ?? null,
-              tvaIntracom: input.newClient.tvaIntracom ?? null,
+              vatNumber: input.newClient.vatNumber ?? null,
             });
             clientId = (result as any)[0]?.insertId ?? Number(result);
           }
@@ -1491,11 +1487,11 @@ Règles importantes:
             if (!productId && line.newProduct) {
               const result = await createProduct({
                 userId,
-                nom: line.newProduct.nom,
+                name: line.newProduct.name,
                 description: line.newProduct.description ?? null,
-                prixHT: line.newProduct.prixHT,
-                tauxTVA: line.newProduct.tauxTVA,
-                unite: line.newProduct.unite,
+                priceHT: line.newProduct.priceHT,
+                vatRate: line.newProduct.vatRate,
+                unit: line.newProduct.unit,
               });
               productId = (result as any)[0]?.insertId ?? Number(result);
             }
@@ -1736,17 +1732,17 @@ Règles importantes:
             try {
               const firstRow = rows[0];
               // Find or create client
-              let client = existingClients.find(c => c.nom.trim().toLowerCase() === clientKey);
+              let client = existingClients.find(c => c.name.trim().toLowerCase() === clientKey);
               if (!client) {
                 const newClientId = await createClient({
                   userId, type: "entreprise" as const,
-                  nom: firstRow.client.trim(),
+                  name: firstRow.client.trim(),
                   email: firstRow.clientEmail ?? null,
-                  adresse: firstRow.clientAddress ?? null,
+                  address: firstRow.clientAddress ?? null,
                   siret: firstRow.clientSiret ?? null,
                 });
-                client = { id: Number(newClientId), userId, type: "entreprise" as const, nom: firstRow.client.trim(),
-                  email: firstRow.clientEmail ?? null, adresse: firstRow.clientAddress ?? null,
+                client = { id: Number(newClientId), userId, type: "entreprise" as const, name: firstRow.client.trim(),
+                  email: firstRow.clientEmail ?? null, address: firstRow.clientAddress ?? null,
                   siret: firstRow.clientSiret ?? null, telephone: null, codePostal: null, ville: null, pays: null,
                   tvaIntracom: null, createdAt: new Date(), updatedAt: new Date() } as any;
                 existingClients.push(client!);
@@ -1766,10 +1762,10 @@ Règles importantes:
               let totalHT = 0, totalVAT = 0;
               for (const row of rows) {
                 // Find or create product
-                let product = existingProducts.find(p => p.nom.trim().toLowerCase() === row.prestation.trim().toLowerCase());
+                let product = existingProducts.find(p => p.name.trim().toLowerCase() === row.prestation.trim().toLowerCase());
                 if (!product) {
                   const productId = await createProduct({
-                    userId, nom: row.prestation.trim(), prixHT: row.prixUnitaireHT, tauxTVA: row.tauxTVA, unite: "unité",
+                    userId, name: row.prestation.trim(), priceHT: row.prixUnitaireHT, vatRate: row.tauxTVA, unit: "forfait",
                   });
                   product = { id: Number(productId), userId, nom: row.prestation.trim(), description: null,
                     prixHT: row.prixUnitaireHT, tauxTVA: row.tauxTVA, unite: "unité",

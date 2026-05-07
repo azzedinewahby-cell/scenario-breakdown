@@ -95,11 +95,11 @@ export async function generateDocumentPdf(input: GeneratePdfInput): Promise<Buff
   const clientY = Math.max(140, companyY + 20);
   doc.rect(50, clientY, 240, 100).fillAndStroke(COLORS.light, COLORS.border);
   doc.fontSize(9).fillColor(COLORS.muted).font("Helvetica").text("FACTURÉ À", 60, clientY + 10);
-  doc.fontSize(11).fillColor(COLORS.accent).font("Helvetica-Bold").text(client.nom, 60, clientY + 25);
+  doc.fontSize(11).fillColor(COLORS.accent).font("Helvetica-Bold").text(client.name, 60, clientY + 25);
   doc.fontSize(9).fillColor(COLORS.primary).font("Helvetica");
   let cy = clientY + 45;
-  if (client.adresse) { doc.text(client.adresse, 60, cy, { width: 220 }); cy += doc.heightOfString(client.adresse, { width: 220 }) + 2; }
-  if (client.codePostal || client.ville) { doc.text(`${client.codePostal ?? ""} ${client.ville ?? ""}`.trim(), 60, cy); cy += 12; }
+  if (client.address) { doc.text(client.address, 60, cy, { width: 220 }); cy += doc.heightOfString(client.address, { width: 220 }) + 2; }
+  // Adresse already includes postal code
   if (client.email) { doc.text(client.email, 60, cy); cy += 12; }
   if (client.siret) { doc.text(`SIRET : ${client.siret}`, 60, cy); cy += 12; }
 

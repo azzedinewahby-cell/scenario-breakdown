@@ -30,8 +30,8 @@ export default function QuoteFormFull({ onSuccess, onCancel }: Props) {
   const [clientMode, setClientMode] = useState<"existing" | "new">("existing");
   const [clientId, setClientId] = useState<string>("");
   const [newClient, setNewClient] = useState({
-    nom: "", email: "", telephone: "", adresse: "",
-    codePostal: "", ville: "", siret: "", tvaIntracom: "",
+    name: "", email: "", phone: "", address: "",
+    siret: "", vatNumber: "",
   });
 
   // Devis
@@ -68,10 +68,10 @@ export default function QuoteFormFull({ onSuccess, onCancel }: Props) {
     if (!product) return;
     updateLine(lineId, {
       productId: product.id,
-      productName: product.nom,
+      productName: product.name,
       description: product.description ?? "",
-      unitPriceHT: product.prixHT ?? 0,
-      vatRate: product.tauxTVA ?? 20,
+      unitPriceHT: product.priceHT ?? 0,
+      vatRate: product.vatRate ?? 20,
     });
   };
 
@@ -92,7 +92,7 @@ export default function QuoteFormFull({ onSuccess, onCancel }: Props) {
     if (clientMode === "existing" && !clientId) {
       alert("Sélectionne un client ou crée-en un nouveau"); return;
     }
-    if (clientMode === "new" && !newClient.nom.trim()) {
+    if (clientMode === "new" && !newClient.name.trim()) {
       alert("Le nom du nouveau client est requis"); return;
     }
     const validLines = lines.filter(l => l.productName.trim() && l.quantity > 0);
@@ -108,11 +108,11 @@ export default function QuoteFormFull({ onSuccess, onCancel }: Props) {
       lines: validLines.map(l => ({
         productId: l.productId ?? undefined,
         newProduct: !l.productId ? {
-          nom: l.productName,
+          name: l.productName,
           description: l.description || undefined,
-          prixHT: l.unitPriceHT,
-          tauxTVA: l.vatRate,
-          unite: "unité",
+          priceHT: l.unitPriceHT,
+          vatRate: l.vatRate,
+          unit: "forfait" as const,
         } : undefined,
         quantity: l.quantity,
         unitPriceHT: l.unitPriceHT,
@@ -154,7 +154,7 @@ export default function QuoteFormFull({ onSuccess, onCancel }: Props) {
             <option value="">— Sélectionne un client —</option>
             {clients?.map(c => (
               <option key={c.id} value={c.id}>
-                {c.nom} {c.ville ? `(${c.ville})` : ""}
+                {c.name}
               </option>
             ))}
           </select>
@@ -162,8 +162,8 @@ export default function QuoteFormFull({ onSuccess, onCancel }: Props) {
           <div className="grid grid-cols-2 gap-3 bg-slate-50 p-4 rounded-md">
             <div className="col-span-2">
               <Label htmlFor="nc-nom">Nom / Raison sociale *</Label>
-              <Input id="nc-nom" value={newClient.nom}
-                onChange={e => setNewClient({ ...newClient, nom: e.target.value })}
+              <Input id="nc-nom" value={newClient.name}
+                onChange={e => setNewClient({ ...newClient, name: e.target.value })}
                 placeholder="Ex: Studio Alpha" />
             </div>
             <div>
@@ -173,23 +173,13 @@ export default function QuoteFormFull({ onSuccess, onCancel }: Props) {
             </div>
             <div>
               <Label htmlFor="nc-tel">Téléphone</Label>
-              <Input id="nc-tel" value={newClient.telephone}
-                onChange={e => setNewClient({ ...newClient, telephone: e.target.value })} />
+              <Input id="nc-tel" value={newClient.phone}
+                onChange={e => setNewClient({ ...newClient, phone: e.target.value })} />
             </div>
             <div className="col-span-2">
               <Label htmlFor="nc-adr">Adresse</Label>
-              <Input id="nc-adr" value={newClient.adresse}
-                onChange={e => setNewClient({ ...newClient, adresse: e.target.value })} />
-            </div>
-            <div>
-              <Label htmlFor="nc-cp">Code postal</Label>
-              <Input id="nc-cp" value={newClient.codePostal}
-                onChange={e => setNewClient({ ...newClient, codePostal: e.target.value })} />
-            </div>
-            <div>
-              <Label htmlFor="nc-vil">Ville</Label>
-              <Input id="nc-vil" value={newClient.ville}
-                onChange={e => setNewClient({ ...newClient, ville: e.target.value })} />
+              <Input id="nc-adr" value={newClient.address}
+                onChange={e => setNewClient({ ...newClient, address: e.target.value })} />
             </div>
             <div>
               <Label htmlFor="nc-siret">SIRET</Label>
@@ -198,8 +188,8 @@ export default function QuoteFormFull({ onSuccess, onCancel }: Props) {
             </div>
             <div>
               <Label htmlFor="nc-tva">N° TVA Intracom</Label>
-              <Input id="nc-tva" value={newClient.tvaIntracom}
-                onChange={e => setNewClient({ ...newClient, tvaIntracom: e.target.value })} />
+              <Input id="nc-tva" value={newClient.vatNumber}
+                onChange={e => setNewClient({ ...newClient, vatNumber: e.target.value })} />
             </div>
           </div>
         )}
@@ -232,7 +222,7 @@ export default function QuoteFormFull({ onSuccess, onCancel }: Props) {
                         list={`products-${line.id}`}
                       />
                       <datalist id={`products-${line.id}`}>
-                        {products?.map(p => <option key={p.id} value={p.nom} />)}
+                        {products?.map(p => <option key={p.id} value={p.name} />)}
                       </datalist>
                       {products && products.length > 0 && (
                         <select
@@ -242,7 +232,7 @@ export default function QuoteFormFull({ onSuccess, onCancel }: Props) {
                           <option value="">— Ou choisir un produit existant —</option>
                           {products.map(p => (
                             <option key={p.id} value={p.id}>
-                              {p.nom} ({((p.prixHT ?? 0) / 1).toFixed(2)} €)
+                              {p.name} ({((p.priceHT ?? 0)).toFixed(2)} €)
                             </option>
                           ))}
                         </select>

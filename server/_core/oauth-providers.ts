@@ -64,9 +64,9 @@ export function registerGoogleOAuth(app: Express) {
       });
       const user = await userRes.json() as any;
       await createSessionAndRedirect(req, res, `google:${user.id}`, user.name ?? user.email, user.email ?? null, "google");
-    } catch (e) {
-      console.error("[Google OAuth] Erreur:", e);
-      res.redirect("/login?error=google_failed");
+    } catch (e: any) {
+      console.error("[Google OAuth] Erreur:", e?.message ?? e);
+      res.redirect(`/login?error=google_failed&detail=${encodeURIComponent(e?.message ?? "unknown")}`);
     }
   });
 }

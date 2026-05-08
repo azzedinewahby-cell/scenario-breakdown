@@ -69,7 +69,27 @@ try {
     "ALTER TABLE `scenarios` ADD COLUMN IF NOT EXISTS `synopsis` text",
     "ALTER TABLE `characters` ADD COLUMN IF NOT EXISTS `gender` enum('male','female','unknown') DEFAULT 'unknown'",
     "ALTER TABLE `characters` ADD COLUMN IF NOT EXISTS `age` enum('adult','child','unknown') DEFAULT 'adult'",
+    // Toutes les colonnes de company_settings
     "ALTER TABLE `company_settings` ADD COLUMN IF NOT EXISTS `tradeName` varchar(256)",
+    "ALTER TABLE `company_settings` ADD COLUMN IF NOT EXISTS `siret` varchar(14)",
+    "ALTER TABLE `company_settings` ADD COLUMN IF NOT EXISTS `vatNumber` varchar(32)",
+    "ALTER TABLE `company_settings` ADD COLUMN IF NOT EXISTS `address` text",
+    "ALTER TABLE `company_settings` ADD COLUMN IF NOT EXISTS `phone` varchar(20)",
+    "ALTER TABLE `company_settings` ADD COLUMN IF NOT EXISTS `email` varchar(256)",
+    "ALTER TABLE `company_settings` ADD COLUMN IF NOT EXISTS `website` varchar(256)",
+    "ALTER TABLE `company_settings` ADD COLUMN IF NOT EXISTS `logoUrl` text",
+    "ALTER TABLE `company_settings` ADD COLUMN IF NOT EXISTS `logoKey` varchar(512)",
+    "ALTER TABLE `company_settings` ADD COLUMN IF NOT EXISTS `legalMentions` text",
+    "ALTER TABLE `company_settings` ADD COLUMN IF NOT EXISTS `paymentTerms` varchar(256) DEFAULT '30 jours net'",
+    "ALTER TABLE `company_settings` ADD COLUMN IF NOT EXISTS `paymentConditions` text",
+    "ALTER TABLE `company_settings` ADD COLUMN IF NOT EXISTS `bankDetails` text",
+    "ALTER TABLE `company_settings` ADD COLUMN IF NOT EXISTS `signature` text",
+    "ALTER TABLE `company_settings` ADD COLUMN IF NOT EXISTS `signatureUrl` text",
+    "ALTER TABLE `company_settings` ADD COLUMN IF NOT EXISTS `signatureKey` varchar(512)",
+    "ALTER TABLE `company_settings` ADD COLUMN IF NOT EXISTS `defaultVatRate` int DEFAULT 20",
+    "ALTER TABLE `company_settings` ADD COLUMN IF NOT EXISTS `invoicePrefix` varchar(10) DEFAULT 'FA'",
+    "ALTER TABLE `company_settings` ADD COLUMN IF NOT EXISTS `quotePrefix` varchar(10) DEFAULT 'DV'",
+    "ALTER TABLE `company_settings` ADD COLUMN IF NOT EXISTS `creditPrefix` varchar(10) DEFAULT 'AV'",
   ];
   for (const sql of extras) {
     try { await conn.execute(sql); } catch {}

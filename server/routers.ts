@@ -1220,19 +1220,9 @@ Règles importantes:
           const { getClientById } = await import("./db");
           return await getClientById(input.clientId);
         }),
-      update: protectedProcedure
-        .input(
-          z.object({
-            clientId: z.number(),
-            data: z.object({
-              type: z.enum(["particulier", "entreprise"]).optional(),
-              name: z.string().optional(),
-              address: z.string().optional(),
-              email: z.string().email().optional(),
-              phone: z.string().optional(),
-              siret: z.string().optional(),
-              vatNumber: z.string().optional(),
-            }),
+      update: protectedProcedure.mutation(async () => {
+        return { success: false, message: "Les paramètres entreprise sont en lecture seule" };
+      }),
           })
         )
         .mutation(async ({ input }) => {
@@ -1295,33 +1285,9 @@ Règles importantes:
 
     // Settings
     settings: router({
-      get: protectedProcedure.query(async ({ ctx }) => {
-        const { getCompanySettingsByUserId, createOrUpdateCompanySettings } = await import("./db");
-        let settings = await getCompanySettingsByUserId(ctx.user.id);
-
-        // Auto-création des paramètres CRE'ARTEURS si vide
-        if (!settings) {
-          await createOrUpdateCompanySettings(ctx.user.id, {
-            companyName: "CRE'ARTEURS",
-            tradeName: "LA KABINE PRODUCTION",
-            siret: "53534086300021",
-            vatNumber: "",
-            address: "72 avenue Henri Ginoux\n92120 MONTROUGE\nFrance",
-            phone: "",
-            email: "",
-            website: "lakabine.pro",
-            legalMentions: "Association déclarée loi 1901 — SIREN 535 340 863 — Code NAF/APE 90.01Z (Arts du spectacle vivant) — Inscrite à l'INSEE le 09/03/2011 — TVA non applicable, art. 293 B du CGI (sauf si assujetti) — Convention collective IDCC 3090 — Membre de l'Économie Sociale et Solidaire (ESS).",
-            paymentTerms: "30 jours fin de mois",
-            paymentConditions: "En cas de retard de paiement, application d'un intérêt de retard au taux légal en vigueur (article L.441-10 du Code de commerce) ainsi qu'une indemnité forfaitaire pour frais de recouvrement de 40 € (article D.441-5).",
-            bankDetails: "Titulaire : LES CRE'ARTEURS\nBanque : CIC MONTROUGE\nIBAN : FR76 3006 6107 3100 0201 1710 183\nBIC : CMCIFRPP",
-            defaultVatRate: 20,
-            invoicePrefix: "FA",
-            quotePrefix: "DV",
-            creditPrefix: "AV",
-          });
-          settings = await getCompanySettingsByUserId(ctx.user.id);
-        }
-        return settings;
+      get: protectedProcedure.query(async () => {
+        const { COMPANY_INFO } = await import("@shared/companyInfo");
+        return COMPANY_INFO;
       }),
       update: protectedProcedure
         .input(
@@ -1599,14 +1565,15 @@ Règles importantes:
       generatePdf: protectedProcedure
         .input(z.object({ quoteId: z.number() }))
         .mutation(async ({ ctx, input }) => {
-          const { getQuoteById, getQuoteLines, getClientById, getCompanySettingsByUserId, getProductById } = await import("./db");
+          const { getQuoteById, getQuoteLines, getClientById, getProductById } = await import("./db");
           const { generateDocumentPdf } = await import("./_core/pdfGenerator");
+          const { COMPANY_INFO } = await import("@shared/companyInfo");
           const quote = await getQuoteById(input.quoteId);
           if (!quote || quote.userId !== ctx.user.id) throw new TRPCError({ code: "NOT_FOUND", message: "Devis introuvable" });
           const client = await getClientById(quote.clientId);
-          const company = await getCompanySettingsByUserId(ctx.user.id);
+          const company = COMPANY_INFO;
           const lines = await getQuoteLines(input.quoteId);
-          if (!client || !company) throw new TRPCError({ code: "BAD_REQUEST", message: "Configurez vos paramètres entreprise et le client" });
+          if (!client) throw new TRPCError({ code: "BAD_REQUEST", message: "Client introuvable" });
           const linesWithProducts = await Promise.all(lines.map(async l => {
             const prod = await getProductById(l.productId);
             return {
@@ -1914,14 +1881,15 @@ Règles importantes:
       generatePdf: protectedProcedure
         .input(z.object({ invoiceId: z.number() }))
         .mutation(async ({ ctx, input }) => {
-          const { getInvoiceById, getInvoiceLines, getClientById, getCompanySettingsByUserId, getProductById } = await import("./db");
+          const { getInvoiceById, getInvoiceLines, getClientById, getProductById } = await import("./db");
           const { generateDocumentPdf } = await import("./_core/pdfGenerator");
+          const { COMPANY_INFO } = await import("@shared/companyInfo");
           const invoice = await getInvoiceById(input.invoiceId);
           if (!invoice || invoice.userId !== ctx.user.id) throw new TRPCError({ code: "NOT_FOUND", message: "Facture introuvable" });
           const client = await getClientById(invoice.clientId);
-          const company = await getCompanySettingsByUserId(ctx.user.id);
+          const company = COMPANY_INFO;
           const lines = await getInvoiceLines(input.invoiceId);
-          if (!client || !company) throw new TRPCError({ code: "BAD_REQUEST", message: "Configurez vos paramètres entreprise et le client avant l'export" });
+          if (!client) throw new TRPCError({ code: "BAD_REQUEST", message: "Client introuvable" });
           const linesWithProducts = await Promise.all(lines.map(async l => {
             const prod = await getProductById(l.productId);
             return {

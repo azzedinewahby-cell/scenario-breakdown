@@ -1,449 +1,130 @@
-import { useState, useEffect } from "react";
 import { trpc } from "@/lib/trpc";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Card } from "@/components/ui/card";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Loader2, CheckCircle, AlertCircle } from "lucide-react";
+import { Lock, Building2 } from "lucide-react";
 
 export default function SettingsTab() {
-  const [formData, setFormData] = useState({
-    companyName: "",
-    tradeName: "",
-    siret: "",
-    vatNumber: "",
-    address: "",
-    phone: "",
-    email: "",
-    website: "",
-    legalMentions: "",
-    paymentTerms: "30 jours net",
-    paymentConditions: "",
-    bankDetails: "",
-    defaultVatRate: 20,
-    invoicePrefix: "FA",
-    quotePrefix: "DV",
-    creditPrefix: "AV",
-    logoUrl: "",
-    signatureUrl: "",
-  });
+  const { data, isLoading } = trpc.commercial.settings.get.useQuery();
 
-  const [isLoading, setIsLoading] = useState(false);
-  const [success, setSuccess] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  // Charger les paramètres existants
-  const settingsQuery = trpc.commercial.settings.get.useQuery();
-
-  useEffect(() => {
-    if (settingsQuery.data) {
-      setFormData(prev => ({
-        ...prev,
-        companyName: settingsQuery.data?.companyName || "",
-        tradeName: (settingsQuery.data as any)?.tradeName || "",
-        siret: settingsQuery.data?.siret || "",
-        vatNumber: settingsQuery.data?.vatNumber || "",
-        address: settingsQuery.data?.address || "",
-        phone: settingsQuery.data?.phone || "",
-        email: settingsQuery.data?.email || "",
-        website: settingsQuery.data?.website || "",
-        legalMentions: settingsQuery.data?.legalMentions || "",
-        paymentTerms: settingsQuery.data?.paymentTerms || "30 jours net",
-        paymentConditions: settingsQuery.data?.paymentConditions || "",
-        bankDetails: settingsQuery.data?.bankDetails || "",
-        defaultVatRate: settingsQuery.data?.defaultVatRate || 20,
-        invoicePrefix: settingsQuery.data?.invoicePrefix || "FA",
-        quotePrefix: settingsQuery.data?.quotePrefix || "DV",
-        creditPrefix: settingsQuery.data?.creditPrefix || "AV",
-        logoUrl: settingsQuery.data?.logoUrl || "",
-        signatureUrl: settingsQuery.data?.signatureUrl || "",
-      }));
-    }
-  }, [settingsQuery.data]);
-
-  const updateMutation = trpc.commercial.settings.update.useMutation();
-
-  const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
-  ) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: name === "defaultVatRate" ? parseInt(value) : value,
-    }));
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
-    setError(null);
-    setSuccess(false);
-
-    try {
-      await updateMutation.mutateAsync(formData);
-      setSuccess(true);
-      setTimeout(() => setSuccess(false), 3000);
-    } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Erreur lors de la sauvegarde"
-      );
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  if (isLoading) return <div className="p-8 text-center text-muted-foreground">Chargement…</div>;
+  if (!data) return null;
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-2xl font-bold text-slate-900">Paramètres</h2>
-        <p className="text-slate-600 mt-1">
-          Personnalisez vos informations d'entreprise et vos factures
-        </p>
-      </div>
-
-      {success && (
-        <Alert className="bg-green-50 border border-green-200">
-          <CheckCircle className="h-4 w-4 text-green-600" />
-          <AlertDescription className="text-green-800">
-            Paramètres sauvegardés avec succès !
-          </AlertDescription>
-        </Alert>
-      )}
-
-      {error && (
-        <Alert variant="destructive">
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
-      )}
-
-      <form onSubmit={handleSubmit} className="space-y-6">
-        {/* Infos Entreprise */}
-        <Card className="p-6">
-          <h3 className="text-lg font-semibold text-slate-900 mb-4">
-            Informations Entreprise
-          </h3>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="companyName">Dénomination légale *</Label>
-              <Input
-                id="companyName"
-                name="companyName"
-                value={formData.companyName}
-                onChange={handleChange}
-                placeholder="Ex: LES CRE'ARTEURS"
-                required
-              />
-              <p className="text-xs text-muted-foreground mt-1">Nom légal (statuts, INSEE, RIB)</p>
-            </div>
-
-            <div>
-              <Label htmlFor="tradeName">Nom commercial</Label>
-              <Input
-                id="tradeName"
-                name="tradeName"
-                value={formData.tradeName}
-                onChange={handleChange}
-                placeholder="Ex: LA KABINE PRODUCTION"
-              />
-              <p className="text-xs text-muted-foreground mt-1">Affiché en grand sur les factures</p>
-            </div>
-
-            <div>
-              <Label htmlFor="siret">SIRET</Label>
-              <Input
-                id="siret"
-                name="siret"
-                value={formData.siret}
-                onChange={handleChange}
-                placeholder="14 chiffres"
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="vatNumber">N° TVA intracommunautaire</Label>
-              <Input
-                id="vatNumber"
-                name="vatNumber"
-                value={formData.vatNumber}
-                onChange={handleChange}
-                placeholder="FR12345678901"
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="phone">Téléphone</Label>
-              <Input
-                id="phone"
-                name="phone"
-                value={formData.phone}
-                onChange={handleChange}
-                placeholder="+33 1 23 45 67 89"
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                name="email"
-                type="email"
-                value={formData.email}
-                onChange={handleChange}
-                placeholder="contact@entreprise.fr"
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="website">Site web</Label>
-              <Input
-                id="website"
-                name="website"
-                value={formData.website}
-                onChange={handleChange}
-                placeholder="https://www.entreprise.fr"
-              />
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle className="flex items-center gap-2">
+              <Building2 className="h-5 w-5" />
+              Informations entreprise
+            </CardTitle>
+            <div className="flex items-center gap-2 text-sm text-muted-foreground bg-amber-50 px-3 py-1 rounded-md">
+              <Lock className="h-4 w-4" />
+              Lecture seule
             </div>
           </div>
-
-          <div className="mt-4">
-            <Label htmlFor="address">Adresse</Label>
-            <Textarea
-              id="address"
-              name="address"
-              value={formData.address}
-              onChange={handleChange}
-              placeholder="Adresse complète"
-              rows={3}
-            />
+          <p className="text-sm text-muted-foreground">
+            Ces informations sont figées et apparaissent automatiquement sur tous les devis, factures et avoirs.
+          </p>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div>
+            <h3 className="text-sm font-semibold mb-3 text-slate-700">Identité</h3>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label>Dénomination légale</Label>
+                <Input value={data.companyName} readOnly className="bg-slate-50" />
+                <p className="text-xs text-muted-foreground mt-1">Nom officiel sur les statuts INSEE</p>
+              </div>
+              <div>
+                <Label>Nom commercial</Label>
+                <Input value={data.tradeName} readOnly className="bg-slate-50 font-semibold" />
+                <p className="text-xs text-muted-foreground mt-1">Affiché en grand sur les factures</p>
+              </div>
+              <div>
+                <Label>SIRET</Label>
+                <Input value={data.siret} readOnly className="bg-slate-50 font-mono" />
+              </div>
+              <div>
+                <Label>N° TVA Intracommunautaire</Label>
+                <Input value={data.vatNumber || "Non assujetti"} readOnly className="bg-slate-50" />
+              </div>
+            </div>
           </div>
-        </Card>
-
-        {/* Mentions Légales et Conditions */}
-        <Card className="p-6">
-          <h3 className="text-lg font-semibold text-slate-900 mb-4">
-            Mentions Légales et Conditions
-          </h3>
 
           <div>
-            <Label htmlFor="legalMentions">Mentions légales</Label>
-            <Textarea
-              id="legalMentions"
-              name="legalMentions"
-              value={formData.legalMentions}
-              onChange={handleChange}
-              placeholder="Mentions légales à afficher sur les factures"
-              rows={4}
-            />
-          </div>
-
-          <div className="grid grid-cols-2 gap-4 mt-4">
-            <div>
-              <Label htmlFor="paymentTerms">Délai de paiement</Label>
-              <Input
-                id="paymentTerms"
-                name="paymentTerms"
-                value={formData.paymentTerms}
-                onChange={handleChange}
-                placeholder="30 jours net"
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="defaultVatRate">TVA par défaut (%)</Label>
-              <Input
-                id="defaultVatRate"
-                name="defaultVatRate"
-                type="number"
-                value={String(formData.defaultVatRate)}
-                onChange={e =>
-                  setFormData(prev => ({
-                    ...prev,
-                    defaultVatRate: parseInt(e.target.value),
-                  }))
-                }
-                min="0"
-                max="100"
-              />
-            </div>
-          </div>
-
-          <div className="mt-4">
-            <Label htmlFor="paymentConditions">Conditions de paiement</Label>
-            <Textarea
-              id="paymentConditions"
-              name="paymentConditions"
-              value={formData.paymentConditions}
-              onChange={handleChange}
-              placeholder="Conditions de paiement détaillées"
-              rows={3}
-            />
-          </div>
-
-          <div className="mt-4">
-            <Label htmlFor="bankDetails">Coordonnées bancaires</Label>
-            <Textarea
-              id="bankDetails"
-              name="bankDetails"
-              value={formData.bankDetails}
-              onChange={handleChange}
-              placeholder="IBAN, BIC, etc."
-              rows={3}
-            />
-          </div>
-        </Card>
-
-        {/* Logo et Signature */}
-        <Card className="p-6">
-          <h3 className="text-lg font-semibold text-slate-900 mb-4">
-            Logo et Signature
-          </h3>
-
-          <div className="grid grid-cols-2 gap-6">
-            <div>
-              <Label htmlFor="logo">Logo de l'entreprise</Label>
-              <div className="mt-2 p-4 border-2 border-dashed border-slate-300 rounded-lg">
-                <input
-                  id="logo"
-                  type="file"
-                  accept="image/*"
-                  onChange={async e => {
-                    const file = e.target.files?.[0];
-                    if (file) {
-                      try {
-                        const formData = new FormData();
-                        formData.append("file", file);
-                        // Upload to S3 via backend
-                        // const response = await fetch("/api/upload/logo", {
-                        //   method: "POST",
-                        //   body: formData,
-                        // });
-                        // const data = await response.json();
-                        // setFormData(prev => ({ ...prev, logoUrl: data.url }));
-                      } catch (err) {
-                        console.error("Erreur upload logo:", err);
-                      }
-                    }
-                  }}
-                  className="w-full"
-                />
-                <p className="text-xs text-slate-500 mt-2">
-                  PNG, JPG, SVG (max 2MB)
-                </p>
+            <h3 className="text-sm font-semibold mb-3 text-slate-700">Adresse & contact</h3>
+            <div className="space-y-4">
+              <div>
+                <Label>Adresse postale</Label>
+                <Textarea value={data.address} readOnly className="bg-slate-50" rows={3} />
               </div>
-              {formData.logoUrl && (
-                <div className="mt-3">
-                  <p className="text-sm font-semibold text-slate-900 mb-2">
-                    Aperçu :
-                  </p>
-                  <img
-                    src={formData.logoUrl}
-                    alt="Logo"
-                    className="max-w-xs h-auto border border-slate-200 rounded"
-                  />
+              <div className="grid grid-cols-3 gap-4">
+                <div>
+                  <Label>Téléphone</Label>
+                  <Input value={data.phone || "—"} readOnly className="bg-slate-50" />
                 </div>
-              )}
-            </div>
-
-            <div>
-              <Label htmlFor="signature">Signature numérique</Label>
-              <div className="mt-2 p-4 border-2 border-dashed border-slate-300 rounded-lg">
-                <input
-                  id="signature"
-                  type="file"
-                  accept="image/*"
-                  onChange={async e => {
-                    const file = e.target.files?.[0];
-                    if (file) {
-                      try {
-                        const formData = new FormData();
-                        formData.append("file", file);
-                        // Upload to S3 via backend
-                      } catch (err) {
-                        console.error("Erreur upload signature:", err);
-                      }
-                    }
-                  }}
-                  className="w-full"
-                />
-                <p className="text-xs text-slate-500 mt-2">
-                  PNG, JPG (max 1MB)
-                </p>
+                <div>
+                  <Label>Email</Label>
+                  <Input value={data.email || "—"} readOnly className="bg-slate-50" />
+                </div>
+                <div>
+                  <Label>Site web</Label>
+                  <Input value={data.website || "—"} readOnly className="bg-slate-50" />
+                </div>
               </div>
-              {formData.signatureUrl && (
-                <div className="mt-3">
-                  <p className="text-sm font-semibold text-slate-900 mb-2">
-                    Aperçu :
-                  </p>
-                  <img
-                    src={formData.signatureUrl}
-                    alt="Signature"
-                    className="max-w-xs h-auto border border-slate-200 rounded"
-                  />
-                </div>
-              )}
             </div>
           </div>
-        </Card>
 
-        {/* Numérotation */}
-        <Card className="p-6">
-          <h3 className="text-lg font-semibold text-slate-900 mb-4">
-            Numérotation des Documents
-          </h3>
+          <div>
+            <h3 className="text-sm font-semibold mb-3 text-slate-700">Coordonnées bancaires</h3>
+            <Textarea value={data.bankDetails} readOnly className="bg-slate-50 font-mono text-sm" rows={4} />
+          </div>
 
-          <div className="grid grid-cols-3 gap-4">
-            <div>
-              <Label htmlFor="invoicePrefix">Préfixe Factures</Label>
-              <Input
-                id="invoicePrefix"
-                name="invoicePrefix"
-                value={String(formData.invoicePrefix)}
-                onChange={handleChange}
-                placeholder="FA"
-                maxLength={10}
-              />
-              <p className="text-xs text-slate-500 mt-1">Ex: FA-2026-001</p>
-            </div>
+          <div>
+            <h3 className="text-sm font-semibold mb-3 text-slate-700">Mentions légales</h3>
+            <Textarea value={data.legalMentions} readOnly className="bg-slate-50 text-sm" rows={3} />
+          </div>
 
-            <div>
-              <Label htmlFor="quotePrefix">Préfixe Devis</Label>
-              <Input
-                id="quotePrefix"
-                name="quotePrefix"
-                value={String(formData.quotePrefix)}
-                onChange={handleChange}
-                placeholder="DV"
-                maxLength={10}
-              />
-              <p className="text-xs text-slate-500 mt-1">Ex: DV-2026-001</p>
-            </div>
-
-            <div>
-              <Label htmlFor="creditPrefix">Préfixe Avoirs</Label>
-              <Input
-                id="creditPrefix"
-                name="creditPrefix"
-                value={String(formData.creditPrefix)}
-                onChange={handleChange}
-                placeholder="AV"
-                maxLength={10}
-              />
-              <p className="text-xs text-slate-500 mt-1">Ex: AV-2026-001</p>
+          <div>
+            <h3 className="text-sm font-semibold mb-3 text-slate-700">Paiement</h3>
+            <div className="space-y-4">
+              <div>
+                <Label>Délai de paiement par défaut</Label>
+                <Input value={data.paymentTerms} readOnly className="bg-slate-50" />
+              </div>
+              <div>
+                <Label>Conditions en cas de retard</Label>
+                <Textarea value={data.paymentConditions} readOnly className="bg-slate-50 text-sm" rows={3} />
+              </div>
             </div>
           </div>
-        </Card>
 
-        <div className="flex gap-2 justify-end">
-          <Button type="submit" disabled={isLoading} className="gap-2">
-            {isLoading && <Loader2 size={16} className="animate-spin" />}
-            {isLoading ? "Sauvegarde..." : "Sauvegarder les paramètres"}
-          </Button>
-        </div>
-      </form>
+          <div>
+            <h3 className="text-sm font-semibold mb-3 text-slate-700">Numérotation des documents</h3>
+            <div className="grid grid-cols-4 gap-4">
+              <div>
+                <Label>Préfixe Facture</Label>
+                <Input value={data.invoicePrefix} readOnly className="bg-slate-50 font-mono text-center" />
+              </div>
+              <div>
+                <Label>Préfixe Devis</Label>
+                <Input value={data.quotePrefix} readOnly className="bg-slate-50 font-mono text-center" />
+              </div>
+              <div>
+                <Label>Préfixe Avoir</Label>
+                <Input value={data.creditPrefix} readOnly className="bg-slate-50 font-mono text-center" />
+              </div>
+              <div>
+                <Label>TVA par défaut</Label>
+                <Input value={`${data.defaultVatRate}%`} readOnly className="bg-slate-50 text-center" />
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }

@@ -1220,9 +1220,19 @@ Règles importantes:
           const { getClientById } = await import("./db");
           return await getClientById(input.clientId);
         }),
-      update: protectedProcedure.mutation(async () => {
-        return { success: false, message: "Les paramètres entreprise sont en lecture seule" };
-      }),
+      update: protectedProcedure
+        .input(
+          z.object({
+            clientId: z.number(),
+            data: z.object({
+              name: z.string().optional(),
+              type: z.enum(["particulier", "entreprise"]).optional(),
+              email: z.string().optional(),
+              phone: z.string().optional(),
+              address: z.string().optional(),
+              siret: z.string().optional(),
+              vatNumber: z.string().optional(),
+            }),
           })
         )
         .mutation(async ({ input }) => {

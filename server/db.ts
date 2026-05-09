@@ -1052,46 +1052,23 @@ export async function generateNextNumber(
 ): Promise<string> {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-
   const year = new Date().getFullYear();
-  const baseNumber = `${prefix}-${year}-`;
 
-  let table: any;
-  let numberField: any;
+  // Incrémenter le compteur atomiquement (INSERT ... ON DUPLICATE KEY UPDATE)
+  await db.execute(
+    sql`INSERT INTO document_counters (userId, prefix, year, lastSequence)
+        VALUES (${userId}, ${prefix}, ${year}, 1)
+        ON DUPLICATE KEY UPDATE lastSequence = lastSequence + 1`
+  );
 
-  if (prefix === "DV") {
-    table = quotes;
-    numberField = quotes.number;
-  } else if (prefix === "FA") {
-    table = invoices;
-    numberField = invoices.number;
-  } else {
-    table = credits;
-    numberField = credits.number;
-  }
+  const rows = await db.execute(
+    sql`SELECT lastSequence FROM document_counters
+        WHERE userId = ${userId} AND prefix = ${prefix} AND year = ${year}
+        LIMIT 1`
+  );
+  const seq = (rows as any)[0]?.[0]?.lastSequence ?? 1;
 
-  // Get the highest number for this year and prefix
-  const result = await db
-    .select({ number: numberField })
-    .from(table)
-    .where(
-      and(
-        eq(table.userId, userId),
-        sql`${numberField} LIKE ${baseNumber + "%"}`
-      )
-    )
-    .orderBy(desc(numberField))
-    .limit(1);
-
-  let nextSequence = 1;
-  if (result.length > 0) {
-    const lastNumber = result[0].number as string;
-    const parts = lastNumber.split("-");
-    const currentSequence = parseInt(parts[parts.length - 1], 10) || 0;
-    nextSequence = currentSequence + 1;
-  }
-
-  return `${baseNumber}${String(nextSequence).padStart(4, "0")}`;
+  return `${prefix}-${year}-${String(seq).padStart(4, "0")}`;
 }
 
 /**

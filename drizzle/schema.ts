@@ -357,3 +357,12 @@ export const companySettings = mysqlTable("company_settings", {
 });
 export type CompanySettings = typeof companySettings.$inferSelect;
 export type InsertCompanySettings = typeof companySettings.$inferInsert;
+
+// ─── Document Counters (numérotation séquentielle irréversible) ───────────────
+export const documentCounters = mysqlTable("document_counters", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  prefix: varchar("prefix", { length: 10 }).notNull(),
+  year: int("year").notNull(),
+  lastSequence: int("lastSequence").default(0).notNull(),
+});

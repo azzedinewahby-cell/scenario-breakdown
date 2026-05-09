@@ -58,7 +58,7 @@ export default function ProductsTab() {
                   <h3 className="font-semibold text-slate-900">{product.name}</h3>
                   {product.description && <p className="text-sm text-slate-600 mt-1">{product.description}</p>}
                   <div className="flex gap-4 mt-2 text-sm text-slate-600">
-                    <span>Prix HT: {product.priceHT ? (product.priceHT / 100).toFixed(2) : "0.00"}€</span>
+                    <span>Prix HT: {product.priceHT ? Number(product.priceHT).toFixed(2) : "0.00"}€</span>
                     <span>TVA: {product.vatRate}%</span>
                     <span>Unité: {product.unit}</span>
                   </div>

@@ -1654,7 +1654,7 @@ Règles importantes:
                 userId: ctx.user.id,
                 name: line.newProduct.name,
                 description: line.newProduct.description ?? null,
-                priceHT: Math.round(line.newProduct.priceHT * 100),
+                priceHT: line.newProduct.priceHT, // euros, comme createWithLines
                 vatRate: line.newProduct.vatRate,
                 unit: line.newProduct.unit,
               });

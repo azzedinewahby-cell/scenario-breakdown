@@ -66,7 +66,7 @@ export default function QuoteFormFull({ onSuccess, onCancel, editQuoteId }: Prop
             productName: prod?.name ?? "",
             description: prod?.description ?? "",
             quantity: l.quantity ?? 1,
-            unitPriceHT: (l.unitPriceHT ?? 0) / 100, // centimes → euros
+            unitPriceHT: l.unitPriceHT ?? 0, // euros
             vatRate: l.vatRate ?? 20,
           };
         }));
@@ -101,7 +101,7 @@ export default function QuoteFormFull({ onSuccess, onCancel, editQuoteId }: Prop
       productId: product.id,
       productName: product.name,
       description: product.description ?? "",
-      unitPriceHT: (product.priceHT ?? 0) / 100, // centimes → euros pour l'affichage
+      unitPriceHT: product.priceHT ?? 0, // euros
       vatRate: product.vatRate ?? 20,
     });
   };
@@ -285,7 +285,7 @@ export default function QuoteFormFull({ onSuccess, onCancel, editQuoteId }: Prop
                           <option value="">— Ou choisir un produit existant —</option>
                           {products.map(p => (
                             <option key={p.id} value={p.id}>
-                              {p.name} ({((p.priceHT ?? 0) / 100).toFixed(2)} €)
+                              {p.name} ({(p.priceHT ?? 0).toFixed(2)} €)
                             </option>
                           ))}
                         </select>

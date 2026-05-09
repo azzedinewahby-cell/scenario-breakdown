@@ -57,9 +57,11 @@ function eur(cents: number, decimals = 2): string {
 
 // Pour les valeurs déjà en euros (lignes de devis/facture)
 function eurVal(euros: number, decimals = 2): string {
-  return (euros ?? 0).toLocaleString("fr-FR", {
-    minimumFractionDigits: decimals, maximumFractionDigits: decimals
-  }) + " €";
+  const val = (euros ?? 0).toFixed(decimals);
+  // Formatage FR sans espace insécable (incompatible pdfkit)
+  const [int, dec] = val.split(".");
+  const intFormatted = int.replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+  return `${intFormatted},${dec} €`;
 }
 
 function formatDate(date: Date | string | null | undefined): string {

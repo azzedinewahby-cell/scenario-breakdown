@@ -1660,17 +1660,16 @@ Règles importantes:
               productId = (result as any)[0]?.insertId ?? Number(result);
             }
             if (!productId) continue;
-            const unitPriceCents = Math.round(line.unitPriceHT * 100);
-            const lineHTCents = Math.round(line.quantity * unitPriceCents);
-            const lineVATCents = Math.round(lineHTCents * (line.vatRate / 100));
-            totalHT += lineHTCents;
-            totalVAT += lineVATCents;
+            const lineHT = line.quantity * line.unitPriceHT;
+            const lineVAT = lineHT * (line.vatRate / 100);
+            totalHT += lineHT;
+            totalVAT += lineVAT;
             await createQuoteLine({
               quoteId: input.quoteId, productId,
               quantity: line.quantity,
-              unitPriceHT: unitPriceCents,
+              unitPriceHT: line.unitPriceHT,
               vatRate: line.vatRate,
-              lineTotal: lineHTCents,
+              lineTotal: lineHT,
               orderIndex: i,
             });
           }

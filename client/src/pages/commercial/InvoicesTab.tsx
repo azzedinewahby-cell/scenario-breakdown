@@ -185,7 +185,7 @@ export default function InvoicesTab() {
                   <p className="text-sm text-slate-600">
                     Total:{" "}
                     {invoice.totalTTC
-                      ? (invoice.totalTTC / 100).toFixed(2)
+                      ? invoice.totalTTC.toFixed(2)
                       : "0.00"}
                     € TTC
                   </p>

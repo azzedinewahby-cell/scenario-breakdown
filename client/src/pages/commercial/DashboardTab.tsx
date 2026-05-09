@@ -6,7 +6,7 @@ import { TrendingUp, AlertCircle, Euro, FileText, Clock, CheckCircle2 } from "lu
 const MONTHS = ["Jan", "Fév", "Mar", "Avr", "Mai", "Juin", "Juil", "Aoû", "Sep", "Oct", "Nov", "Déc"];
 
 function formatEuros(cents: number): string {
-  const value = (cents ?? 0) / 100;
+  const value = cents ?? 0;
   return value.toLocaleString("fr-FR", { style: "currency", currency: "EUR", maximumFractionDigits: 0 });
 }
 

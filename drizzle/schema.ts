@@ -238,7 +238,7 @@ export const quotes = mysqlTable("quotes", {
   number: varchar("number", { length: 32 }).notNull().unique(),
   issueDate: timestamp("issueDate").defaultNow().notNull(),
   validityDate: timestamp("validityDate"),
-  status: mysqlEnum("status", ["brouillon", "envoyé", "accepté", "refusé"]).default("brouillon").notNull(),
+  status: varchar("status", { length: 32 }).default("brouillon").notNull(),
   totalHT: int("totalHT").default(0),
   totalVAT: int("totalVAT").default(0),
   totalTTC: int("totalTTC").default(0),

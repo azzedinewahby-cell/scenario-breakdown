@@ -1731,7 +1731,7 @@ Règles importantes:
             invoiceId: z.number(),
             data: z.object({
               status: z
-                .enum(["brouillon", "envoyée", "payée", "en retard"])
+                .enum(["brouillon", "envoyée", "payée", "acompte", "en retard"])
                 .optional(),
               totalHT: z.number().optional(),
               totalVAT: z.number().optional(),

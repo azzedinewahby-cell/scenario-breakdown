@@ -2,25 +2,35 @@ import { useState } from "react";
 import { trpc } from "@/lib/trpc";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, Eye, Download, Trash2, X } from "lucide-react";
+import { Plus, Download, Trash2, X, CheckCircle, CreditCard } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 
+const STATUS_LABELS: Record<string, { label: string; color: string }> = {
+  brouillon: { label: "Brouillon",  color: "bg-slate-100 text-slate-600"    },
+  envoyée:   { label: "Envoyée",    color: "bg-blue-100 text-blue-700"      },
+  payée:     { label: "Payée",      color: "bg-green-100 text-green-700"    },
+  acompte:   { label: "Acompte",    color: "bg-amber-100 text-amber-700"    },
+  "en retard":{ label: "En retard", color: "bg-red-100 text-red-600"        },
+};
+
+const PAYMENT_METHODS = ["Virement", "Espèces", "Carte bancaire", "Chèque"];
+
 export default function InvoicesTab() {
   const [showForm, setShowForm] = useState(false);
-  const [formData, setFormData] = useState({
-    clientId: "",
-    quoteId: "",
-    notes: "",
-  });
+  const [formData, setFormData] = useState({ clientId: "", quoteId: "", notes: "" });
+  const [payModal, setPayModal] = useState<{ invoiceId: number; type: "payée" | "acompte" } | null>(null);
+  const [selectedMethod, setSelectedMethod] = useState("Virement");
 
-  const { data: invoices, isLoading } =
-    trpc.commercial.invoices.list.useQuery();
+  const { data: invoices, isLoading, refetch } = trpc.commercial.invoices.list.useQuery();
   const { data: clients } = trpc.commercial.clients.list.useQuery();
   const { data: quotes } = trpc.commercial.quotes.list.useQuery();
 
   const createMutation = trpc.commercial.invoices.create.useMutation();
+  const updateMutation = trpc.commercial.invoices.update.useMutation({
+    onSuccess: () => { refetch(); setPayModal(null); },
+  });
 
   const generatePdfMutation = trpc.commercial.invoices.generatePdf.useMutation({
     onSuccess: (data) => {
@@ -168,45 +178,82 @@ export default function InvoicesTab() {
           </p>
         </Card>
       ) : (
-        <div className="grid gap-4">
-          {invoices.map(invoice => (
-            <Card
-              key={invoice.id}
-              className="p-4 bg-white border border-slate-200 hover:shadow-md transition"
-            >
-              <div className="flex justify-between items-start">
-                <div className="flex-1">
-                  <h3 className="font-semibold text-slate-900">
-                    {invoice.number}
+        <>
+          {/* Modal paiement */}
+          {payModal && (
+            <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+              <div className="bg-white rounded-xl shadow-xl p-6 w-80 space-y-4">
+                <div className="flex justify-between items-center">
+                  <h3 className="font-bold text-lg">
+                    {payModal.type === "payée" ? "Marquer comme payée" : "Enregistrer un acompte"}
                   </h3>
-                  <p className="text-sm text-slate-600">
-                    Statut: {invoice.status}
-                  </p>
-                  <p className="text-sm text-slate-600">
-                    Total:{" "}
-                    {invoice.totalTTC
-                      ? invoice.totalTTC.toFixed(2)
-                      : "0.00"}
-                    € TTC
-                  </p>
+                  <Button variant="ghost" size="sm" onClick={() => setPayModal(null)}><X size={14} /></Button>
                 </div>
-                <div className="flex gap-2">
-                  <Button variant="outline" size="sm" className="gap-1"
-                    onClick={() => generatePdfMutation.mutate({ invoiceId: invoice.id })}
-                    disabled={generatePdfMutation.isPending}
-                    title="Télécharger le PDF">
-                    <Download size={14} />
-                  </Button>
-                  <Button variant="destructive" size="sm" className="gap-1"
-                    onClick={() => handleDelete(invoice.id)}
-                    title="Supprimer">
-                    <Trash2 size={14} />
-                  </Button>
+                <div className="space-y-2">
+                  <Label>Mode de règlement</Label>
+                  <div className="grid grid-cols-2 gap-2">
+                    {PAYMENT_METHODS.map(m => (
+                      <button key={m} type="button"
+                        onClick={() => setSelectedMethod(m)}
+                        className={`border rounded-lg px-3 py-2 text-sm font-medium transition ${selectedMethod === m ? "bg-black text-white border-black" : "bg-white text-slate-700 border-slate-200 hover:border-black"}`}>
+                        {m}
+                      </button>
+                    ))}
+                  </div>
                 </div>
+                <Button className="w-full" onClick={() =>
+                  updateMutation.mutate({ invoiceId: payModal.invoiceId, data: { status: payModal.type, paymentMethod: selectedMethod } })
+                } disabled={updateMutation.isPending}>
+                  Confirmer
+                </Button>
               </div>
-            </Card>
-          ))}
-        </div>
+            </div>
+          )}
+
+          <div className="grid gap-4">
+            {invoices.map(invoice => (
+              <Card key={invoice.id} className="p-4 bg-white border border-slate-200 hover:shadow-md transition">
+                <div className="flex justify-between items-start gap-4">
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-semibold text-slate-900">{invoice.number}</h3>
+                    <div className="flex items-center gap-2 mt-1 flex-wrap">
+                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_LABELS[invoice.status]?.color ?? "bg-slate-100 text-slate-600"}`}>
+                        {STATUS_LABELS[invoice.status]?.label ?? invoice.status}
+                      </span>
+                      {(invoice as any).paymentMethod && (
+                        <span className="text-xs text-slate-400">{(invoice as any).paymentMethod}</span>
+                      )}
+                      <span className="text-sm text-slate-600">{invoice.totalTTC ? invoice.totalTTC.toFixed(2) : "0.00"} € TTC</span>
+                    </div>
+                  </div>
+                  <div className="flex gap-2 flex-wrap justify-end items-center">
+                    {invoice.status === "brouillon" && (
+                      <>
+                        <Button size="sm" className="gap-1 bg-green-600 hover:bg-green-700 text-white"
+                          onClick={() => { setSelectedMethod("Virement"); setPayModal({ invoiceId: invoice.id, type: "payée" }); }}>
+                          <CheckCircle size={14} /> Payée
+                        </Button>
+                        <Button size="sm" variant="outline" className="gap-1 border-amber-400 text-amber-700 hover:bg-amber-50"
+                          onClick={() => { setSelectedMethod("Virement"); setPayModal({ invoiceId: invoice.id, type: "acompte" }); }}>
+                          <CreditCard size={14} /> Acompte
+                        </Button>
+                      </>
+                    )}
+                    <Button variant="outline" size="sm"
+                      onClick={() => generatePdfMutation.mutate({ invoiceId: invoice.id })}
+                      disabled={generatePdfMutation.isPending} title="Télécharger le PDF">
+                      <Download size={14} />
+                    </Button>
+                    <Button variant="destructive" size="sm"
+                      onClick={() => handleDelete(invoice.id)} title="Supprimer">
+                      <Trash2 size={14} />
+                    </Button>
+                  </div>
+                </div>
+              </Card>
+            ))}
+          </div>
+        </>
       )}
     </div>
   );

@@ -1738,6 +1738,9 @@ Règles importantes:
               totalTTC: z.number().optional(),
               paymentMethod: z.string().optional(),
               paymentDate: z.date().optional(),
+              acompteAmount: z.number().optional(),
+              acompteDate: z.date().optional(),
+              resteAPayer: z.number().optional(),
             }),
           })
         )
@@ -1923,7 +1926,10 @@ Règles importantes:
             client, company, lines: linesWithProducts,
             totalHT: invoice.totalHT ?? 0, totalVAT: invoice.totalVAT ?? 0, totalTTC: invoice.totalTTC ?? 0,
             paymentMethod: invoice.paymentMethod ?? null,
-          });
+            acompteAmount: (invoice as any).acompteAmount ?? 0,
+            acompteDate: (invoice as any).acompteDate ?? null,
+            resteAPayer: (invoice as any).resteAPayer ?? 0,
+          } as any);
           return { pdfBase64: pdfBuffer.toString("base64"), filename: `Facture_${invoice.number}.pdf` };
         }),
 

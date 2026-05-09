@@ -20,8 +20,9 @@ const PAYMENT_METHODS = ["Virement", "Espèces", "Carte bancaire", "Chèque"];
 export default function InvoicesTab() {
   const [showForm, setShowForm] = useState(false);
   const [formData, setFormData] = useState({ clientId: "", quoteId: "", notes: "" });
-  const [payModal, setPayModal] = useState<{ invoiceId: number; type: "payée" | "acompte" } | null>(null);
+  const [payModal, setPayModal] = useState<{ invoiceId: number; type: "payée" | "acompte"; totalTTC: number } | null>(null);
   const [selectedMethod, setSelectedMethod] = useState("Virement");
+  const [acompteAmount, setAcompteAmount] = useState("");
 
   const { data: invoices, isLoading, refetch } = trpc.commercial.invoices.list.useQuery();
   const { data: clients } = trpc.commercial.clients.list.useQuery();
@@ -201,9 +202,29 @@ export default function InvoicesTab() {
                     ))}
                   </div>
                 </div>
-                <Button className="w-full" onClick={() =>
-                  updateMutation.mutate({ invoiceId: payModal.invoiceId, data: { status: payModal.type, paymentMethod: selectedMethod } })
-                } disabled={updateMutation.isPending}>
+                {payModal.type === "acompte" && (
+                  <div className="space-y-1">
+                    <Label>Montant de l'acompte TTC (€)</Label>
+                    <Input type="number" step="0.01" min="0" max={payModal.totalTTC}
+                      value={acompteAmount} onChange={e => setAcompteAmount(e.target.value)}
+                      placeholder={`Max: ${payModal.totalTTC.toFixed(2)} €`} />
+                    {acompteAmount && !isNaN(parseFloat(acompteAmount)) && (
+                      <p className="text-xs text-slate-500">
+                        Reste à payer : <strong>{Math.max(0, payModal.totalTTC - parseFloat(acompteAmount)).toFixed(2)} €</strong>
+                      </p>
+                    )}
+                  </div>
+                )}
+                <Button className="w-full" onClick={() => {
+                  const data: any = { status: payModal.type, paymentMethod: selectedMethod };
+                  if (payModal.type === "acompte") {
+                    const amt = parseFloat(acompteAmount) || 0;
+                    data.acompteAmount = Math.round(amt * 100);
+                    data.acompteDate = new Date();
+                    data.resteAPayer = Math.round(Math.max(0, payModal.totalTTC - amt) * 100);
+                  }
+                  updateMutation.mutate({ invoiceId: payModal.invoiceId, data });
+                }} disabled={updateMutation.isPending}>
                   Confirmer
                 </Button>
               </div>
@@ -230,11 +251,11 @@ export default function InvoicesTab() {
                     {invoice.status === "brouillon" && (
                       <>
                         <Button size="sm" className="gap-1 bg-green-600 hover:bg-green-700 text-white"
-                          onClick={() => { setSelectedMethod("Virement"); setPayModal({ invoiceId: invoice.id, type: "payée" }); }}>
+                          onClick={() => { setSelectedMethod("Virement"); setAcompteAmount(""); setPayModal({ invoiceId: invoice.id, type: "payée", totalTTC: invoice.totalTTC ?? 0 }); }}>
                           <CheckCircle size={14} /> Payée
                         </Button>
                         <Button size="sm" variant="outline" className="gap-1 border-amber-400 text-amber-700 hover:bg-amber-50"
-                          onClick={() => { setSelectedMethod("Virement"); setPayModal({ invoiceId: invoice.id, type: "acompte" }); }}>
+                          onClick={() => { setSelectedMethod("Virement"); setAcompteAmount(""); setPayModal({ invoiceId: invoice.id, type: "acompte", totalTTC: invoice.totalTTC ?? 0 }); }}>
                           <CreditCard size={14} /> Acompte
                         </Button>
                       </>

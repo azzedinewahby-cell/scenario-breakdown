@@ -256,6 +256,22 @@ export async function generateDocumentPdf(input: GeneratePdfInput): Promise<Buff
   doc.text("Total TTC", totX, bottomY+43, { lineBreak:false });
   doc.text(eurVal(totalTTC), totX, bottomY+43, { width:totW, align:"right", lineBreak:false });
 
+  // Acompte + reste à payer
+  let afterTotY = bottomY + 70;
+  const acompteAmt = (input as any).acompteAmount;
+  const acompteDate = (input as any).acompteDate;
+  const resteAPayer = (input as any).resteAPayer;
+  if (acompteAmt && acompteAmt > 0) {
+    doc.fontSize(8.5).fillColor(C.dark).font("Helvetica");
+    doc.text(`Acompte versé le ${formatDate(acompteDate)} (${paymentMethod || "Virement"}) :`, totX, afterTotY, { lineBreak:false });
+    doc.fillColor("#e53e3e").font("Helvetica-Bold")
+       .text(`- ${eurVal(acompteAmt / 100)}`, totX, afterTotY, { width:totW, align:"right", lineBreak:false });
+    afterTotY += 14;
+    doc.fillColor(C.dark).font("Helvetica-Bold").fontSize(9)
+       .text("Reste à payer :", totX, afterTotY, { lineBreak:false });
+    doc.text(eurVal((resteAPayer ?? 0) / 100), totX, afterTotY, { width:totW, align:"right", lineBreak:false });
+  }
+
   // ── Montant en lettres ──
   const entiers = Math.floor(totalTTC);
   const centimes = Math.round((totalTTC - entiers) * 100);

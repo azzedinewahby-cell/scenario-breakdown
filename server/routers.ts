@@ -1928,19 +1928,11 @@ Règles importantes:
       fromQuote: protectedProcedure
         .input(z.object({ quoteId: z.number() }))
         .mutation(async ({ ctx, input }) => {
-          const { getQuoteById, getQuoteLines, createInvoice, createInvoiceLine, updateInvoice, getInvoicesByUserId } = await import("./db");
+          const { getQuoteById, getQuoteLines, createInvoice, createInvoiceLine, generateNextNumber, updateInvoice } = await import("./db");
           const quote = await getQuoteById(input.quoteId);
           if (!quote || quote.userId !== ctx.user.id) throw new TRPCError({ code: "NOT_FOUND", message: "Devis introuvable" });
-
-          // Idempotence : si une facture existe déjà pour ce devis, la retourner
-          const allInvoices = await getInvoicesByUserId(ctx.user.id);
-          const existing = allInvoices.find((inv: any) => inv.quoteId === input.quoteId);
-          if (existing) return { invoiceId: existing.id, invoiceNumber: existing.number };
-
-          // Numéro FA = même séquence que le devis (DV-2026-0001 → FA-2026-0001)
-          const invoiceNumber = quote.number.replace(/^DV-/, "FA-");
-
           const lines = await getQuoteLines(input.quoteId);
+          const invoiceNumber = await generateNextNumber("FA", ctx.user.id);
           const dueDate = new Date();
           dueDate.setDate(dueDate.getDate() + 30);
           const invoiceId = await createInvoice({
@@ -1949,14 +1941,15 @@ Règles importantes:
           });
           let totalHT = 0, totalVAT = 0;
           for (const line of lines) {
-            const lineHT = (line.quantity ?? 0) * (line.unitPriceHT ?? 0);
-            const lineVAT = Math.round(lineHT * ((line.vatRate ?? 20) / 100) * 100) / 100;
-            totalHT += lineHT;
-            totalVAT += lineVAT;
+            // Les lignes du devis sont déjà en centimes
+            const lineHTCents = (line.quantity ?? 0) * (line.unitPriceHT ?? 0);
+            const lineVATCents = Math.round(lineHTCents * ((line.vatRate ?? 20) / 100));
+            totalHT += lineHTCents;
+            totalVAT += lineVATCents;
             await createInvoiceLine({
               invoiceId: Number(invoiceId), productId: line.productId,
               quantity: line.quantity ?? 1, unitPriceHT: line.unitPriceHT ?? 0,
-              vatRate: line.vatRate ?? 20, lineTotal: lineHT,
+              vatRate: line.vatRate ?? 20, lineTotal: lineHTCents,
             });
           }
           await updateInvoice(Number(invoiceId), { totalHT, totalVAT, totalTTC: totalHT + totalVAT });

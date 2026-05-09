@@ -76,15 +76,39 @@ export async function upsertUser(user: InsertUser): Promise<void> {
     return;
   }
   try {
+    // Si on a un email, vérifier si un compte existe déjà avec cet email
+    // (cas : inscrit via email/password puis connexion OAuth avec le même email)
+    if (user.email) {
+      const existing = await db
+        .select()
+        .from(users)
+        .where(eq(users.email, user.email))
+        .limit(1);
+
+      if (existing.length > 0) {
+        // Fusionner : mettre à jour l'openId vers le nouveau (Google/Facebook)
+        await db
+          .update(users)
+          .set({
+            openId: user.openId,
+            name: user.name ?? existing[0].name,
+            loginMethod: user.loginMethod ?? existing[0].loginMethod,
+            lastSignedIn: user.lastSignedIn ?? new Date(),
+          })
+          .where(eq(users.email, user.email));
+        return;
+      }
+    }
+
+    // Pas de compte existant avec cet email → INSERT avec ON DUPLICATE KEY sur openId
     const values: InsertUser = { openId: user.openId };
-    const updateSet: Record<string, unknown> = {};
-    if (user.name !== undefined) { values.name = user.name ?? null; updateSet.name = user.name ?? null; }
-    if (user.email !== undefined) { values.email = user.email ?? null; updateSet.email = user.email ?? null; }
+    const updateSet: Record<string, unknown> = { lastSignedIn: new Date() };
+    if (user.name !== undefined)        { values.name = user.name ?? null;               updateSet.name = user.name ?? null; }
+    if (user.email !== undefined)       { values.email = user.email ?? null;             updateSet.email = user.email ?? null; }
     if (user.loginMethod !== undefined) { values.loginMethod = user.loginMethod ?? null; updateSet.loginMethod = user.loginMethod ?? null; }
-    if (user.lastSignedIn !== undefined) { values.lastSignedIn = user.lastSignedIn; updateSet.lastSignedIn = user.lastSignedIn; }
-    if (user.role !== undefined) { values.role = user.role; updateSet.role = user.role; }
-    if (!values.lastSignedIn) values.lastSignedIn = new Date();
-    if (Object.keys(updateSet).length === 0) updateSet.lastSignedIn = new Date();
+    if (user.lastSignedIn !== undefined){ values.lastSignedIn = user.lastSignedIn;       updateSet.lastSignedIn = user.lastSignedIn; }
+    else                                { values.lastSignedIn = new Date(); }
+    if (user.role !== undefined)        { values.role = user.role; }
 
     await db.insert(users).values(values).onDuplicateKeyUpdate({ set: updateSet });
   } catch (error) {

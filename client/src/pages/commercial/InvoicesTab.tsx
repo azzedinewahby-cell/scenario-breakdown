@@ -219,7 +219,7 @@ export default function InvoicesTab() {
                   const data: any = { status: payModal.type, paymentMethod: selectedMethod };
                   if (payModal.type === "acompte") {
                     const amt = parseFloat(acompteAmount) || 0;
-                    data.acompteAmount = Math.round(amt * 100);
+                    data.acompteAmount = Math.round(amt * 100); // centimes
                     data.acompteDate = new Date();
                     data.resteAPayer = Math.round(Math.max(0, payModal.totalTTC - amt) * 100);
                   }
@@ -254,11 +254,11 @@ export default function InvoicesTab() {
                     {(invoice.status === "brouillon" || invoice.status === "acompte") && (
                       <>
                         <Button size="sm" className="gap-1 bg-green-600 hover:bg-green-700 text-white"
-                          onClick={() => { setSelectedMethod("Virement"); setAcompteAmount(""); setPayModal({ invoiceId: invoice.id, type: "payée", totalTTC: (invoice as any).resteAPayer > 0 ? (invoice as any).resteAPayer : (invoice.totalTTC ?? 0) }); }}>
+                          onClick={() => { setSelectedMethod("Virement"); setAcompteAmount(""); const reste = (invoice as any).resteAPayer; setPayModal({ invoiceId: invoice.id, type: "payée", totalTTC: reste > 0 ? reste / 100 : (invoice.totalTTC ?? 0) }); }}>
                           <CheckCircle size={14} /> Payée
                         </Button>
                         <Button size="sm" variant="outline" className="gap-1 border-amber-400 text-amber-700 hover:bg-amber-50"
-                          onClick={() => { setSelectedMethod("Virement"); setAcompteAmount(""); setPayModal({ invoiceId: invoice.id, type: "acompte", totalTTC: (invoice as any).resteAPayer > 0 ? (invoice as any).resteAPayer : (invoice.totalTTC ?? 0) }); }}>
+                          onClick={() => { setSelectedMethod("Virement"); setAcompteAmount(""); const reste = (invoice as any).resteAPayer; setPayModal({ invoiceId: invoice.id, type: "acompte", totalTTC: reste > 0 ? reste / 100 : (invoice.totalTTC ?? 0) }); }}>
                           <CreditCard size={14} /> Acompte
                         </Button>
                       </>

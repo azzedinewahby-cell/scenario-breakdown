@@ -369,3 +369,15 @@ export const documentCounters = mysqlTable("document_counters", {
   year: int("year").notNull(),
   lastSequence: int("lastSequence").default(0).notNull(),
 });
+
+// ─── Acompte Lines ────────────────────────────────────────────────────────────
+export const acompteLines = mysqlTable("acompte_lines", {
+  id: int("id").autoincrement().primaryKey(),
+  invoiceId: int("invoiceId").notNull(),
+  amount: int("amount").notNull(), // en centimes
+  paymentMethod: varchar("paymentMethod", { length: 32 }),
+  paidAt: timestamp("paidAt").defaultNow().notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+export type AcompteLine = typeof acompteLines.$inferSelect;
+export type InsertAcompteLine = typeof acompteLines.$inferInsert;

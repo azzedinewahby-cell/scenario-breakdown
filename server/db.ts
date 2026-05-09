@@ -20,6 +20,7 @@ import {
   invoiceLines,
   credits,
   companySettings,
+  acompteLines,
   type InsertScenario,
   type InsertScene,
   type InsertCharacter,
@@ -1165,4 +1166,17 @@ export async function getPasswordHash(openId: string): Promise<string | null> {
   const result = await db.select({ loginMethod: users.loginMethod }).from(users).where(eq(users.openId, openId)).limit(1);
   if (!result[0]?.loginMethod?.startsWith("email:")) return null;
   return result[0].loginMethod.replace("email:", "");
+}
+
+// ─── Acompte Lines ────────────────────────────────────────────────────────────
+export async function createAcompteLine(data: { invoiceId: number; amount: number; paymentMethod?: string }) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  return await db.insert(acompteLines).values({ ...data, paidAt: new Date() });
+}
+
+export async function getAcompteLinesByInvoiceId(invoiceId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return await db.select().from(acompteLines).where(eq(acompteLines.invoiceId, invoiceId)).orderBy(acompteLines.paidAt);
 }

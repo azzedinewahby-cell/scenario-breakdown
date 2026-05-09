@@ -1745,15 +1745,19 @@ Règles importantes:
           })
         )
         .mutation(async ({ input }) => {
-          const { updateInvoice, getInvoiceById } = await import("./db");
-          // Si acompte, accumuler sur l'existant
+          const { updateInvoice, getInvoiceById, createAcompteLine, getAcompteLinesByInvoiceId } = await import("./db");
           if (input.data.acompteAmount !== undefined) {
             const existing = await getInvoiceById(input.invoiceId);
-            const prevAcompte = (existing as any)?.acompteAmount ?? 0;
-            const prevReste = (existing as any)?.resteAPayer ?? (existing as any)?.totalTTC ?? 0;
-            const newAcompte = prevAcompte + input.data.acompteAmount;
-            const newReste = Math.max(0, prevReste - input.data.acompteAmount);
-            input.data.acompteAmount = newAcompte;
+            const totalTTCCents = Math.round(((existing as any)?.totalTTC ?? 0) * 100);
+            // Calculer le total déjà versé
+            const prevLines = await getAcompteLinesByInvoiceId(input.invoiceId);
+            const totalVerse = prevLines.reduce((s: number, l: any) => s + (l.amount ?? 0), 0);
+            const newAmount = input.data.acompteAmount; // déjà en centimes (envoyé par le client)
+            const newReste = Math.max(0, totalTTCCents - totalVerse - newAmount);
+            // Créer la ligne acompte
+            await createAcompteLine({ invoiceId: input.invoiceId, amount: newAmount, paymentMethod: input.data.paymentMethod });
+            // Mettre à jour l'invoice
+            input.data.acompteAmount = totalVerse + newAmount;
             input.data.resteAPayer = newReste;
           }
           return await updateInvoice(input.invoiceId, input.data);

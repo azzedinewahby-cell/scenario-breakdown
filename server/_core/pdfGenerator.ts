@@ -297,41 +297,45 @@ export async function generateDocumentPdf(input: GeneratePdfInput): Promise<Buff
 
   // ─── RIB ─────────────────────────────────────────────────────────────────
   const pageH = doc.page.height;
-  const ribY = pageH - 105;
+  const ribY = pageH - 108;
 
-  doc.moveTo(L, ribY - 8).lineTo(R, ribY - 8).strokeColor(C.border).lineWidth(0.5).stroke();
+  // Ligne séparatrice
+  doc.save().moveTo(L, ribY - 6).lineTo(R, ribY - 6)
+     .strokeColor(C.border).lineWidth(0.5).stroke().restore();
 
   // En-tête RIB
   doc.rect(L, ribY, W, 16).fill(C.accentLight);
   doc.fontSize(8).fillColor(C.accent).font("Helvetica-Bold")
-     .text("COORDONNÉES BANCAIRES", L + 4, ribY + 4);
+     .text("COORDONNÉES BANCAIRES", L + 4, ribY + 4, { lineBreak: false });
 
-  // Données bancaires sur une ligne
-  const ribData = [
-    { label: "Titulaire", value: company.bankOwner || "LES CRE'ARTEURS" },
-    { label: "Banque",    value: company.bankName  || "CIC MONTROUGE"   },
-    { label: "IBAN",      value: company.iban      || "FR76 3006 6107 3100 0201 1710 183" },
-    { label: "BIC",       value: company.bic       || "CMCIFRPP"        },
+  // Fond du bloc données
+  doc.rect(L, ribY + 16, W, 32).fillColor("#fafafa").fill();
+  doc.rect(L, ribY + 16, W, 32).strokeColor(C.border).lineWidth(0.3).stroke();
+
+  // Colonnes : Titulaire | Banque | IBAN | BIC
+  const cols2 = [
+    { label: "Titulaire", value: company.bankOwner || "LES CRE'ARTEURS", x: L + 4,   w: 96  },
+    { label: "Banque",    value: company.bankName  || "CIC MONTROUGE",   x: L + 104,  w: 96  },
+    { label: "IBAN",      value: company.iban      || "FR76 3006 6107 3100 0201 1710 183", x: L + 204, w: 216 },
+    { label: "BIC",       value: company.bic       || "CMCIFRPP",        x: L + 424,  w: 87  },
   ];
 
-  let ribX = L;
-  const colWidths = [100, 100, 220, 95];
-  doc.fontSize(7.5);
-  ribData.forEach((item, i) => {
-    doc.fillColor(C.muted).font("Helvetica").text(item.label, ribX + 2, ribY + 22);
-    doc.fillColor(C.text).font("Helvetica-Bold").text(item.value, ribX + 2, ribY + 31, { width: colWidths[i] - 4 });
-    if (i < ribData.length - 1) {
-      doc.moveTo(ribX + colWidths[i], ribY + 16).lineTo(ribX + colWidths[i], ribY + 46)
-         .strokeColor(C.border).lineWidth(0.3).stroke();
+  cols2.forEach((col, i) => {
+    doc.fontSize(7).fillColor(C.muted).font("Helvetica")
+       .text(col.label, col.x, ribY + 19, { width: col.w, lineBreak: false });
+    doc.fontSize(8).fillColor(C.text).font("Helvetica-Bold")
+       .text(col.value, col.x, ribY + 29, { width: col.w, lineBreak: false });
+    // Séparateur vertical (sauf dernier)
+    if (i < cols2.length - 1) {
+      const sepX = col.x + col.w + 4;
+      doc.save().moveTo(sepX, ribY + 16).lineTo(sepX, ribY + 48)
+         .strokeColor(C.border).lineWidth(0.3).stroke().restore();
     }
-    ribX += colWidths[i];
   });
 
-  doc.rect(L, ribY + 16, W, 30).stroke(); // Bordure du bloc RIB
-  doc.strokeColor(C.border).lineWidth(0.3);
-
   // ─── FOOTER ──────────────────────────────────────────────────────────────
-  doc.moveTo(L, pageH - 50).lineTo(R, pageH - 50).strokeColor(C.border).lineWidth(0.5).stroke();
+  doc.moveTo(L, pageH - 50).lineTo(R, pageH - 50)
+     .strokeColor(C.border).lineWidth(0.5).stroke();
   if (company.legalMentions) {
     doc.fontSize(7).fillColor(C.muted).font("Helvetica")
        .text(company.legalMentions, L, pageH - 44, { width: W, align: "center" });

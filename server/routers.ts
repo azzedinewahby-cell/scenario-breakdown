@@ -1580,7 +1580,7 @@ Règles importantes:
           const quote = await getQuoteById(input.quoteId);
           if (!quote || quote.userId !== ctx.user.id) throw new TRPCError({ code: "NOT_FOUND", message: "Devis introuvable" });
           const client = await getClientById(quote.clientId);
-          const dbCompany = await getCompanySettingsByUserId(ctx.user.id);
+          const dbCompany = await getCompanySettingsByUserId(ctx.user.id).catch(() => null);
           const company = { ...COMPANY_INFO, ...(dbCompany ?? {}) };
           const lines = await getQuoteLines(input.quoteId);
           if (!client) throw new TRPCError({ code: "BAD_REQUEST", message: "Client introuvable" });
@@ -1896,7 +1896,7 @@ Règles importantes:
           const invoice = await getInvoiceById(input.invoiceId);
           if (!invoice || invoice.userId !== ctx.user.id) throw new TRPCError({ code: "NOT_FOUND", message: "Facture introuvable" });
           const client = await getClientById(invoice.clientId);
-          const dbCompany = await getCompanySettingsByUserId(ctx.user.id);
+          const dbCompany = await getCompanySettingsByUserId(ctx.user.id).catch(() => null);
           const company = { ...COMPANY_INFO, ...(dbCompany ?? {}) };
           const lines = await getInvoiceLines(input.invoiceId);
           if (!client) throw new TRPCError({ code: "BAD_REQUEST", message: "Client introuvable" });

@@ -919,7 +919,7 @@ export async function createInvoice(data: InsertInvoice) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   const result = await db.insert(invoices).values(data);
-  return result;
+  return (result as any)[0]?.insertId ?? Number(result);
 }
 
 export async function getInvoicesByUserId(userId: number) {

@@ -1575,13 +1575,14 @@ Règles importantes:
       generatePdf: protectedProcedure
         .input(z.object({ quoteId: z.number() }))
         .mutation(async ({ ctx, input }) => {
-          const { getQuoteById, getQuoteLines, getClientById, getProductById } = await import("./db");
+          const { getQuoteById, getQuoteLines, getClientById, getProductById, getCompanySettingsByUserId } = await import("./db");
           const { generateDocumentPdf } = await import("./_core/pdfGenerator");
           const { COMPANY_INFO } = await import("@shared/companyInfo");
           const quote = await getQuoteById(input.quoteId);
           if (!quote || quote.userId !== ctx.user.id) throw new TRPCError({ code: "NOT_FOUND", message: "Devis introuvable" });
           const client = await getClientById(quote.clientId);
-          const company = COMPANY_INFO;
+          const dbCompany = await getCompanySettingsByUserId(ctx.user.id);
+          const company = { ...COMPANY_INFO, ...(dbCompany ?? {}) };
           const lines = await getQuoteLines(input.quoteId);
           if (!client) throw new TRPCError({ code: "BAD_REQUEST", message: "Client introuvable" });
           const linesWithProducts = await Promise.all(lines.map(async l => {
@@ -1890,13 +1891,14 @@ Règles importantes:
       generatePdf: protectedProcedure
         .input(z.object({ invoiceId: z.number() }))
         .mutation(async ({ ctx, input }) => {
-          const { getInvoiceById, getInvoiceLines, getClientById, getProductById } = await import("./db");
+          const { getInvoiceById, getInvoiceLines, getClientById, getProductById, getCompanySettingsByUserId } = await import("./db");
           const { generateDocumentPdf } = await import("./_core/pdfGenerator");
           const { COMPANY_INFO } = await import("@shared/companyInfo");
           const invoice = await getInvoiceById(input.invoiceId);
           if (!invoice || invoice.userId !== ctx.user.id) throw new TRPCError({ code: "NOT_FOUND", message: "Facture introuvable" });
           const client = await getClientById(invoice.clientId);
-          const company = COMPANY_INFO;
+          const dbCompany = await getCompanySettingsByUserId(ctx.user.id);
+          const company = { ...COMPANY_INFO, ...(dbCompany ?? {}) };
           const lines = await getInvoiceLines(input.invoiceId);
           if (!client) throw new TRPCError({ code: "BAD_REQUEST", message: "Client introuvable" });
           const linesWithProducts = await Promise.all(lines.map(async l => {

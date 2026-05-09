@@ -19,6 +19,10 @@ export const COMPANY_INFO = {
 
   // Bancaire (CIC Montrouge)
   bankDetails: "Titulaire : LES CRE'ARTEURS\nBanque : CIC MONTROUGE\nIBAN : FR76 3006 6107 3100 0201 1710 183\nBIC : CMCIFRPP",
+  bankOwner: "LES CRE'ARTEURS",
+  bankName:  "CIC MONTROUGE",
+  iban:      "FR76 3006 6107 3100 0201 1710 183",
+  bic:       "CMCIFRPP",
 
   // Mentions légales
   legalMentions: "Association déclarée loi 1901 — SIREN 535 340 863 — Code NAF/APE 90.01Z (Arts du spectacle vivant) — Inscrite à l'INSEE le 09/03/2011 — Convention collective IDCC 3090 — Membre de l'Économie Sociale et Solidaire (ESS).",

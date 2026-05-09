@@ -281,26 +281,60 @@ export async function generateDocumentPdf(input: GeneratePdfInput): Promise<Buff
   doc.text(eurVal(totalTTC), totX, bottomY+49, { width:totW, align:"right" });
 
   // ── Montant en lettres ──
-  const ttcVal = totalTTC / 100;
+  const ttcVal = totalTTC; // déjà en euros
   const entiers = Math.floor(ttcVal);
-  const cents = Math.round((ttcVal - entiers) * 100);
-  const enLettres = nbEnLettres(entiers) + (cents > 0 ? ` euros et ${nbEnLettres(cents)} centimes` : " euros");
+  const centimes = Math.round((ttcVal - entiers) * 100);
+  const enLettres = nbEnLettres(entiers) + (centimes > 0 ? ` euros et ${nbEnLettres(centimes)} centimes` : " euros");
   const lettresY = echeY + 40;
   doc.fontSize(8).fillColor(C.text).font("Helvetica")
-     .text(`Le montant total s'élève à ${enLettres}`, L, lettresY, { width:W });
+     .text(`Le montant total s'élève à ${enLettres}`, L, lettresY, { width: W });
 
   // ── Conditions de paiement ──
   if (company.paymentConditions) {
     doc.fontSize(7).fillColor(C.muted).font("Helvetica")
-       .text(company.paymentConditions, L, lettresY+14, { width:W });
+       .text(company.paymentConditions, L, lettresY + 12, { width: W });
   }
 
-  // ─── FOOTER ──────────────────────────────────────────────────────────────
+  // ─── RIB ─────────────────────────────────────────────────────────────────
   const pageH = doc.page.height;
-  doc.moveTo(L, pageH-50).lineTo(R, pageH-50).strokeColor(C.border).lineWidth(0.5).stroke();
+  const ribY = pageH - 105;
+
+  doc.moveTo(L, ribY - 8).lineTo(R, ribY - 8).strokeColor(C.border).lineWidth(0.5).stroke();
+
+  // En-tête RIB
+  doc.rect(L, ribY, W, 16).fill(C.accentLight);
+  doc.fontSize(8).fillColor(C.accent).font("Helvetica-Bold")
+     .text("COORDONNÉES BANCAIRES", L + 4, ribY + 4);
+
+  // Données bancaires sur une ligne
+  const ribData = [
+    { label: "Titulaire", value: company.bankOwner || "LES CRE'ARTEURS" },
+    { label: "Banque",    value: company.bankName  || "CIC MONTROUGE"   },
+    { label: "IBAN",      value: company.iban      || "FR76 3006 6107 3100 0201 1710 183" },
+    { label: "BIC",       value: company.bic       || "CMCIFRPP"        },
+  ];
+
+  let ribX = L;
+  const colWidths = [100, 100, 220, 95];
+  doc.fontSize(7.5);
+  ribData.forEach((item, i) => {
+    doc.fillColor(C.muted).font("Helvetica").text(item.label, ribX + 2, ribY + 22);
+    doc.fillColor(C.text).font("Helvetica-Bold").text(item.value, ribX + 2, ribY + 31, { width: colWidths[i] - 4 });
+    if (i < ribData.length - 1) {
+      doc.moveTo(ribX + colWidths[i], ribY + 16).lineTo(ribX + colWidths[i], ribY + 46)
+         .strokeColor(C.border).lineWidth(0.3).stroke();
+    }
+    ribX += colWidths[i];
+  });
+
+  doc.rect(L, ribY + 16, W, 30).stroke(); // Bordure du bloc RIB
+  doc.strokeColor(C.border).lineWidth(0.3);
+
+  // ─── FOOTER ──────────────────────────────────────────────────────────────
+  doc.moveTo(L, pageH - 50).lineTo(R, pageH - 50).strokeColor(C.border).lineWidth(0.5).stroke();
   if (company.legalMentions) {
     doc.fontSize(7).fillColor(C.muted).font("Helvetica")
-       .text(company.legalMentions, L, pageH-44, { width:W, align:"center" });
+       .text(company.legalMentions, L, pageH - 44, { width: W, align: "center" });
   }
 
   doc.end();

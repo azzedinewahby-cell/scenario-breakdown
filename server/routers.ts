@@ -1477,6 +1477,7 @@ Règles importantes:
             totalVAT += lineVAT;
             await createQuoteLine({
               quoteId, productId,
+              productName: line.productName || line.newProduct?.name,
               quantity: line.quantity,
               unitPriceHT: line.unitPriceHT,
               vatRate: line.vatRate,
@@ -1666,6 +1667,7 @@ Règles importantes:
             totalVAT += lineVAT;
             await createQuoteLine({
               quoteId: input.quoteId, productId,
+              productName: line.productName || line.newProduct?.name,
               quantity: line.quantity,
               unitPriceHT: line.unitPriceHT,
               vatRate: line.vatRate,
@@ -1902,8 +1904,9 @@ Règles importantes:
           if (!client) throw new TRPCError({ code: "BAD_REQUEST", message: "Client introuvable" });
           const linesWithProducts = await Promise.all(lines.map(async l => {
             const prod = await getProductById(l.productId);
+            // Chercher aussi le nom dans les quote_lines si le produit n'est pas trouvé
             return {
-              productName: prod?.nom ?? `Produit #${l.productId}`,
+              productName: l.productName ?? prod?.name ?? `Produit #${l.productId}`,
               description: prod?.description ?? null,
               quantity: l.quantity ?? 1,
               unitPriceHT: l.unitPriceHT ?? 0,
@@ -1957,6 +1960,7 @@ Règles importantes:
             totalVAT += lineVAT;
             await createInvoiceLine({
               invoiceId: Number(invoiceId), productId: line.productId,
+              productName: (line as any).productName ?? undefined,
               quantity: line.quantity ?? 1, unitPriceHT: line.unitPriceHT ?? 0,
               vatRate: line.vatRate ?? 20, lineTotal: lineHT,
             });

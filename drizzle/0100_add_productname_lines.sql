@@ -1,0 +1,2 @@
+ALTER TABLE `invoice_lines` ADD `productName` varchar(256);
+ALTER TABLE `quote_lines` ADD `productName` varchar(256);

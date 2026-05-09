@@ -302,7 +302,7 @@ export default function QuoteFormFull({ onSuccess, onCancel, editQuoteId }: Prop
                     </div>
                     <div>
                       <Label className="text-xs">PU HT (€)</Label>
-                      <Input type="number" step="0.01" min="0" value={line.unitPriceHT}
+                      <Input type="number" step="0.01" min="0" value={line.unitPriceHT === 0 ? "" : line.unitPriceHT} placeholder="0.00"
                         onChange={e => updateLine(line.id, { unitPriceHT: parseFloat(e.target.value) || 0 })} />
                     </div>
                     <div>

@@ -247,11 +247,15 @@ function StoryboardTab({ scenarioId }: { scenarioId: number }) {
   );
 }// ─── Structure Analysis Tab ─────────────────────────────────────────────────────
 function StructureAnalysisTab({ scenarioId }: { scenarioId: number }) {
-  const [analysis, setAnalysis] = useState<any>(null);
+  const storageKey = `structure_analysis_${scenarioId}`;
+  const [analysis, setAnalysis] = useState<any>(() => {
+    try { const s = localStorage.getItem(storageKey); return s ? JSON.parse(s) : null; } catch { return null; }
+  });
 
   const generateMutation = trpc.breakdown.analyzeStructure.useMutation({
     onSuccess: (data) => {
       setAnalysis(data.data);
+      try { localStorage.setItem(storageKey, JSON.stringify(data.data)); } catch {}
     },
   });
 
@@ -524,7 +528,7 @@ function StructureAnalysisTab({ scenarioId }: { scenarioId: number }) {
       <div className="flex justify-center pt-4">
         <Button
           variant="outline"
-          onClick={() => setAnalysis(null)}
+          onClick={() => { setAnalysis(null); try { localStorage.removeItem(storageKey); } catch {} }}
           className="gap-2"
         >
           <Lightbulb className="w-4 h-4" />
@@ -536,11 +540,16 @@ function StructureAnalysisTab({ scenarioId }: { scenarioId: number }) {
 }
 
 // ─── Technical Breakdown Tab ─────────────────────────────────────────────────────
-function TechnicalBreakdownTab({ scenarioId }: { scenarioId: number }) {  const [breakdown, setBreakdown] = useState<any>(null);
+function TechnicalBreakdownTab({ scenarioId }: { scenarioId: number }) {
+  const storageKey = `technical_breakdown_${scenarioId}`;
+  const [breakdown, setBreakdown] = useState<any>(() => {
+    try { const s = localStorage.getItem(storageKey); return s ? JSON.parse(s) : null; } catch { return null; }
+  });
 
   const generateMutation = trpc.breakdown.generateTechnicalBreakdown.useMutation({
     onSuccess: (data) => {
       setBreakdown(data.data);
+      try { localStorage.setItem(storageKey, JSON.stringify(data.data)); } catch {}
     },
   });
 
@@ -584,7 +593,7 @@ function TechnicalBreakdownTab({ scenarioId }: { scenarioId: number }) {  const 
     <div className="space-y-6">
       {/* Bouton régénérer */}
       <div className="flex justify-end">
-        <Button variant="outline" size="sm" onClick={() => setBreakdown(null)} className="gap-2">
+        <Button variant="outline" size="sm" onClick={() => { setBreakdown(null); try { localStorage.removeItem(storageKey); } catch {} }} className="gap-2">
           <Layers className="w-4 h-4" /> Régénérer
         </Button>
       </div>

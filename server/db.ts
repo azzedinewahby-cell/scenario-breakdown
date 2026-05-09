@@ -1085,9 +1085,9 @@ export async function generateNextNumber(
 
   let nextSequence = 1;
   if (result.length > 0) {
-    const lastNumber = result[0].number;
+    const lastNumber = result[0].number as string;
     const parts = lastNumber.split("-");
-    const currentSequence = parseInt(parts[2], 10);
+    const currentSequence = parseInt(parts[parts.length - 1], 10) || 0;
     nextSequence = currentSequence + 1;
   }
 

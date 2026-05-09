@@ -245,17 +245,20 @@ export default function InvoicesTab() {
                         <span className="text-xs text-slate-400">{(invoice as any).paymentMethod}</span>
                       )}
                       <span className="text-sm text-slate-600">{invoice.totalTTC ? invoice.totalTTC.toFixed(2) : "0.00"} € TTC</span>
+                      {invoice.status === "acompte" && (invoice as any).resteAPayer > 0 && (
+                        <span className="text-xs font-medium text-amber-700">Reste : {((invoice as any).resteAPayer / 100).toFixed(2)} €</span>
+                      )}
                     </div>
                   </div>
                   <div className="flex gap-2 flex-wrap justify-end items-center">
-                    {invoice.status === "brouillon" && (
+                    {(invoice.status === "brouillon" || invoice.status === "acompte") && (
                       <>
                         <Button size="sm" className="gap-1 bg-green-600 hover:bg-green-700 text-white"
-                          onClick={() => { setSelectedMethod("Virement"); setAcompteAmount(""); setPayModal({ invoiceId: invoice.id, type: "payée", totalTTC: invoice.totalTTC ?? 0 }); }}>
+                          onClick={() => { setSelectedMethod("Virement"); setAcompteAmount(""); setPayModal({ invoiceId: invoice.id, type: "payée", totalTTC: (invoice as any).resteAPayer > 0 ? (invoice as any).resteAPayer : (invoice.totalTTC ?? 0) }); }}>
                           <CheckCircle size={14} /> Payée
                         </Button>
                         <Button size="sm" variant="outline" className="gap-1 border-amber-400 text-amber-700 hover:bg-amber-50"
-                          onClick={() => { setSelectedMethod("Virement"); setAcompteAmount(""); setPayModal({ invoiceId: invoice.id, type: "acompte", totalTTC: invoice.totalTTC ?? 0 }); }}>
+                          onClick={() => { setSelectedMethod("Virement"); setAcompteAmount(""); setPayModal({ invoiceId: invoice.id, type: "acompte", totalTTC: (invoice as any).resteAPayer > 0 ? (invoice as any).resteAPayer : (invoice.totalTTC ?? 0) }); }}>
                           <CreditCard size={14} /> Acompte
                         </Button>
                       </>

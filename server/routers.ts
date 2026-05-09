@@ -1745,7 +1745,17 @@ Règles importantes:
           })
         )
         .mutation(async ({ input }) => {
-          const { updateInvoice } = await import("./db");
+          const { updateInvoice, getInvoiceById } = await import("./db");
+          // Si acompte, accumuler sur l'existant
+          if (input.data.acompteAmount !== undefined) {
+            const existing = await getInvoiceById(input.invoiceId);
+            const prevAcompte = (existing as any)?.acompteAmount ?? 0;
+            const prevReste = (existing as any)?.resteAPayer ?? (existing as any)?.totalTTC ?? 0;
+            const newAcompte = prevAcompte + input.data.acompteAmount;
+            const newReste = Math.max(0, prevReste - input.data.acompteAmount);
+            input.data.acompteAmount = newAcompte;
+            input.data.resteAPayer = newReste;
+          }
           return await updateInvoice(input.invoiceId, input.data);
         }),
       delete: protectedProcedure

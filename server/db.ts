@@ -1054,7 +1054,7 @@ export async function generateNextNumber(
   if (!db) throw new Error("Database not available");
 
   const year = new Date().getFullYear();
-  const pattern = `${prefix}-${year}-%`;
+  const baseNumber = `${prefix}-${year}-`;
 
   let table: any;
   let numberField: any;
@@ -1070,28 +1070,28 @@ export async function generateNextNumber(
     numberField = credits.number;
   }
 
-  // Extraire le MAX du numéro de séquence (cast en entier pour éviter le tri alpha)
+  // Get the highest number for this year and prefix
   const result = await db
     .select({ number: numberField })
     .from(table)
     .where(
       and(
         eq(table.userId, userId),
-        sql`${numberField} LIKE ${pattern}`
+        sql`${numberField} LIKE ${baseNumber + "%"}`
       )
-    );
+    )
+    .orderBy(desc(numberField))
+    .limit(1);
 
   let nextSequence = 1;
   if (result.length > 0) {
-    const maxSeq = result.reduce((max, row) => {
-      const parts = (row.number as string).split("-");
-      const seq = parseInt(parts[parts.length - 1], 10) || 0;
-      return seq > max ? seq : max;
-    }, 0);
-    nextSequence = maxSeq + 1;
+    const lastNumber = result[0].number;
+    const parts = lastNumber.split("-");
+    const currentSequence = parseInt(parts[2], 10);
+    nextSequence = currentSequence + 1;
   }
 
-  return `${prefix}-${year}-${String(nextSequence).padStart(4, "0")}`;
+  return `${baseNumber}${String(nextSequence).padStart(4, "0")}`;
 }
 
 /**

@@ -201,7 +201,7 @@ export async function generateDocumentPdf(input: GeneratePdfInput): Promise<Buff
      .text("Type de vente : Vente de services", L, y, { lineBreak:false });
 
   // ─── BAS DE PAGE — position dynamique, au minimum à 540 ──────────────────
-  const bottomY = pageH - 295; // TVA/totaux toujours en bas, juste au-dessus du RIB
+  const bottomY = y + 18; // TVA juste après le tableau
 
   // ── Détail TVA (gauche) ──
   doc.rect(L, bottomY, 250, 16).fill(C.black);

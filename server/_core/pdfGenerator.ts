@@ -91,7 +91,7 @@ export async function generateDocumentPdf(input: GeneratePdfInput): Promise<Buff
 
   const docTitle = { facture:"FACTURE", devis:"DEVIS", avoir:"AVOIR" }[type];
 
-  const doc = new PDFDocument({ size:"A4", margins:{top:36,bottom:5,left:40,right:40}, bufferPages:true });
+  const doc = new PDFDocument({ size:"A4", margins:{top:36,bottom:0,left:40,right:40}, bufferPages:true });
   const buffers: Buffer[] = [];
   doc.on("data", b => buffers.push(b));
   const pdfPromise = new Promise<Buffer>(resolve => doc.on("end", () => resolve(Buffer.concat(buffers))));
@@ -200,8 +200,8 @@ export async function generateDocumentPdf(input: GeneratePdfInput): Promise<Buff
   doc.fontSize(7.5).fillColor(C.light).font("Helvetica")
      .text("Type de vente : Vente de services", L, y, { lineBreak:false });
 
-  // ─── BAS DE PAGE (positionné fixe par rapport au bas) ────────────────────
-  const bottomY = pageH - 220;
+  // ─── BAS DE PAGE — position dynamique, au minimum à 540 ──────────────────
+  const bottomY = Math.max(y + 20, 540);
 
   // ── Détail TVA (gauche) ──
   doc.rect(L, bottomY, 250, 16).fill(C.black);

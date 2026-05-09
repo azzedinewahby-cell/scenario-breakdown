@@ -1273,22 +1273,21 @@ Règles importantes:
         .query(async ({ input }) => {
           try {
             const result = await searchBySiren(input.siren);
-            if (!result) {
-              throw new TRPCError({
-                code: "NOT_FOUND",
-                message: "SIREN non trouve dans la base INSEE",
-              });
-            }
+            if (!result) throw new TRPCError({ code: "NOT_FOUND", message: "SIREN non trouvé" });
             return result;
           } catch (error) {
             if (error instanceof TRPCError) throw error;
-            throw new TRPCError({
-              code: "INTERNAL_SERVER_ERROR",
-              message:
-                error instanceof Error
-                  ? error.message
-                  : "Erreur lors de la recherche SIREN",
-            });
+            throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: error instanceof Error ? error.message : "Erreur recherche SIREN" });
+          }
+        }),
+      searchByQuery: publicProcedure
+        .input(z.object({ query: z.string().min(2) }))
+        .query(async ({ input }) => {
+          try {
+            const { searchByQuery } = await import("./siretService");
+            return await searchByQuery(input.query);
+          } catch (error) {
+            throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: error instanceof Error ? error.message : "Erreur recherche" });
           }
         }),
     }),

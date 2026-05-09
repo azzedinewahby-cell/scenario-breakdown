@@ -1,6 +1,6 @@
 /**
- * Service de recherche SIRET via l'API Sirene (INSEE)
- * API publique : https://api.insee.fr/catalogue/site/themes/sirene
+ * Service de recherche entreprises via l'API recherche-entreprises.api.gouv.fr
+ * API publique, pas d'authentification requise
  */
 
 export interface SiretSearchResult {
@@ -17,146 +17,56 @@ export interface SiretSearchResult {
   employees?: string;
 }
 
-/**
- * Valide le format d'un SIRET (14 chiffres)
- */
+const BASE_URL = "https://recherche-entreprises.api.gouv.fr";
+
+function mapResult(r: any): SiretSearchResult {
+  const siege = r.siege ?? {};
+  const adresse = [
+    siege.numero_voie, siege.type_voie, siege.libelle_voie
+  ].filter(Boolean).join(" ").trim() || siege.adresse || "";
+  const full = [adresse, siege.code_postal, siege.libelle_commune].filter(Boolean).join(", ");
+  return {
+    siret:        siege.siret || r.siret || "",
+    siren:        r.siren || "",
+    name:         r.nom_complet || r.nom_raison_sociale || r.denomination || "",
+    address:      full,
+    postalCode:   siege.code_postal || "",
+    city:         siege.libelle_commune || "",
+    vatNumber:    r.numero_tva_intra || "",
+    status:       (r.etat_administratif === "A" || siege.etat_administratif === "A") ? "actif" : "inactif",
+    creationDate: r.date_creation || "",
+    sector:       r.activite_principale || siege.activite_principale || "",
+    employees:    r.tranche_effectif_salarie || "",
+  };
+}
+
+export async function searchByQuery(query: string): Promise<SiretSearchResult[]> {
+  const q = query.replace(/\s/g, "").match(/^\d{9,14}$/) ? query.replace(/\s/g, "") : query;
+  const url = `${BASE_URL}/search?q=${encodeURIComponent(q)}&page=1&per_page=5&mtm_campaign=maprod`;
+  const res = await fetch(url, { headers: { Accept: "application/json" } });
+  if (!res.ok) throw new Error(`Erreur API: ${res.status}`);
+  const data = await res.json();
+  return (data.results ?? []).map(mapResult);
+}
+
+export async function searchBySiret(siret: string): Promise<SiretSearchResult | null> {
+  const results = await searchByQuery(siret);
+  return results.find(r => r.siret === siret.replace(/\s/g, "")) ?? results[0] ?? null;
+}
+
+export async function searchBySiren(siren: string): Promise<SiretSearchResult | null> {
+  const results = await searchByQuery(siren);
+  return results.find(r => r.siren === siren.replace(/\s/g, "")) ?? results[0] ?? null;
+}
+
+export function formatAddress(result: SiretSearchResult): string {
+  return result.address;
+}
+
 export function isValidSiretFormat(siret: string): boolean {
   return /^\d{14}$/.test(siret.replace(/\s/g, ""));
 }
 
-/**
- * Valide le format d'un SIREN (9 chiffres)
- */
 export function isValidSirenFormat(siren: string): boolean {
   return /^\d{9}$/.test(siren.replace(/\s/g, ""));
-}
-
-/**
- * Recherche une entreprise par SIRET via l'API Sirene
- * Utilise l'API publique de l'INSEE (pas d'authentification requise)
- */
-export async function searchBySiret(
-  siret: string
-): Promise<SiretSearchResult | null> {
-  const cleanSiret = siret.replace(/\s/g, "");
-
-  if (!isValidSiretFormat(cleanSiret)) {
-    throw new Error("Format SIRET invalide (doit contenir 14 chiffres)");
-  }
-
-  try {
-    // API Sirene publique
-    const response = await fetch(
-      `https://api.insee.fr/entreprises/sirene/V3.11/siret/${cleanSiret}`,
-      {
-        method: "GET",
-        headers: {
-          Accept: "application/json",
-        },
-      }
-    );
-
-    if (response.status === 404) {
-      return null; // SIRET non trouvé
-    }
-
-    if (!response.ok) {
-      throw new Error(`Erreur API INSEE: ${response.status}`);
-    }
-
-    const data = await response.json();
-
-    // Transformation des données de l'API INSEE
-    const etablissement = data.etablissement;
-    const entreprise = data.entreprise;
-
-    return {
-      siret: cleanSiret,
-      siren: etablissement?.siren || entreprise?.siren || "",
-      name: etablissement?.enseigne || entreprise?.nom || "",
-      address:
-        `${etablissement?.numeroVoie || ""} ${etablissement?.typeVoie || ""} ${etablissement?.nomVoie || ""}`.trim(),
-      postalCode: etablissement?.codePostal || "",
-      city: etablissement?.libelleCommuneEtablissement || "",
-      vatNumber: `FR${etablissement?.siren || ""}`.substring(0, 13), // Approximation
-      status:
-        etablissement?.etatAdministratifEtablissement === "A"
-          ? "actif"
-          : "inactif",
-      creationDate: etablissement?.dateCreationEtablissement,
-      sector: etablissement?.activitePrincipaleEtablissement,
-      employees: etablissement?.trancheEffectifsEtablissement,
-    };
-  } catch (error) {
-    console.error("Erreur lors de la recherche SIRET:", error);
-    throw new Error(
-      "Impossible de rechercher le SIRET. Veuillez vérifier votre connexion."
-    );
-  }
-}
-
-/**
- * Recherche une entreprise par SIREN via l'API Sirene
- */
-export async function searchBySiren(
-  siren: string
-): Promise<SiretSearchResult | null> {
-  const cleanSiren = siren.replace(/\s/g, "");
-
-  if (!isValidSirenFormat(cleanSiren)) {
-    throw new Error("Format SIREN invalide (doit contenir 9 chiffres)");
-  }
-
-  try {
-    const response = await fetch(
-      `https://api.insee.fr/entreprises/sirene/V3.11/siren/${cleanSiren}`,
-      {
-        method: "GET",
-        headers: {
-          Accept: "application/json",
-        },
-      }
-    );
-
-    if (response.status === 404) {
-      return null;
-    }
-
-    if (!response.ok) {
-      throw new Error(`Erreur API INSEE: ${response.status}`);
-    }
-
-    const data = await response.json();
-    const entreprise = data.entreprise;
-
-    return {
-      siret: "", // SIREN search doesn't return SIRET
-      siren: cleanSiren,
-      name: entreprise?.nom || "",
-      address: "", // SIREN search doesn't return address
-      postalCode: "",
-      city: "",
-      vatNumber: `FR${cleanSiren}`,
-      status:
-        entreprise?.etatAdministratifEntreprise === "A" ? "actif" : "inactif",
-      creationDate: entreprise?.dateCreationEntreprise,
-      sector: entreprise?.activitePrincipaleEntreprise,
-      employees: entreprise?.trancheEffectifsEntreprise,
-    };
-  } catch (error) {
-    console.error("Erreur lors de la recherche SIREN:", error);
-    throw new Error(
-      "Impossible de rechercher le SIREN. Veuillez vérifier votre connexion."
-    );
-  }
-}
-
-/**
- * Formate une adresse complète
- */
-export function formatAddress(result: SiretSearchResult): string {
-  const parts = [result.address, result.postalCode, result.city].filter(
-    Boolean
-  );
-  return parts.join(", ");
 }

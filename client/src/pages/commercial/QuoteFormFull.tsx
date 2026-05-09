@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Plus, Trash2, X, UserPlus, Search } from "lucide-react";
+import SiretSearchForm from "./SiretSearchForm";
 
 type LineDraft = {
   id: string;
@@ -214,6 +215,10 @@ export default function QuoteFormFull({ onSuccess, onCancel, editQuoteId }: Prop
           </select>
         ) : (
           <div className="grid grid-cols-2 gap-3 bg-slate-50 p-4 rounded-md">
+            <div className="col-span-2">
+              <Label className="text-xs text-muted-foreground mb-1 block">Recherche rapide INSEE (raison sociale ou SIRET)</Label>
+              <SiretSearchForm onSelect={data => setNewClient({ ...newClient, name: data.name || "", address: data.address || "", siret: data.siret || "", vatNumber: data.vatNumber || "" })} />
+            </div>
             <div className="col-span-2">
               <Label htmlFor="nc-nom">Nom / Raison sociale *</Label>
               <Input id="nc-nom" value={newClient.name}

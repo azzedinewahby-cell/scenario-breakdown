@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { Plus } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import ClientsTab from "./commercial/ClientsTab";
 import ProductsTab from "./commercial/ProductsTab";
 import QuotesTab from "./commercial/QuotesTab";
@@ -18,13 +18,18 @@ export default function CommercialPage() {
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-8">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-4xl font-bold text-slate-900 mb-2">
-            Gestion Commerciale
-          </h1>
-          <p className="text-slate-600">
-            Gérez vos clients, produits, devis, factures et avoirs
-          </p>
+        <div className="mb-8 flex items-start justify-between">
+          <div>
+            <h1 className="text-4xl font-bold text-slate-900 mb-2">
+              Gestion Commerciale
+            </h1>
+            <p className="text-slate-600">
+              Gérez vos clients, produits, devis, factures et avoirs
+            </p>
+          </div>
+          <Button variant="outline" className="gap-2" onClick={() => window.history.back()}>
+            <ArrowLeft size={16} /> Retour
+          </Button>
         </div>
 
         {/* Tabs */}

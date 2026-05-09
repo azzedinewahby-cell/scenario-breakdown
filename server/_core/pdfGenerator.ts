@@ -102,7 +102,7 @@ export async function generateDocumentPdf(input: GeneratePdfInput): Promise<Buff
   // ─── LOGO + EN-TÊTE SOCIÉTÉ ───────────────────────────────────────────────
   const logoPath = path.join(process.cwd(), "server", "assets", "logo.png");
   try {
-    doc.image(logoPath, L, 36, { width: 48, height: 48 });
+    doc.image(logoPath, L, 36, { width: 45 }); // ratio préservé, pas de height
   } catch {}
 
   const tradeName = company.tradeName || company.companyName;
@@ -270,7 +270,10 @@ export async function generateDocumentPdf(input: GeneratePdfInput): Promise<Buff
        .text(company.paymentConditions, L, lettresY + 11, { width: W });
   }
 
-  // ─── RIB compact (une seule ligne) ──────────────────────────────────────
+  // ─── RIB + FOOTER : forcer sur la page 1 ────────────────────────────────
+  doc.switchToPage(0);
+
+  // RIB (une seule ligne)
   const ribY = pageH - 78;
   doc.save().moveTo(L, ribY - 4).lineTo(R, ribY - 4)
      .strokeColor(C.border).lineWidth(0.5).stroke().restore();
@@ -280,12 +283,12 @@ export async function generateDocumentPdf(input: GeneratePdfInput): Promise<Buff
      .font("Helvetica")
      .text(`Titulaire : ${company.bankOwner || "LES CRE'ARTEURS"}   |   Banque : ${company.bankName || "CIC MONTROUGE"}   |   IBAN : ${company.iban || "FR76 3006 6107 3100 0201 1710 183"}   |   BIC : ${company.bic || "CMCIFRPP"}`, { lineBreak: false });
 
-  // ─── FOOTER ──────────────────────────────────────────────────────────────
+  // Footer
   doc.save().moveTo(L, pageH - 52).lineTo(R, pageH - 52)
      .strokeColor(C.border).lineWidth(0.5).stroke().restore();
   if (company.legalMentions) {
     doc.fontSize(6.5).fillColor(C.light).font("Helvetica")
-       .text(company.legalMentions, L, pageH - 47, { width: W, align: "center" });
+       .text(company.legalMentions, L, pageH - 47, { width: W, align: "center", lineBreak: false });
   }
 
   doc.end();

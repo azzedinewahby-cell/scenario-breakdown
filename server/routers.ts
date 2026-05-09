@@ -1422,7 +1422,7 @@ Règles importantes:
         .mutation(async ({ ctx, input }) => {
           const {
             createQuote, createQuoteLine, generateNextNumber, updateQuote,
-            createClient, createProduct,
+            createClient, getOrCreateProduct, createProduct,
           } = await import("./db");
           const userId = ctx.user.id;
 
@@ -1460,7 +1460,7 @@ Règles importantes:
             const line = input.lines[i];
             let productId = line.productId;
             if (!productId && line.newProduct) {
-              const result = await createProduct({
+              const result = await getOrCreateProduct({
                 userId,
                 name: line.newProduct.name,
                 description: line.newProduct.description ?? null,
@@ -1633,7 +1633,7 @@ Règles importantes:
         .mutation(async ({ ctx, input }) => {
           const {
             getQuoteById, getQuoteLines, deleteQuoteLine,
-            updateQuote, createQuoteLine, createProduct,
+            updateQuote, createQuoteLine, getOrCreateProduct, createProduct,
           } = await import("./db");
           const quote = await getQuoteById(input.quoteId);
           if (!quote || quote.userId !== ctx.user.id) throw new TRPCError({ code: "NOT_FOUND", message: "Devis introuvable" });
@@ -1650,7 +1650,7 @@ Règles importantes:
             const line = input.lines[i];
             let productId = line.productId;
             if (!productId && line.newProduct) {
-              const result = await createProduct({
+              const result = await getOrCreateProduct({
                 userId: ctx.user.id,
                 name: line.newProduct.name,
                 description: line.newProduct.description ?? null,

@@ -817,6 +817,20 @@ export async function createProduct(data: InsertProduct) {
   return result;
 }
 
+export async function getOrCreateProduct(data: InsertProduct): Promise<number> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  // Chercher un produit existant avec le même nom pour ce user
+  const existing = await db
+    .select()
+    .from(products)
+    .where(and(eq(products.userId, data.userId), eq(products.name, data.name)))
+    .limit(1);
+  if (existing.length > 0) return existing[0].id;
+  const result = await db.insert(products).values(data);
+  return Number((result as any)[0]?.insertId ?? result);
+}
+
 export async function getProductsByUserId(userId: number) {
   const db = await getDb();
   if (!db) return [];

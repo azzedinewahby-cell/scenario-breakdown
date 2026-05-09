@@ -270,43 +270,22 @@ export async function generateDocumentPdf(input: GeneratePdfInput): Promise<Buff
        .text(company.paymentConditions, L, lettresY + 11, { width: W });
   }
 
-  // ─── RIB compact ─────────────────────────────────────────────────────────
-  const ribY = pageH - 88;
-  doc.save().moveTo(L, ribY - 5).lineTo(R, ribY - 5)
+  // ─── RIB compact (une seule ligne) ──────────────────────────────────────
+  const ribY = pageH - 78;
+  doc.save().moveTo(L, ribY - 4).lineTo(R, ribY - 4)
      .strokeColor(C.border).lineWidth(0.5).stroke().restore();
 
-  // Header RIB
-  doc.rect(L, ribY, W, 13).fill(C.black);
-  doc.fontSize(7).fillColor(C.white).font("Helvetica-Bold")
-     .text("COORDONNÉES BANCAIRES", L+4, ribY+3, { lineBreak:false });
-
-  // Bloc données RIB
-  doc.rect(L, ribY+13, W, 22).fill(C.bg);
-
-  const ribCols = [
-    { label:"Titulaire", value: company.bankOwner || "LES CRE'ARTEURS",                    x: L+4,   w: 96  },
-    { label:"Banque",    value: company.bankName  || "CIC MONTROUGE",                       x: L+104, w: 96  },
-    { label:"IBAN",      value: company.iban      || "FR76 3006 6107 3100 0201 1710 183",   x: L+204, w: 214 },
-    { label:"BIC",       value: company.bic       || "CMCIFRPP",                            x: L+422, w: 89  },
-  ];
-
-  ribCols.forEach((col, i) => {
-    doc.fontSize(6.5).fillColor(C.light).font("Helvetica")
-       .text(col.label, col.x, ribY+16, { lineBreak:false });
-    doc.fontSize(7.5).fillColor(C.dark).font("Helvetica-Bold")
-       .text(col.value, col.x, ribY+24, { width: col.w, lineBreak:false });
-    if (i < ribCols.length - 1) {
-      doc.save().moveTo(col.x + col.w, ribY+13).lineTo(col.x + col.w, ribY+35)
-         .strokeColor(C.border).lineWidth(0.3).stroke().restore();
-    }
-  });
+  doc.fontSize(7).fillColor(C.dark).font("Helvetica-Bold")
+     .text("RIB — ", L, ribY, { continued: true })
+     .font("Helvetica")
+     .text(`Titulaire : ${company.bankOwner || "LES CRE'ARTEURS"}   |   Banque : ${company.bankName || "CIC MONTROUGE"}   |   IBAN : ${company.iban || "FR76 3006 6107 3100 0201 1710 183"}   |   BIC : ${company.bic || "CMCIFRPP"}`, { lineBreak: false });
 
   // ─── FOOTER ──────────────────────────────────────────────────────────────
-  doc.save().moveTo(L, pageH - 46).lineTo(R, pageH - 46)
+  doc.save().moveTo(L, pageH - 52).lineTo(R, pageH - 52)
      .strokeColor(C.border).lineWidth(0.5).stroke().restore();
   if (company.legalMentions) {
     doc.fontSize(6.5).fillColor(C.light).font("Helvetica")
-       .text(company.legalMentions, L, pageH - 41, { width: W, align: "center" });
+       .text(company.legalMentions, L, pageH - 47, { width: W, align: "center" });
   }
 
   doc.end();

@@ -13,6 +13,7 @@ type LineDraft = {
   productName: string;
   description: string;
   quantity: number;
+  unit: string;
   unitPriceHT: number;
   vatRate: number;
 };
@@ -48,7 +49,7 @@ export default function QuoteFormFull({ onSuccess, onCancel, editQuoteId }: Prop
 
   // Lignes
   const [lines, setLines] = useState<LineDraft[]>([
-    { id: crypto.randomUUID(), productId: null, productName: "", description: "", quantity: 1, unitPriceHT: 0, vatRate: 20 },
+    { id: crypto.randomUUID(), productId: null, productName: "", description: "", quantity: 1, unit: "forfait", unitPriceHT: 0, vatRate: 20 },
   ]);
 
   // Charger les données existantes en mode édition
@@ -82,7 +83,7 @@ export default function QuoteFormFull({ onSuccess, onCancel, editQuoteId }: Prop
   }, [lines]);
 
   const addLine = () => {
-    setLines([...lines, { id: crypto.randomUUID(), productId: null, productName: "", description: "", quantity: 1, unitPriceHT: 0, vatRate: 20 }]);
+    setLines([...lines, { id: crypto.randomUUID(), productId: null, productName: "", description: "", quantity: 1, unit: "forfait", unitPriceHT: 0, vatRate: 20 }]);
   };
 
   const removeLine = (id: string) => {
@@ -293,12 +294,30 @@ export default function QuoteFormFull({ onSuccess, onCancel, editQuoteId }: Prop
                     </div>
                   </div>
 
-                  {/* Quantité, prix, TVA */}
-                  <div className="grid grid-cols-4 gap-2">
+                  {/* Quantité, unité, prix, TVA */}
+                  <div className="grid grid-cols-5 gap-2">
                     <div>
                       <Label className="text-xs">Quantité</Label>
                       <Input type="number" step="0.01" min="0" value={line.quantity}
                         onChange={e => updateLine(line.id, { quantity: parseFloat(e.target.value) || 0 })} />
+                    </div>
+                    <div>
+                      <Label className="text-xs">Unité</Label>
+                      <select
+                        className="w-full h-10 border border-input rounded-md px-2 text-sm bg-background"
+                        value={line.unit || "forfait"}
+                        onChange={e => updateLine(line.id, { unit: e.target.value })}
+                      >
+                        <option value="forfait">Forfait</option>
+                        <option value="heure">Heure</option>
+                        <option value="jour">Jour</option>
+                        <option value="semaine">Semaine</option>
+                        <option value="mois">Mois</option>
+                        <option value="piece">Pièce</option>
+                        <option value="u">Unité</option>
+                        <option value="km">Km</option>
+                        <option value="m2">m²</option>
+                      </select>
                     </div>
                     <div>
                       <Label className="text-xs">PU HT (€)</Label>

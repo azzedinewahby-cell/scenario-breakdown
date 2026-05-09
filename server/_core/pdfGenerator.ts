@@ -91,7 +91,7 @@ export async function generateDocumentPdf(input: GeneratePdfInput): Promise<Buff
 
   const docTitle = { facture:"FACTURE", devis:"DEVIS", avoir:"AVOIR" }[type];
 
-  const doc = new PDFDocument({ size:"A4", margins:{top:36,bottom:55,left:40,right:40}, bufferPages:true });
+  const doc = new PDFDocument({ size:"A4", margins:{top:36,bottom:5,left:40,right:40}, bufferPages:true });
   const buffers: Buffer[] = [];
   doc.on("data", b => buffers.push(b));
   const pdfPromise = new Promise<Buffer>(resolve => doc.on("end", () => resolve(Buffer.concat(buffers))));
@@ -270,10 +270,7 @@ export async function generateDocumentPdf(input: GeneratePdfInput): Promise<Buff
        .text(company.paymentConditions, L, lettresY + 11, { width: W, height: 28, lineBreak: true });
   }
 
-  // ─── RIB + FOOTER : toujours sur la page 1 ───────────────────────────────
-  // On revient sur la page 0 et on dessine à coordonnées absolues fixes
-  doc.switchToPage(0);
-
+  // ─── RIB + FOOTER (coordonnées absolues, toujours page 1) ───────────────
   const ribY = pageH - 78;
   doc.save().moveTo(L, ribY - 4).lineTo(R, ribY - 4)
      .strokeColor(C.border).lineWidth(0.5).stroke().restore();
@@ -292,16 +289,6 @@ export async function generateDocumentPdf(input: GeneratePdfInput): Promise<Buff
     doc.fontSize(6.5).fillColor(C.light).font("Helvetica")
        .text(company.legalMentions, L, pageH - 47, { width: W, align: "center", lineBreak: false });
   }
-
-  // Supprimer les pages supplémentaires si pdfkit en a créé
-  const range = doc.bufferedPageRange();
-  for (let i = range.start + range.count - 1; i > 0; i--) {
-    // pdfkit ne permet pas de supprimer une page, mais on peut la vider
-    doc.switchToPage(i);
-    // Couvrir toute la page en blanc pour masquer tout contenu parasite
-    doc.rect(0, 0, doc.page.width, doc.page.height).fill(C.white);
-  }
-  doc.switchToPage(0);
 
   doc.end();
   return pdfPromise;

@@ -1,1 +1,1 @@
-ALTER TABLE `company_settings` ADD COLUMN IF NOT EXISTS `tradeName` varchar(256);
+ALTER TABLE `company_settings` ADD `tradeName` varchar(256);

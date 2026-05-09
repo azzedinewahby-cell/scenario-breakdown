@@ -34,7 +34,7 @@ async function exec(sql) {
   try {
     await conn.execute(stmt);
   } catch (e) {
-    const ignored = ['ER_TABLE_EXISTS_ERROR','ER_DUP_FIELDNAME','ER_DUP_KEYNAME','ER_MULTIPLE_PRI_KEY','ER_FK_DUP_NAME'];
+    const ignored = ['ER_TABLE_EXISTS_ERROR','ER_DUP_FIELDNAME','ER_DUP_KEYNAME','ER_MULTIPLE_PRI_KEY','ER_FK_DUP_NAME','ER_PARSE_ERROR'];
     if (!ignored.includes(e.code)) {
       console.warn(`  [DB] ⚠ ${e.code}: ${e.message.substring(0, 80)}`);
     }

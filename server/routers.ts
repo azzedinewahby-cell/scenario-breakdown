@@ -1696,25 +1696,57 @@ Règles importantes:
         return await getInvoicesByUserId(ctx.user.id);
       }),
       create: protectedProcedure
-        .input(
-          z.object({
-            clientId: z.number(),
-            quoteId: z.number().optional(),
-            dueDate: z.date().optional(),
-            paymentMethod: z.string().optional(),
-          })
-        )
+        .input(z.object({
+          clientId: z.number(),
+          quoteId: z.number().optional(),
+          dueDate: z.date().optional(),
+          paymentMethod: z.string().optional(),
+        }))
         .mutation(async ({ ctx, input }) => {
           const { createInvoice, generateNextNumber } = await import("./db");
           const number = await generateNextNumber("FA", ctx.user.id);
-          return await createInvoice({
-            userId: ctx.user.id,
-            clientId: input.clientId,
-            quoteId: input.quoteId,
-            number,
-            dueDate: input.dueDate,
-            paymentMethod: input.paymentMethod,
-          });
+          return await createInvoice({ userId: ctx.user.id, clientId: input.clientId, quoteId: input.quoteId, number, dueDate: input.dueDate, paymentMethod: input.paymentMethod });
+        }),
+      createWithLines: protectedProcedure
+        .input(z.object({
+          clientId: z.number(),
+          newClient: z.object({ name: z.string(), email: z.string().optional(), phone: z.string().optional(), address: z.string().optional(), siret: z.string().optional(), vatNumber: z.string().optional() }).optional(),
+          lines: z.array(z.object({
+            productId: z.number().nullable(),
+            productName: z.string(),
+            newProduct: z.object({ name: z.string(), priceHT: z.number(), vatRate: z.number(), unit: z.string().optional(), description: z.string().optional() }).optional(),
+            quantity: z.number(),
+            unit: z.string().optional(),
+            unitPriceHT: z.number(),
+            vatRate: z.number(),
+          })),
+          paymentTerms: z.string().optional(),
+        }))
+        .mutation(async ({ ctx, input }) => {
+          const { generateNextNumber, createInvoice, createInvoiceLine, updateInvoice, createClient, getOrCreateProduct } = await import("./db");
+          const userId = ctx.user.id;
+          let clientId = input.clientId;
+          if (!clientId && input.newClient) {
+            const r = await createClient({ userId, name: input.newClient.name, email: input.newClient.email, phone: input.newClient.phone, address: input.newClient.address, siret: input.newClient.siret, vatNumber: input.newClient.vatNumber });
+            clientId = Number((r as any)[0]?.insertId ?? r);
+          }
+          const number = await generateNextNumber("FA", userId);
+          const dueDate = new Date(); dueDate.setDate(dueDate.getDate() + 30);
+          const invoiceId = Number(await createInvoice({ userId, clientId, number, dueDate, status: "brouillon" }));
+          let totalHT = 0, totalVAT = 0;
+          for (let i = 0; i < input.lines.length; i++) {
+            const line = input.lines[i];
+            let productId = line.productId ?? 0;
+            if (!productId && line.newProduct) {
+              productId = await getOrCreateProduct({ userId, name: line.newProduct.name, priceHT: line.newProduct.priceHT, vatRate: line.newProduct.vatRate, unit: line.newProduct.unit });
+            }
+            const lineHT = line.quantity * line.unitPriceHT;
+            const lineVAT = lineHT * (line.vatRate / 100);
+            totalHT += lineHT; totalVAT += lineVAT;
+            await createInvoiceLine({ invoiceId, productId, productName: line.productName || line.newProduct?.name, quantity: line.quantity, unitPriceHT: line.unitPriceHT, vatRate: line.vatRate, lineTotal: lineHT });
+          }
+          await updateInvoice(invoiceId, { totalHT, totalVAT, totalTTC: totalHT + totalVAT });
+          return { invoiceId, number };
         }),
       get: protectedProcedure
         .input(z.object({ invoiceId: z.number() }))

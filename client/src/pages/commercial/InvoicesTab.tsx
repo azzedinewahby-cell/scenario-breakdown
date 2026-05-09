@@ -6,6 +6,7 @@ import { Plus, Download, Trash2, X, CheckCircle, CreditCard } from "lucide-react
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import InvoiceFormDirect from "./InvoiceFormDirect";
 
 const STATUS_LABELS: Record<string, { label: string; color: string }> = {
   brouillon: { label: "Brouillon",  color: "bg-slate-100 text-slate-600"    },
@@ -57,21 +58,21 @@ export default function InvoicesTab() {
   };
 
   const handleCreate = async () => {
-    if (!formData.clientId || !formData.quoteId) {
-      alert("Veuillez sélectionner un client et un devis");
+    if (!formData.clientId) {
+      alert("Veuillez sélectionner un client");
       return;
     }
-
     try {
       await createMutation.mutateAsync({
         clientId: parseInt(formData.clientId),
-        quoteId: parseInt(formData.quoteId),
+        quoteId: formData.quoteId ? parseInt(formData.quoteId) : undefined,
         dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
       });
       setShowForm(false);
       setFormData({ clientId: "", quoteId: "", notes: "" });
-    } catch (error) {
-      console.error("Erreur création facture:", error);
+      utils.commercial.invoices.list.invalidate();
+    } catch (error: any) {
+      alert("Erreur : " + (error?.message ?? "inconnue"));
     }
   };
 
@@ -92,86 +93,8 @@ export default function InvoicesTab() {
       </div>
 
       {showForm && (
-        <Card className="p-6 bg-white border border-blue-200 bg-blue-50">
-          <div className="flex justify-between items-center mb-4">
-            <h3 className="text-lg font-semibold text-slate-900">
-              Créer une nouvelle facture
-            </h3>
-            <button
-              onClick={() => setShowForm(false)}
-              className="text-slate-500 hover:text-slate-700"
-            >
-              <X size={20} />
-            </button>
-          </div>
-
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="clientId">Client *</Label>
-              <select
-                id="clientId"
-                value={formData.clientId}
-                onChange={e =>
-                  setFormData({ ...formData, clientId: e.target.value })
-                }
-                className="w-full px-3 py-2 border border-slate-300 rounded-md"
-              >
-                <option value="">Sélectionner un client</option>
-                {clients?.map(client => (
-                  <option key={client.id} value={client.id}>
-                    {client.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <Label htmlFor="quoteId">Devis *</Label>
-              <select
-                id="quoteId"
-                value={formData.quoteId}
-                onChange={e =>
-                  setFormData({ ...formData, quoteId: e.target.value })
-                }
-                className="w-full px-3 py-2 border border-slate-300 rounded-md"
-              >
-                <option value="">Sélectionner un devis</option>
-                {quotes?.map(quote => (
-                  <option key={quote.id} value={quote.id}>
-                    {quote.number}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <Label htmlFor="notes">Notes</Label>
-              <Textarea
-                id="notes"
-                value={formData.notes}
-                onChange={e =>
-                  setFormData({ ...formData, notes: e.target.value })
-                }
-                placeholder="Notes additionnelles"
-                rows={3}
-              />
-            </div>
-
-            <div className="flex gap-2 justify-end">
-              <Button variant="outline" onClick={() => setShowForm(false)}>
-                Annuler
-              </Button>
-              <Button
-                onClick={handleCreate}
-                disabled={createMutation.isPending}
-              >
-                {createMutation.isPending ? "Création..." : "Créer la facture"}
-              </Button>
-            </div>
-          </div>
-        </Card>
+        <InvoiceFormDirect onSuccess={() => { setShowForm(false); utils.commercial.invoices.list.invalidate(); }} onCancel={() => setShowForm(false)} />
       )}
-
       {!invoices || invoices.length === 0 ? (
         <Card className="p-8 text-center bg-slate-50 border border-slate-200">
           <p className="text-slate-600">

@@ -12,7 +12,7 @@ export const COMPANY_INFO = {
   vatNumber: "",
 
   // Adresse
-  address: "72 avenue Henri Ginoux\n92120 MONTROUGE\nFrance",
+  address: "108 avenue Henri Ginoux\n92120 MONTROUGE\nFrance",
   phone: "",
   email: "",
   website: "lakabine.pro",

@@ -1523,7 +1523,7 @@ Règles importantes:
             quoteId: z.number(),
             data: z.object({
               status: z
-                .enum(["brouillon", "envoyé", "accepté", "refusé"])
+                .enum(["brouillon", "confirmé", "envoyé", "accepté", "refusé"])
                 .optional(),
               totalHT: z.number().optional(),
               totalVAT: z.number().optional(),

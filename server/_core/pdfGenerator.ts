@@ -55,6 +55,13 @@ function eur(cents: number, decimals = 2): string {
   }) + " €";
 }
 
+// Pour les valeurs déjà en euros (lignes de devis/facture)
+function eurVal(euros: number, decimals = 2): string {
+  return (euros ?? 0).toLocaleString("fr-FR", {
+    minimumFractionDigits: decimals, maximumFractionDigits: decimals
+  }) + " €";
+}
+
 function formatDate(date: Date | string | null | undefined): string {
   if (!date) return "—";
   const d = typeof date === "string" ? new Date(date) : date;
@@ -192,9 +199,9 @@ export async function generateDocumentPdf(input: GeneratePdfInput): Promise<Buff
     doc.text(line.productName,                                              cols.libelle.x, y+5, { width:cols.libelle.w });
     doc.text(line.quantity.toLocaleString("fr-FR",{minimumFractionDigits:2}), cols.qte.x, y+5, { width:cols.qte.w,     align:"right" });
     doc.text(line.unit ?? "u",                                             cols.unite.x,   y+5, { width:cols.unite.w                  });
-    doc.text(eur(line.unitPriceHT, 5),                                     cols.pu.x,      y+5, { width:cols.pu.w,      align:"right" });
+    doc.text(eurVal(line.unitPriceHT, 2),                                     cols.pu.x,      y+5, { width:cols.pu.w,      align:"right" });
     doc.text(`${(line.discount??0).toFixed(2)}%`,                          cols.rem.x,     y+5, { width:cols.rem.w,     align:"right" });
-    doc.text(eur(line.lineTotal),                                           cols.montant.x, y+5, { width:cols.montant.w, align:"right" });
+    doc.text(eurVal(line.lineTotal),                                           cols.montant.x, y+5, { width:cols.montant.w, align:"right" });
     doc.text(`${line.vatRate.toFixed(2)}%`,                                cols.tva.x,     y+5, { width:cols.tva.w,     align:"right" });
     // Bordure basse
     doc.moveTo(L, y+lh).lineTo(R, y+lh).strokeColor(C.border).lineWidth(0.3).stroke();
@@ -236,9 +243,9 @@ export async function generateDocumentPdf(input: GeneratePdfInput): Promise<Buff
   for (const [rate, vals] of vatByRate.entries()) {
     const label = rate===20?"Normale":rate===10?"Intermédiaire":rate===5.5?"Réduite":`${rate}%`;
     doc.text(label,             L+6,   tvaY+4);
-    doc.text(eur(vals.base),    L+70,  tvaY+4, { width:70, align:"right" });
+    doc.text(eurVal(vals.base),    L+70,  tvaY+4, { width:70, align:"right" });
     doc.text(`${rate.toFixed(2)}%`, L+150, tvaY+4, { width:40, align:"right" });
-    doc.text(eur(vals.vat),     L+195, tvaY+4, { width:55, align:"right" });
+    doc.text(eurVal(vals.vat),     L+195, tvaY+4, { width:55, align:"right" });
     tvaY += 15;
   }
 
@@ -253,23 +260,23 @@ export async function generateDocumentPdf(input: GeneratePdfInput): Promise<Buff
   doc.fontSize(8.5).fillColor(C.accent).font("Helvetica-Bold").text("Echéance(s)", L+4, echeY+4);
   if (dueDate) {
     doc.font("Helvetica").fillColor(C.text)
-       .text(`${eur(totalTTC)} au ${formatDate(dueDate)}`, L+88, echeY+4);
+       .text(`${eurVal(totalTTC)} au ${formatDate(dueDate)}`, L+88, echeY+4);
   }
 
   // ── Totaux (droite) ──
   const totX = 360, totW = 195;
   doc.fontSize(9).fillColor(C.text).font("Helvetica");
   doc.text("Total HT", totX, bottomY+4);
-  doc.text(eur(totalHT), totX, bottomY+4, { width:totW, align:"right" });
+  doc.text(eurVal(totalHT), totX, bottomY+4, { width:totW, align:"right" });
 
   doc.text("TVA", totX, bottomY+20);
-  doc.text(eur(totalVAT), totX, bottomY+20, { width:totW, align:"right" });
+  doc.text(eurVal(totalVAT), totX, bottomY+20, { width:totW, align:"right" });
 
   // Total TTC — bandeau accent
   doc.rect(totX-5, bottomY+40, totW+5, 28).fill(C.accent);
   doc.fontSize(11).fillColor(C.white).font("Helvetica-Bold");
   doc.text("Total TTC", totX, bottomY+49);
-  doc.text(eur(totalTTC), totX, bottomY+49, { width:totW, align:"right" });
+  doc.text(eurVal(totalTTC), totX, bottomY+49, { width:totW, align:"right" });
 
   // ── Montant en lettres ──
   const ttcVal = totalTTC / 100;

@@ -1,4 +1,5 @@
 import PDFDocument from "pdfkit";
+import path from "path";
 import type { Client } from "../../drizzle/schema";
 
 type DocumentType = "facture" | "devis" | "avoir";
@@ -33,35 +34,22 @@ type GeneratePdfInput = {
   notes?: string | null;
 };
 
+// ─── Palette Noir & Blanc ────────────────────────────────────────────────────
 const C = {
-  accent:     "#3FA8B0",
-  accentDark: "#2E8A91",
-  accentLight:"#E8F5F6",
-  text:       "#1f2937",
-  muted:      "#6b7280",
-  border:     "#d1d5db",
+  black:      "#000000",
+  dark:       "#1a1a1a",
+  mid:        "#555555",
+  light:      "#999999",
+  border:     "#cccccc",
+  bg:         "#f5f5f5",
   white:      "#ffffff",
-  rowAlt:     "#f9fafb",
 };
 
-function hex2rgb(hex: string): [number, number, number] {
-  const h = hex.replace("#", "");
-  return [parseInt(h.slice(0,2),16)/255, parseInt(h.slice(2,4),16)/255, parseInt(h.slice(4,6),16)/255];
-}
-
-function eur(cents: number, decimals = 2): string {
-  return ((cents ?? 0) / 100).toLocaleString("fr-FR", {
-    minimumFractionDigits: decimals, maximumFractionDigits: decimals
-  }) + " €";
-}
-
-// Pour les valeurs déjà en euros (lignes de devis/facture)
 function eurVal(euros: number, decimals = 2): string {
   const val = (euros ?? 0).toFixed(decimals);
-  // Formatage FR sans espace insécable (incompatible pdfkit)
   const [int, dec] = val.split(".");
   const intFormatted = int.replace(/\B(?=(\d{3})+(?!\d))/g, " ");
-  return `${intFormatted},${dec} €`;
+  return `${intFormatted},${dec} \u20ac`;
 }
 
 function formatDate(date: Date | string | null | undefined): string {
@@ -103,242 +91,222 @@ export async function generateDocumentPdf(input: GeneratePdfInput): Promise<Buff
 
   const docTitle = { facture:"FACTURE", devis:"DEVIS", avoir:"AVOIR" }[type];
 
-  const doc = new PDFDocument({ size:"A4", margins:{top:40,bottom:60,left:40,right:40}, bufferPages:true });
+  const doc = new PDFDocument({ size:"A4", margins:{top:36,bottom:55,left:40,right:40}, bufferPages:true });
   const buffers: Buffer[] = [];
   doc.on("data", b => buffers.push(b));
   const pdfPromise = new Promise<Buffer>(resolve => doc.on("end", () => resolve(Buffer.concat(buffers))));
 
   const L = 40, R = 555, W = 515;
+  const pageH = doc.page.height; // 841.89
 
-  // ─── HEADER ──────────────────────────────────────────────────────────────
+  // ─── LOGO + EN-TÊTE SOCIÉTÉ ───────────────────────────────────────────────
+  const logoPath = path.join(process.cwd(), "server", "assets", "logo.png");
+  try {
+    doc.image(logoPath, L, 36, { width: 48, height: 48 });
+  } catch {}
+
   const tradeName = company.tradeName || company.companyName;
-  doc.fontSize(12).fillColor(C.accent).font("Helvetica-Bold").text(tradeName, L, 40);
-
-  doc.fontSize(8.5).fillColor(C.text).font("Helvetica");
-  let cy = 56;
+  doc.fontSize(11).fillColor(C.black).font("Helvetica-Bold").text(tradeName, L + 56, 36);
+  doc.fontSize(8).fillColor(C.mid).font("Helvetica");
+  let cy = 50;
   if (company.address) {
-    for (const line of (company.address as string).split("\n")) { doc.text(line, L, cy); cy += 11; }
+    for (const line of (company.address as string).split("\n")) { doc.text(line, L + 56, cy); cy += 10; }
   }
-  if (company.email)  { doc.text(`Email : ${company.email}`, L, cy); cy += 11; }
-  if (company.siret)  { doc.text(`Siret : ${company.siret}`, L, cy); cy += 11; }
-  if (company.vatNumber && company.vatNumber !== "NC") {
-    doc.text(`N° TVA : ${company.vatNumber}`, L, cy);
-  }
+  if (company.email) { doc.text(`Email : ${company.email}`, L + 56, cy); cy += 10; }
+  doc.text(`Siret : ${company.siret}`, L + 56, cy); cy += 10;
 
   // Titre document (droite)
-  doc.fontSize(30).fillColor(C.accent).font("Helvetica-Bold")
-     .text(docTitle, 300, 38, { width: 255, align:"right" });
+  doc.fontSize(26).fillColor(C.black).font("Helvetica-Bold")
+     .text(docTitle, 300, 34, { width: 255, align: "right" });
 
   // Infos doc (droite)
-  let iy = 80;
-  doc.fontSize(9).fillColor(C.text).font("Helvetica");
-  doc.text(`N° : ${number}`, 300, iy, { width:255, align:"right" }); iy += 13;
-  doc.text(`Date d'émission : ${formatDate(issueDate)}`, 300, iy, { width:255, align:"right" }); iy += 13;
-  doc.text(`N° TVA : ${company.vatNumber || "NC"}`, 300, iy, { width:255, align:"right" }); iy += 13;
-  if (clientNumber) { doc.text(`N° client : ${clientNumber}`, 300, iy, { width:255, align:"right" }); }
+  let iy = 68;
+  doc.fontSize(8.5).fillColor(C.dark).font("Helvetica");
+  doc.text(`N\u00b0 : ${number}`, 300, iy, { width:255, align:"right" }); iy += 12;
+  doc.text(`Date d\u2019\u00e9mission : ${formatDate(issueDate)}`, 300, iy, { width:255, align:"right" }); iy += 12;
+  doc.text(`N\u00b0 TVA : ${company.vatNumber || "NC"}`, 300, iy, { width:255, align:"right" }); iy += 12;
+  if (clientNumber) { doc.text(`N\u00b0 client : ${clientNumber}`, 300, iy, { width:255, align:"right" }); }
 
   // ─── BLOC CLIENT ─────────────────────────────────────────────────────────
-  const clientY = 170;
-  doc.fontSize(10).fillColor(C.accent).font("Helvetica-Bold")
+  const clientY = 155;
+  doc.fontSize(10).fillColor(C.black).font("Helvetica-Bold")
      .text(client.name, 320, clientY, { width:235 });
-  doc.fontSize(8.5).fillColor(C.text).font("Helvetica");
-  let cly = clientY + 14;
+  doc.fontSize(8.5).fillColor(C.dark).font("Helvetica");
+  let cly = clientY + 13;
   if (client.address) {
-    for (const line of (client.address as string).split("\n")) { doc.text(line, 320, cly, { width:235 }); cly += 11; }
+    for (const line of (client.address as string).split("\n")) { doc.text(line, 320, cly, { width:235 }); cly += 10; }
   }
-  if (client.siret) { doc.text(`Siret : ${client.siret}`, 320, cly, { width:235 }); cly += 11; }
-  if (client.email) { doc.text(client.email, 320, cly, { width:235 }); cly += 11; }
+  if (client.siret) { doc.text(`Siret : ${client.siret}`, 320, cly, { width:235 }); cly += 10; }
+  if (client.email) { doc.text(client.email, 320, cly, { width:235 }); cly += 10; }
 
   // Ligne séparatrice
-  let y = Math.max(cly + 20, 260);
-  doc.moveTo(L, y).lineTo(R, y).strokeColor(C.border).lineWidth(0.5).stroke();
-  y += 12;
+  let y = Math.max(cly + 12, 230);
+  doc.save().moveTo(L, y).lineTo(R, y).strokeColor(C.border).lineWidth(0.5).stroke().restore();
+  y += 10;
 
   // ─── RÉFÉRENCE & DESCRIPTION ─────────────────────────────────────────────
   if (reference) {
-    doc.fontSize(9).fillColor(C.text).font("Helvetica-Bold")
-       .text(`Réf. : `, L, y, { continued:true })
-       .font("Helvetica").text(reference);
-    y += 14;
+    doc.fontSize(8.5).fillColor(C.dark).font("Helvetica-Bold")
+       .text(`R\u00e9f. : `, L, y, { continued:true })
+       .font("Helvetica").text(reference, { lineBreak:false });
+    y += 12;
   }
   if (description) {
-    doc.fontSize(9).fillColor(C.text).font("Helvetica")
+    doc.fontSize(8.5).fillColor(C.dark).font("Helvetica")
        .text(description, L, y, { width:W });
-    y += doc.heightOfString(description, { width:W }) + 10;
-  } else { y += 6; }
+    y += doc.heightOfString(description, { width:W }) + 8;
+  } else { y += 4; }
 
   // ─── TABLEAU ─────────────────────────────────────────────────────────────
   const cols = {
-    libelle: { x: L+6,   w: 195 },
-    qte:     { x: L+205, w: 38  },
-    unite:   { x: L+247, w: 32  },
-    pu:      { x: L+283, w: 68  },
-    rem:     { x: L+355, w: 38  },
-    montant: { x: L+397, w: 68  },
-    tva:     { x: L+469, w: 42  },
+    libelle: { x: L+5,   w: 190 },
+    qte:     { x: L+198, w: 36  },
+    unite:   { x: L+237, w: 30  },
+    pu:      { x: L+270, w: 70  },
+    rem:     { x: L+343, w: 36  },
+    montant: { x: L+382, w: 68  },
+    tva:     { x: L+453, w: 58  },
   };
 
-  // Header tableau — fond accent, texte blanc
-  const rowH = 20;
-  doc.rect(L, y, W, rowH).fill(C.accent);
-  doc.fontSize(8.5).fillColor(C.white).font("Helvetica-Bold");
-  doc.text("Libellé",     cols.libelle.x, y+6);
-  doc.text("Qté",         cols.qte.x,     y+6, { width:cols.qte.w,     align:"right" });
-  doc.text("Unité",       cols.unite.x,   y+6, { width:cols.unite.w                  });
-  doc.text("PU HT",       cols.pu.x,      y+6, { width:cols.pu.w,      align:"right" });
-  doc.text("Rem.",        cols.rem.x,     y+6, { width:cols.rem.w,     align:"right" });
-  doc.text("Montant HT",  cols.montant.x, y+6, { width:cols.montant.w, align:"right" });
-  doc.text("TVA",         cols.tva.x,     y+6, { width:cols.tva.w,     align:"right" });
-  y += rowH;
+  // Header tableau — fond noir, texte blanc
+  doc.rect(L, y, W, 18).fill(C.black);
+  doc.fontSize(8).fillColor(C.white).font("Helvetica-Bold");
+  doc.text("Libellé",      cols.libelle.x, y+5, { lineBreak:false });
+  doc.text("Qté",          cols.qte.x,     y+5, { width:cols.qte.w,     align:"right", lineBreak:false });
+  doc.text("Unité",        cols.unite.x,   y+5, { lineBreak:false });
+  doc.text("PU HT",        cols.pu.x,      y+5, { width:cols.pu.w,      align:"right", lineBreak:false });
+  doc.text("Rem.",         cols.rem.x,     y+5, { width:cols.rem.w,     align:"right", lineBreak:false });
+  doc.text("Montant HT",   cols.montant.x, y+5, { width:cols.montant.w, align:"right", lineBreak:false });
+  doc.text("TVA",          cols.tva.x,     y+5, { width:cols.tva.w,     align:"right", lineBreak:false });
+  y += 18;
 
   // Lignes
-  doc.fontSize(8.5).fillColor(C.text).font("Helvetica");
   lines.forEach((line, i) => {
-    const textH = Math.max(doc.heightOfString(line.productName, { width:cols.libelle.w }), 10);
-    const lh = textH + 10;
-    if (i % 2 === 1) { doc.rect(L, y, W, lh).fill(C.rowAlt); }
-    doc.fillColor(C.text);
-    doc.text(line.productName,                                              cols.libelle.x, y+5, { width:cols.libelle.w });
-    doc.text(line.quantity.toLocaleString("fr-FR",{minimumFractionDigits:2}), cols.qte.x, y+5, { width:cols.qte.w,     align:"right" });
-    doc.text(line.unit ?? "u",                                             cols.unite.x,   y+5, { width:cols.unite.w                  });
-    doc.text(eurVal(line.unitPriceHT, 2),                                     cols.pu.x,      y+5, { width:cols.pu.w,      align:"right" });
-    doc.text(`${(line.discount??0).toFixed(2)}%`,                          cols.rem.x,     y+5, { width:cols.rem.w,     align:"right" });
-    doc.text(eurVal(line.lineTotal),                                           cols.montant.x, y+5, { width:cols.montant.w, align:"right" });
-    doc.text(`${line.vatRate.toFixed(2)}%`,                                cols.tva.x,     y+5, { width:cols.tva.w,     align:"right" });
-    // Bordure basse
-    doc.moveTo(L, y+lh).lineTo(R, y+lh).strokeColor(C.border).lineWidth(0.3).stroke();
+    const lh = 16;
+    if (i % 2 === 1) { doc.rect(L, y, W, lh).fill(C.bg); }
+    doc.fillColor(C.dark).font("Helvetica").fontSize(8);
+    doc.text(line.productName,                                                 cols.libelle.x, y+4, { width:cols.libelle.w, lineBreak:false });
+    doc.text(line.quantity.toFixed(2),                                         cols.qte.x,     y+4, { width:cols.qte.w,     align:"right", lineBreak:false });
+    doc.text(line.unit ?? "u",                                                 cols.unite.x,   y+4, { lineBreak:false });
+    doc.text(eurVal(line.unitPriceHT, 2),                                      cols.pu.x,      y+4, { width:cols.pu.w,      align:"right", lineBreak:false });
+    doc.text(`${(line.discount??0).toFixed(2)}%`,                              cols.rem.x,     y+4, { width:cols.rem.w,     align:"right", lineBreak:false });
+    doc.text(eurVal(line.lineTotal),                                            cols.montant.x, y+4, { width:cols.montant.w, align:"right", lineBreak:false });
+    doc.text(`${line.vatRate.toFixed(2)}%`,                                    cols.tva.x,     y+4, { width:cols.tva.w,     align:"right", lineBreak:false });
+    doc.save().moveTo(L, y+lh).lineTo(R, y+lh).strokeColor(C.border).lineWidth(0.3).stroke().restore();
     y += lh;
-    if (y > 680) { doc.addPage(); y = 50; }
   });
 
-  y += 8;
-  doc.fontSize(8).fillColor(C.muted).font("Helvetica")
-     .text("Type de vente : Vente de services", L, y);
-  y += 20;
+  y += 6;
+  doc.fontSize(7.5).fillColor(C.light).font("Helvetica")
+     .text("Type de vente : Vente de services", L, y, { lineBreak:false });
 
-  // ─── BAS DE PAGE (dynamique) ─────────────────────────────────────────────
-  // On calcule la hauteur nécessaire en bas et on se positionne au moins à y ou à 580
-  const bottomY = Math.max(y + 10, 570);
+  // ─── BAS DE PAGE (positionné fixe par rapport au bas) ────────────────────
+  const bottomY = pageH - 220;
 
   // ── Détail TVA (gauche) ──
-  doc.rect(L, bottomY, 255, 20).fill(C.accent);
-  doc.fontSize(9).fillColor(C.white).font("Helvetica-Bold")
-     .text("Détail de la TVA", L+6, bottomY+6);
+  doc.rect(L, bottomY, 250, 16).fill(C.black);
+  doc.fontSize(8).fillColor(C.white).font("Helvetica-Bold")
+     .text("Détail de la TVA", L+4, bottomY+4, { lineBreak:false });
 
-  let tvaY = bottomY + 20;
-  // Sous-header TVA
-  doc.fontSize(8.5).fillColor(C.text).font("Helvetica-Bold");
-  doc.text("Code",    L+6,   tvaY+4);
-  doc.text("Base HT", L+70,  tvaY+4, { width:70, align:"right" });
-  doc.text("Taux",    L+150, tvaY+4, { width:40, align:"right" });
-  doc.text("Montant", L+195, tvaY+4, { width:55, align:"right" });
-  tvaY += 16;
+  let tvaY = bottomY + 16;
+  doc.fontSize(7.5).fillColor(C.dark).font("Helvetica-Bold");
+  doc.text("Code",    L+4,   tvaY+3, { lineBreak:false });
+  doc.text("Base HT", L+70,  tvaY+3, { width:65, align:"right", lineBreak:false });
+  doc.text("Taux",    L+145, tvaY+3, { width:35, align:"right", lineBreak:false });
+  doc.text("Montant", L+185, tvaY+3, { width:60, align:"right", lineBreak:false });
+  tvaY += 14;
 
   const vatByRate = new Map<number, { base: number; vat: number }>();
   for (const line of lines) {
     const e = vatByRate.get(line.vatRate) ?? { base:0, vat:0 };
     e.base += line.lineTotal;
-    e.vat  += Math.round(line.lineTotal * line.vatRate / 100);
+    e.vat  += Math.round(line.lineTotal * line.vatRate / 100 * 100) / 100;
     vatByRate.set(line.vatRate, e);
   }
-  doc.font("Helvetica").fillColor(C.text);
+  doc.font("Helvetica").fillColor(C.dark).fontSize(7.5);
   for (const [rate, vals] of vatByRate.entries()) {
     const label = rate===20?"Normale":rate===10?"Intermédiaire":rate===5.5?"Réduite":`${rate}%`;
-    doc.text(label,             L+6,   tvaY+4);
-    doc.text(eurVal(vals.base),    L+70,  tvaY+4, { width:70, align:"right" });
-    doc.text(`${rate.toFixed(2)}%`, L+150, tvaY+4, { width:40, align:"right" });
-    doc.text(eurVal(vals.vat),     L+195, tvaY+4, { width:55, align:"right" });
-    tvaY += 15;
+    doc.text(label,             L+4,   tvaY+2, { lineBreak:false });
+    doc.text(eurVal(vals.base), L+70,  tvaY+2, { width:65, align:"right", lineBreak:false });
+    doc.text(`${rate.toFixed(2)}%`, L+145, tvaY+2, { width:35, align:"right", lineBreak:false });
+    doc.text(eurVal(vals.vat),  L+185, tvaY+2, { width:60, align:"right", lineBreak:false });
+    tvaY += 13;
   }
 
-  // ── Règlement ──
-  const regY = tvaY + 10;
-  doc.rect(L, regY, 80, 16).fill(C.accentLight);
-  doc.fontSize(8.5).fillColor(C.accent).font("Helvetica-Bold").text("Règlement", L+4, regY+4);
-  doc.font("Helvetica").fillColor(C.text).text(paymentMethod || "Virement", L+88, regY+4);
-
-  const echeY = regY + 18;
-  doc.rect(L, echeY, 80, 16).fill(C.accentLight);
-  doc.fontSize(8.5).fillColor(C.accent).font("Helvetica-Bold").text("Echéance(s)", L+4, echeY+4);
+  // ── Règlement / Échéance ──
+  const regY = tvaY + 6;
+  doc.fontSize(8).fillColor(C.dark).font("Helvetica-Bold").text("Règlement :", L, regY, { continued:true })
+     .font("Helvetica").text(`  ${paymentMethod || "Virement"}`, { lineBreak:false });
   if (dueDate) {
-    doc.font("Helvetica").fillColor(C.text)
-       .text(`${eurVal(totalTTC)} au ${formatDate(dueDate)}`, L+88, echeY+4);
+    doc.font("Helvetica-Bold").text("Échéance(s) :", L, regY + 12, { continued:true })
+       .font("Helvetica").text(`  ${eurVal(totalTTC)} au ${formatDate(dueDate)}`, { lineBreak:false });
   }
 
   // ── Totaux (droite) ──
-  const totX = 360, totW = 195;
-  doc.fontSize(9).fillColor(C.text).font("Helvetica");
-  doc.text("Total HT", totX, bottomY+4);
-  doc.text(eurVal(totalHT), totX, bottomY+4, { width:totW, align:"right" });
+  const totX = 355, totW = 200;
+  doc.fontSize(9).fillColor(C.dark).font("Helvetica");
+  doc.text("Total HT",  totX, bottomY+4,  { width:totW, lineBreak:false });
+  doc.text(eurVal(totalHT),  totX, bottomY+4,  { width:totW, align:"right", lineBreak:false });
+  doc.text("TVA",       totX, bottomY+18, { width:totW, lineBreak:false });
+  doc.text(eurVal(totalVAT), totX, bottomY+18, { width:totW, align:"right", lineBreak:false });
 
-  doc.text("TVA", totX, bottomY+20);
-  doc.text(eurVal(totalVAT), totX, bottomY+20, { width:totW, align:"right" });
-
-  // Total TTC — bandeau accent
-  doc.rect(totX-5, bottomY+40, totW+5, 28).fill(C.accent);
-  doc.fontSize(11).fillColor(C.white).font("Helvetica-Bold");
-  doc.text("Total TTC", totX, bottomY+49);
-  doc.text(eurVal(totalTTC), totX, bottomY+49, { width:totW, align:"right" });
+  // Total TTC — bandeau noir
+  doc.rect(totX-5, bottomY+36, totW+5, 24).fill(C.black);
+  doc.fontSize(10).fillColor(C.white).font("Helvetica-Bold");
+  doc.text("Total TTC", totX, bottomY+43, { lineBreak:false });
+  doc.text(eurVal(totalTTC), totX, bottomY+43, { width:totW, align:"right", lineBreak:false });
 
   // ── Montant en lettres ──
-  const ttcVal = totalTTC; // déjà en euros
-  const entiers = Math.floor(ttcVal);
-  const centimes = Math.round((ttcVal - entiers) * 100);
+  const entiers = Math.floor(totalTTC);
+  const centimes = Math.round((totalTTC - entiers) * 100);
   const enLettres = nbEnLettres(entiers) + (centimes > 0 ? ` euros et ${nbEnLettres(centimes)} centimes` : " euros");
-  const lettresY = echeY + 40;
-  doc.fontSize(8).fillColor(C.text).font("Helvetica")
-     .text(`Le montant total s'élève à ${enLettres}`, L, lettresY, { width: W });
+  const lettresY = regY + 28;
+  doc.fontSize(7.5).fillColor(C.dark).font("Helvetica")
+     .text(`Le montant total s\u2019\u00e9l\u00e8ve \u00e0 ${enLettres}`, L, lettresY, { width:W });
 
-  // ── Conditions de paiement ──
+  // ── Conditions ──
   if (company.paymentConditions) {
-    doc.fontSize(7).fillColor(C.muted).font("Helvetica")
-       .text(company.paymentConditions, L, lettresY + 12, { width: W });
+    doc.fontSize(7).fillColor(C.light).font("Helvetica")
+       .text(company.paymentConditions, L, lettresY + 11, { width: W });
   }
 
-  // ─── RIB ─────────────────────────────────────────────────────────────────
-  const pageH = doc.page.height;
-  const ribY = pageH - 108;
-
-  // Ligne séparatrice
-  doc.save().moveTo(L, ribY - 6).lineTo(R, ribY - 6)
+  // ─── RIB compact ─────────────────────────────────────────────────────────
+  const ribY = pageH - 88;
+  doc.save().moveTo(L, ribY - 5).lineTo(R, ribY - 5)
      .strokeColor(C.border).lineWidth(0.5).stroke().restore();
 
-  // En-tête RIB
-  doc.rect(L, ribY, W, 16).fill(C.accentLight);
-  doc.fontSize(8).fillColor(C.accent).font("Helvetica-Bold")
-     .text("COORDONNÉES BANCAIRES", L + 4, ribY + 4, { lineBreak: false });
+  // Header RIB
+  doc.rect(L, ribY, W, 13).fill(C.black);
+  doc.fontSize(7).fillColor(C.white).font("Helvetica-Bold")
+     .text("COORDONNÉES BANCAIRES", L+4, ribY+3, { lineBreak:false });
 
-  // Fond du bloc données
-  doc.rect(L, ribY + 16, W, 32).fillColor("#fafafa").fill();
-  doc.rect(L, ribY + 16, W, 32).strokeColor(C.border).lineWidth(0.3).stroke();
+  // Bloc données RIB
+  doc.rect(L, ribY+13, W, 22).fill(C.bg);
 
-  // Colonnes : Titulaire | Banque | IBAN | BIC
-  const cols2 = [
-    { label: "Titulaire", value: company.bankOwner || "LES CRE'ARTEURS", x: L + 4,   w: 96  },
-    { label: "Banque",    value: company.bankName  || "CIC MONTROUGE",   x: L + 104,  w: 96  },
-    { label: "IBAN",      value: company.iban      || "FR76 3006 6107 3100 0201 1710 183", x: L + 204, w: 216 },
-    { label: "BIC",       value: company.bic       || "CMCIFRPP",        x: L + 424,  w: 87  },
+  const ribCols = [
+    { label:"Titulaire", value: company.bankOwner || "LES CRE'ARTEURS",                    x: L+4,   w: 96  },
+    { label:"Banque",    value: company.bankName  || "CIC MONTROUGE",                       x: L+104, w: 96  },
+    { label:"IBAN",      value: company.iban      || "FR76 3006 6107 3100 0201 1710 183",   x: L+204, w: 214 },
+    { label:"BIC",       value: company.bic       || "CMCIFRPP",                            x: L+422, w: 89  },
   ];
 
-  cols2.forEach((col, i) => {
-    doc.fontSize(7).fillColor(C.muted).font("Helvetica")
-       .text(col.label, col.x, ribY + 19, { width: col.w, lineBreak: false });
-    doc.fontSize(8).fillColor(C.text).font("Helvetica-Bold")
-       .text(col.value, col.x, ribY + 29, { width: col.w, lineBreak: false });
-    // Séparateur vertical (sauf dernier)
-    if (i < cols2.length - 1) {
-      const sepX = col.x + col.w + 4;
-      doc.save().moveTo(sepX, ribY + 16).lineTo(sepX, ribY + 48)
+  ribCols.forEach((col, i) => {
+    doc.fontSize(6.5).fillColor(C.light).font("Helvetica")
+       .text(col.label, col.x, ribY+16, { lineBreak:false });
+    doc.fontSize(7.5).fillColor(C.dark).font("Helvetica-Bold")
+       .text(col.value, col.x, ribY+24, { width: col.w, lineBreak:false });
+    if (i < ribCols.length - 1) {
+      doc.save().moveTo(col.x + col.w, ribY+13).lineTo(col.x + col.w, ribY+35)
          .strokeColor(C.border).lineWidth(0.3).stroke().restore();
     }
   });
 
   // ─── FOOTER ──────────────────────────────────────────────────────────────
-  doc.moveTo(L, pageH - 50).lineTo(R, pageH - 50)
-     .strokeColor(C.border).lineWidth(0.5).stroke();
+  doc.save().moveTo(L, pageH - 46).lineTo(R, pageH - 46)
+     .strokeColor(C.border).lineWidth(0.5).stroke().restore();
   if (company.legalMentions) {
-    doc.fontSize(7).fillColor(C.muted).font("Helvetica")
-       .text(company.legalMentions, L, pageH - 44, { width: W, align: "center" });
+    doc.fontSize(6.5).fillColor(C.light).font("Helvetica")
+       .text(company.legalMentions, L, pageH - 41, { width: W, align: "center" });
   }
 
   doc.end();

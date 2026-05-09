@@ -262,34 +262,46 @@ export async function generateDocumentPdf(input: GeneratePdfInput): Promise<Buff
   const enLettres = nbEnLettres(entiers) + (centimes > 0 ? ` euros et ${nbEnLettres(centimes)} centimes` : " euros");
   const lettresY = regY + 28;
   doc.fontSize(7.5).fillColor(C.dark).font("Helvetica")
-     .text(`Le montant total s\u2019\u00e9l\u00e8ve \u00e0 ${enLettres}`, L, lettresY, { width:W });
+     .text(`Le montant total s\u2019\u00e9l\u00e8ve \u00e0 ${enLettres}`, L, lettresY, { width: W, lineBreak: false });
 
   // ── Conditions ──
   if (company.paymentConditions) {
     doc.fontSize(7).fillColor(C.light).font("Helvetica")
-       .text(company.paymentConditions, L, lettresY + 11, { width: W });
+       .text(company.paymentConditions, L, lettresY + 11, { width: W, height: 28, lineBreak: true });
   }
 
-  // ─── RIB + FOOTER : forcer sur la page 1 ────────────────────────────────
+  // ─── RIB + FOOTER : toujours sur la page 1 ───────────────────────────────
+  // On revient sur la page 0 et on dessine à coordonnées absolues fixes
   doc.switchToPage(0);
 
-  // RIB (une seule ligne)
   const ribY = pageH - 78;
   doc.save().moveTo(L, ribY - 4).lineTo(R, ribY - 4)
      .strokeColor(C.border).lineWidth(0.5).stroke().restore();
 
   doc.fontSize(7).fillColor(C.dark).font("Helvetica-Bold")
-     .text("RIB — ", L, ribY, { continued: true })
+     .text("RIB \u2014 ", L, ribY, { continued: true })
      .font("Helvetica")
-     .text(`Titulaire : ${company.bankOwner || "LES CRE'ARTEURS"}   |   Banque : ${company.bankName || "CIC MONTROUGE"}   |   IBAN : ${company.iban || "FR76 3006 6107 3100 0201 1710 183"}   |   BIC : ${company.bic || "CMCIFRPP"}`, { lineBreak: false });
+     .text(
+       `Titulaire : ${company.bankOwner || "LES CRE'ARTEURS"}   |   Banque : ${company.bankName || "CIC MONTROUGE"}   |   IBAN : ${company.iban || "FR76 3006 6107 3100 0201 1710 183"}   |   BIC : ${company.bic || "CMCIFRPP"}`,
+       { lineBreak: false }
+     );
 
-  // Footer
   doc.save().moveTo(L, pageH - 52).lineTo(R, pageH - 52)
      .strokeColor(C.border).lineWidth(0.5).stroke().restore();
   if (company.legalMentions) {
     doc.fontSize(6.5).fillColor(C.light).font("Helvetica")
        .text(company.legalMentions, L, pageH - 47, { width: W, align: "center", lineBreak: false });
   }
+
+  // Supprimer les pages supplémentaires si pdfkit en a créé
+  const range = doc.bufferedPageRange();
+  for (let i = range.start + range.count - 1; i > 0; i--) {
+    // pdfkit ne permet pas de supprimer une page, mais on peut la vider
+    doc.switchToPage(i);
+    // Couvrir toute la page en blanc pour masquer tout contenu parasite
+    doc.rect(0, 0, doc.page.width, doc.page.height).fill(C.white);
+  }
+  doc.switchToPage(0);
 
   doc.end();
   return pdfPromise;

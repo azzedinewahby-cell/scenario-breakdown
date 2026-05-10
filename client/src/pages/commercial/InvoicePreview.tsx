@@ -59,7 +59,7 @@ export default function InvoicePreview({ invoiceId, onClose, onDownload }: Props
           {/* HEADER */}
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", padding: "18px 36px 14px" }}>
             <div style={{ display: "flex", alignItems: "flex-start", gap: "10px" }}>
-              <img src="/assets/logo.png" alt="Logo" style={{ width: "44px", height: "auto", objectFit: "contain" }} onError={e => (e.currentTarget.style.display = "none")} />
+              <img src="/assets/logo.png" alt="Logo" style={{ width: "52px", height: "52px", objectFit: "contain", objectPosition: "left center" }} onError={e => (e.currentTarget.style.display = "none")} />
               <div>
                 <div style={{ fontSize: "13px", fontWeight: 700, letterSpacing: "0.4px", color: "#111", marginBottom: "5px" }}>
                   LA KABINE PRODUCTION

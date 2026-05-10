@@ -53,8 +53,9 @@ export async function generateDocumentPdf(input: Input): Promise<Buffer> {
   // ── EN-TÊTE : émetteur gauche ─────────────────────────────────────────────
   const tradeName = (company.tradeName||company.companyName||"").toUpperCase();
   txt(tradeName, ML, 20, { bold:true, size:13 });
+  const formatAddr = (addr: string) => addr.split("\n").flatMap(l => l.length > 45 ? l.split(", ").filter(Boolean) : [l]);
   let hy = 36;
-  for (const l of [...(company.address||"").split("\n"), company.email?`Email : ${company.email}`:null, company.siret?`Siret : ${company.siret}`:null].filter(Boolean) as string[]) {
+  for (const l of [...formatAddr(company.address||""), company.email?`Email : ${company.email}`:null, company.siret?`Siret : ${company.siret}`:null].filter(Boolean) as string[]) {
     txt(l, ML, hy, { size:8.5, color:"#666666" }); hy += 11;
   }
 
@@ -73,7 +74,8 @@ export async function generateDocumentPdf(input: Input): Promise<Buffer> {
   doc.rect(CX, CY - 4, CW, 1.5).fill("#111111");
   txt(client.name, CX + 3, CY + 5, { bold:true, size:10, width:CW - 6 });
   let cy = CY + 18;
-  for (const l of [...(client.address||"").split("\n"), client.siret?`Siret : ${client.siret}`:null, client.email||null].filter(Boolean) as string[]) {
+  const formatAddress = (addr: string) => addr.split("\n").flatMap(l => l.split(", ").filter(Boolean));
+  for (const l of [...formatAddress(client.address||""), client.siret?`Siret : ${client.siret}`:null, client.email||null].filter(Boolean) as string[]) {
     txt(l, CX + 3, cy, { size:8.5, color:"#555555", width:CW - 6 }); cy += 11;
   }
 

@@ -1407,14 +1407,16 @@ Règles importantes:
           // Lignes
           lines: z.array(z.object({
             productId: z.number().optional(),
+            productName: z.string().optional(),
             newProduct: z.object({
               name: z.string().min(1),
               description: z.string().optional(),
               priceHT: z.number().nonnegative(),
               vatRate: z.number().min(0).max(100).default(20),
-              unit: z.enum(["heure", "jour", "forfait"]).default("forfait"),
+              unit: z.string().default("forfait"),
             }).optional(),
             quantity: z.number().positive(),
+            unit: z.string().default("forfait"),
             unitPriceHT: z.number().nonnegative(),
             vatRate: z.number().min(0).max(100).default(20),
           })).min(1, "Au moins une ligne est requise"),

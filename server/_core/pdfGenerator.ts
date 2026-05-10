@@ -4,7 +4,7 @@ import type { Client } from "../../drizzle/schema";
 
 type DocumentType = "facture" | "devis" | "avoir";
 
-type LineWithProduct = {
+type LineItem = {
   productName: string;
   description?: string | null;
   quantity: number;
@@ -26,290 +26,297 @@ type GeneratePdfInput = {
   client: Client;
   clientNumber?: string;
   company: any;
-  lines: LineWithProduct[];
+  lines: LineItem[];
   totalHT: number;
   totalVAT: number;
   totalTTC: number;
   paymentMethod?: string | null;
   notes?: string | null;
+  acompteAmount?: number;
+  acompteDate?: Date | null;
+  resteAPayer?: number;
 };
 
-// ─── Palette Noir & Blanc ────────────────────────────────────────────────────
-const C = {
-  black:      "#000000",
-  dark:       "#1a1a1a",
-  mid:        "#555555",
-  light:      "#999999",
-  border:     "#cccccc",
-  bg:         "#f5f5f5",
-  white:      "#ffffff",
-};
-
-function eurVal(euros: number, decimals = 2): string {
-  const val = (euros ?? 0).toFixed(decimals);
-  const [int, dec] = val.split(".");
-  const intFormatted = int.replace(/\B(?=(\d{3})+(?!\d))/g, " ");
-  return `${intFormatted},${dec} \u20ac`;
+function fmt(n: number, dec = 2): string {
+  const s = Math.abs(n).toFixed(dec);
+  const [int, d] = s.split(".");
+  const intF = int.replace(/\B(?=(\d{3})+(?!\d))/g, "\u202f");
+  return `${n < 0 ? "-" : ""}${intF},${d}\u202f\u20ac`;
 }
 
-function formatDate(date: Date | string | null | undefined): string {
-  if (!date) return "—";
-  const d = typeof date === "string" ? new Date(date) : date;
-  return d.toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit", year: "numeric" });
+function fmtDate(d: Date | string | null | undefined): string {
+  if (!d) return "";
+  const dt = typeof d === "string" ? new Date(d) : d;
+  return dt.toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit", year: "numeric" });
 }
 
-function nbEnLettres(n: number): string {
+function toWords(n: number): string {
   if (n === 0) return "zéro";
-  const units = ["","un","deux","trois","quatre","cinq","six","sept","huit","neuf",
-                 "dix","onze","douze","treize","quatorze","quinze","seize","dix-sept","dix-huit","dix-neuf"];
-  const tens  = ["","","vingt","trente","quarante","cinquante","soixante","soixante","quatre-vingt","quatre-vingt"];
+  const u = ["","un","deux","trois","quatre","cinq","six","sept","huit","neuf",
+             "dix","onze","douze","treize","quatorze","quinze","seize","dix-sept","dix-huit","dix-neuf"];
+  const t = ["","","vingt","trente","quarante","cinquante","soixante","soixante","quatre-vingt","quatre-vingt"];
   const lt100 = (x: number): string => {
-    if (x < 20) return units[x];
-    const t = Math.floor(x/10), u = x%10;
-    if (t===7||t===9) return tens[t]+"-"+(t===7&&u===1?"et-":"")+units[10+u];
-    if (u===0) return tens[t]+(t===8?"s":"");
-    if (u===1&&t<8) return tens[t]+"-et-un";
-    return tens[t]+"-"+units[u];
+    if (x<20) return u[x];
+    const [q,r] = [Math.floor(x/10), x%10];
+    if (q===7||q===9) return t[q]+"-"+(q===7&&r===1?"et-":"")+u[10+r];
+    if (r===0) return t[q]+(q===8?"s":"");
+    if (r===1&&q<8) return t[q]+"-et-un";
+    return t[q]+"-"+u[r];
   };
   const lt1000 = (x: number): string => {
     if (x<100) return lt100(x);
-    const c=Math.floor(x/100),r=x%100;
-    const cent=c===1?"cent":units[c]+" cent"+(r===0?"s":"");
+    const [c,r] = [Math.floor(x/100), x%100];
+    const cent = c===1?"cent":u[c]+" cent"+(r===0?"s":"");
     return r===0?cent:cent+" "+lt100(r);
   };
   if (n<1000) return lt1000(n);
   if (n<1000000) {
-    const k=Math.floor(n/1000),r=n%1000;
+    const [k,r] = [Math.floor(n/1000), n%1000];
     return (k===1?"mille":lt1000(k)+" mille")+(r===0?"":" "+lt1000(r));
   }
   return n.toString();
 }
 
+// ─── couleurs & constantes ────────────────────────────────────────────────────
+const BLK = "#111111";
+const GRY = "#777777";
+const LGT = "#aaaaaa";
+const WHT = "#ffffff";
+const BDR = "#cccccc";
+const BG2 = "#f7f7f7";
+
 export async function generateDocumentPdf(input: GeneratePdfInput): Promise<Buffer> {
-  const { type, number, issueDate, dueDate, reference, description,
-          client, clientNumber, company, lines, totalHT, totalVAT, totalTTC, paymentMethod } = input;
+  const { type, number, issueDate, dueDate, client, company,
+          lines, totalHT, totalVAT, totalTTC, paymentMethod,
+          acompteAmount = 0, acompteDate, resteAPayer = 0 } = input;
 
-  const docTitle = { facture:"FACTURE", devis:"DEVIS", avoir:"AVOIR" }[type];
+  const TITLE = { facture: "FACTURE", devis: "DEVIS", avoir: "AVOIR" }[type];
 
-  const doc = new PDFDocument({ size:"A4", margins:{top:36,bottom:0,left:40,right:40}, bufferPages:true });
-  const buffers: Buffer[] = [];
-  doc.on("data", b => buffers.push(b));
-  const pdfPromise = new Promise<Buffer>(resolve => doc.on("end", () => resolve(Buffer.concat(buffers))));
-
-  const L = 40, R = 555, W = 515;
-  const pageH = doc.page.height; // 841.89
-
-  // ─── LOGO + EN-TÊTE SOCIÉTÉ ───────────────────────────────────────────────
-  // Logo isolé dans save/restore pour éviter contamination de l'état graphique
-  const logoPath = path.join(process.cwd(), "server", "assets", "logo.png");
-  try {
-    doc.save();
-    doc.image(logoPath, L, 36, { width: 45 });
-    doc.restore();
-    doc.fillColor(C.black).strokeColor(C.black); // reset explicite après le logo
-  } catch {}
-
-  const tradeName = company.tradeName || company.companyName;
-  doc.fontSize(11).fillColor(C.black).font("Helvetica-Bold").text(tradeName, L + 56, 36);
-  doc.fontSize(8).fillColor(C.mid).font("Helvetica");
-  let cy = 50;
-  if (company.address) {
-    for (const line of (company.address as string).split("\n")) { doc.text(line, L + 56, cy); cy += 10; }
-  }
-  if (company.email) { doc.text(`Email : ${company.email}`, L + 56, cy); cy += 10; }
-  doc.text(`Siret : ${company.siret}`, L + 56, cy); cy += 10;
-
-  // Titre document (droite)
-  doc.fontSize(26).fillColor(C.black).font("Helvetica-Bold")
-     .text(docTitle, 300, 34, { width: 255, align: "right" });
-
-  // Infos doc (droite)
-  let iy = 68;
-  doc.fontSize(8.5).fillColor(C.dark).font("Helvetica");
-  doc.text(`N\u00b0 : ${number}`, 300, iy, { width:255, align:"right" }); iy += 12;
-  doc.text(`Date d\u2019\u00e9mission : ${formatDate(issueDate)}`, 300, iy, { width:255, align:"right" }); iy += 12;
-  doc.text(`N\u00b0 TVA : ${company.vatNumber || "NC"}`, 300, iy, { width:255, align:"right" }); iy += 12;
-  if (clientNumber) { doc.text(`N\u00b0 client : ${clientNumber}`, 300, iy, { width:255, align:"right" }); }
-
-  // ─── BLOC CLIENT ─────────────────────────────────────────────────────────
-  const clientY = 155;
-  doc.fontSize(10).fillColor(C.black).font("Helvetica-Bold")
-     .text(client.name, 320, clientY, { width:235 });
-  doc.fontSize(8.5).fillColor(C.dark).font("Helvetica");
-  let cly = clientY + 13;
-  if (client.address) {
-    for (const line of (client.address as string).split("\n")) { doc.text(line, 320, cly, { width:235 }); cly += 10; }
-  }
-  if (client.siret) { doc.text(`Siret : ${client.siret}`, 320, cly, { width:235 }); cly += 10; }
-  if (client.email) { doc.text(client.email, 320, cly, { width:235 }); cly += 10; }
-
-  // Ligne séparatrice
-  let y = Math.max(cly + 12, 230);
-  doc.save().moveTo(L, y).lineTo(R, y).strokeColor(C.border).lineWidth(0.5).stroke().restore();
-  y += 10;
-
-  // ─── RÉFÉRENCE & DESCRIPTION ─────────────────────────────────────────────
-  if (reference) {
-    doc.fontSize(8.5).fillColor(C.dark).font("Helvetica-Bold")
-       .text(`R\u00e9f. : `, L, y, { continued:true })
-       .font("Helvetica").text(reference, { lineBreak:false });
-    y += 12;
-  }
-  if (description) {
-    doc.fontSize(8.5).fillColor(C.dark).font("Helvetica")
-       .text(description, L, y, { width:W });
-    y += doc.heightOfString(description, { width:W }) + 8;
-  } else { y += 4; }
-
-  // ─── TABLEAU ─────────────────────────────────────────────────────────────
-  const cols = {
-    libelle: { x: L+5,   w: 190 },
-    qte:     { x: L+198, w: 36  },
-    unite:   { x: L+237, w: 30  },
-    pu:      { x: L+270, w: 70  },
-    rem:     { x: L+343, w: 36  },
-    montant: { x: L+382, w: 68  },
-    tva:     { x: L+453, w: 58  },
-  };
-
-  // Header tableau — fond noir, texte blanc
-  doc.rect(L, y, W, 18).fill(C.black);
-  doc.fontSize(8).fillColor(C.white).font("Helvetica-Bold");
-  doc.text("Libellé",      cols.libelle.x, y+5, { lineBreak:false });
-  doc.text("Qté",          cols.qte.x,     y+5, { width:cols.qte.w,     align:"right", lineBreak:false });
-  doc.text("Unité",        cols.unite.x,   y+5, { lineBreak:false });
-  doc.text("PU HT",        cols.pu.x,      y+5, { width:cols.pu.w,      align:"right", lineBreak:false });
-  doc.text("Rem.",         cols.rem.x,     y+5, { width:cols.rem.w,     align:"right", lineBreak:false });
-  doc.text("Montant HT",   cols.montant.x, y+5, { width:cols.montant.w, align:"right", lineBreak:false });
-  doc.text("TVA",          cols.tva.x,     y+5, { width:cols.tva.w,     align:"right", lineBreak:false });
-  y += 18;
-
-  // Lignes
-  lines.forEach((line, i) => {
-    const lh = 16;
-    if (i % 2 === 1) {
-      doc.save();
-      doc.fillColor(C.bg).strokeColor(C.bg).rect(L, y, W, lh).fill();
-      doc.fillColor(C.black).strokeColor(C.black); // reset après fill
-      doc.restore();
-    }
-    doc.fontSize(8).fillColor(C.dark).font("Helvetica");
-    doc.text(line.productName,             cols.libelle.x, y+4, { width:cols.libelle.w, lineBreak:false });
-    doc.text(line.quantity.toFixed(2),     cols.qte.x,     y+4, { width:cols.qte.w,     align:"right", lineBreak:false });
-    doc.text(line.unit ?? "u",             cols.unite.x,   y+4, { lineBreak:false });
-    doc.text(eurVal(line.unitPriceHT, 2),  cols.pu.x,      y+4, { width:cols.pu.w,      align:"right", lineBreak:false });
-    doc.text(`${(line.discount??0).toFixed(2)}%`, cols.rem.x, y+4, { width:cols.rem.w, align:"right", lineBreak:false });
-    doc.text(eurVal(line.lineTotal),       cols.montant.x, y+4, { width:cols.montant.w, align:"right", lineBreak:false });
-    doc.text(`${line.vatRate.toFixed(2)}%`,cols.tva.x,     y+4, { width:cols.tva.w,     align:"right", lineBreak:false });
-    y += lh;
+  const doc = new PDFDocument({
+    size: "A4",
+    margins: { top: 40, bottom: 40, left: 44, right: 44 },
+    bufferPages: true,
+    info: { Title: `${TITLE} ${number}`, Author: company.tradeName || company.companyName }
   });
 
-  y += 6;
-  doc.fontSize(7.5).fillColor(C.light).font("Helvetica")
-     .text("Type de vente : Vente de services", L, y, { lineBreak: false });
+  const chunks: Buffer[] = [];
+  doc.on("data", c => chunks.push(c));
+  const done = new Promise<Buffer>(res => doc.on("end", () => res(Buffer.concat(chunks))));
 
-  // Totaux toujours en bas de page (position fixe)
-  const bottomY = pageH - 280;
+  const L = 44, R = 551, W = R - L;
+  const PH = doc.page.height; // 841.89
 
-  // ── Détail TVA (gauche) ──
-  doc.rect(L, bottomY, 250, 16).fill(C.black);
-  doc.fontSize(8).fillColor(C.white).font("Helvetica-Bold")
-     .text("Détail de la TVA", L+4, bottomY+4, { lineBreak:false });
+  // helper: draw filled rect (state-safe)
+  const fillRect = (x: number, y: number, w: number, h: number, color: string) => {
+    const cur = doc._fillColor ?? [BLK];
+    doc.rect(x, y, w, h).fill(color);
+    doc.fillColor(Array.isArray(cur) ? cur[0] : cur);
+    doc.strokeColor(BDR);
+  };
 
-  let tvaY = bottomY + 16;
-  doc.fontSize(7.5).fillColor(C.dark).font("Helvetica-Bold");
-  doc.text("Code",    L+4,   tvaY+3, { lineBreak:false });
-  doc.text("Base HT", L+70,  tvaY+3, { width:65, align:"right", lineBreak:false });
-  doc.text("Taux",    L+145, tvaY+3, { width:35, align:"right", lineBreak:false });
-  doc.text("Montant", L+185, tvaY+3, { width:60, align:"right", lineBreak:false });
-  tvaY += 14;
-
-  const vatByRate = new Map<number, { base: number; vat: number }>();
-  for (const line of lines) {
-    const e = vatByRate.get(line.vatRate) ?? { base:0, vat:0 };
-    e.base += line.lineTotal;
-    e.vat  += Math.round(line.lineTotal * line.vatRate / 100 * 100) / 100;
-    vatByRate.set(line.vatRate, e);
-  }
-  doc.font("Helvetica").fillColor(C.dark).fontSize(7.5);
-  for (const [rate, vals] of vatByRate.entries()) {
-    const label = rate===20?"Normale":rate===10?"Intermédiaire":rate===5.5?"Réduite":`${rate}%`;
-    doc.text(label,             L+4,   tvaY+2, { lineBreak:false });
-    doc.text(eurVal(vals.base), L+70,  tvaY+2, { width:65, align:"right", lineBreak:false });
-    doc.text(`${rate.toFixed(2)}%`, L+145, tvaY+2, { width:35, align:"right", lineBreak:false });
-    doc.text(eurVal(vals.vat),  L+185, tvaY+2, { width:60, align:"right", lineBreak:false });
-    tvaY += 13;
-  }
-
-  // ── Règlement / Échéance ──
-  const regY = tvaY + 6;
-  doc.fontSize(8).fillColor(C.dark).font("Helvetica-Bold").text("Règlement :", L, regY, { continued:true })
-     .font("Helvetica").text(`  ${paymentMethod || "Virement"}`, { lineBreak:false });
-  if (dueDate) {
-    doc.font("Helvetica-Bold").text("Échéance(s) :", L, regY + 12, { continued:true })
-       .font("Helvetica").text(`  ${eurVal(totalTTC)} au ${formatDate(dueDate)}`, { lineBreak:false });
-  }
-
-  // ── Totaux (droite) ──
-  const totX = 355, totW = 200;
-  doc.fontSize(9).fillColor(C.dark).font("Helvetica");
-  doc.text("Total HT",  totX, bottomY+4,  { width:totW, lineBreak:false });
-  doc.text(eurVal(totalHT),  totX, bottomY+4,  { width:totW, align:"right", lineBreak:false });
-  doc.text("TVA",       totX, bottomY+18, { width:totW, lineBreak:false });
-  doc.text(eurVal(totalVAT), totX, bottomY+18, { width:totW, align:"right", lineBreak:false });
-
-  // Total TTC — bandeau noir
-  doc.rect(totX-5, bottomY+36, totW+5, 24).fill(C.black);
-  doc.fontSize(10).fillColor(C.white).font("Helvetica-Bold");
-  doc.text("Total TTC", totX, bottomY+43, { lineBreak:false });
-  doc.text(eurVal(totalTTC), totX, bottomY+43, { width:totW, align:"right", lineBreak:false });
-
-  // Acompte + reste à payer
-  let afterTotY = bottomY + 70;
-  const acompteAmt = (input as any).acompteAmount;
-  const acompteDate = (input as any).acompteDate;
-  const resteAPayer = (input as any).resteAPayer;
-  if (acompteAmt && acompteAmt > 0) {
+  // helper: draw line (state-safe)
+  const line = (x1: number, y1: number, x2: number, y2: number, color = BDR, w = 0.5) => {
     doc.save();
-    doc.fontSize(8.5).fillColor(C.dark).font("Helvetica");
-    doc.text(`Acompte versé le ${formatDate(acompteDate)} (${paymentMethod || "Virement"}) :`, totX, afterTotY, { lineBreak:false });
-    doc.fillColor("#e53e3e").font("Helvetica-Bold")
-       .text(`- ${eurVal(acompteAmt / 100)}`, totX, afterTotY, { width:totW, align:"right", lineBreak:false });
-    afterTotY += 14;
-    doc.fillColor(C.dark).font("Helvetica-Bold").fontSize(9)
-       .text("Reste à payer :", totX, afterTotY, { lineBreak:false });
-    doc.text(eurVal((resteAPayer ?? 0) / 100), totX, afterTotY, { width:totW, align:"right", lineBreak:false });
+    doc.moveTo(x1, y1).lineTo(x2, y2).strokeColor(color).lineWidth(w).stroke();
     doc.restore();
+  };
+
+  // helper: text cell
+  const cell = (text: string, x: number, y: number, opts: any = {}) => {
+    doc.fillColor(opts.color || BLK)
+       .font(opts.bold ? "Helvetica-Bold" : "Helvetica")
+       .fontSize(opts.size || 8.5)
+       .text(text, x, y, {
+         width: opts.width,
+         align: opts.align || "left",
+         lineBreak: false,
+       });
+  };
+
+  // ── LOGO ──────────────────────────────────────────────────────────────────
+  const logoPath = path.join(process.cwd(), "server", "assets", "logo.png");
+  let logoH = 0;
+  try {
+    // fond blanc pour neutraliser l'alpha du PNG
+    fillRect(L, 36, 55, 55, WHT);
+    doc.image(logoPath, L, 36, { width: 50 });
+    logoH = 50;
+  } catch { logoH = 0; }
+
+  // ── EN-TÊTE ÉMETTEUR (gauche) ─────────────────────────────────────────────
+  const HX = logoH > 0 ? L + 58 : L;
+  const tradeName = company.tradeName || company.companyName;
+  cell(tradeName, HX, 38, { bold: true, size: 10.5 });
+  let hy = 52;
+  const headerLines = [
+    ...(company.address || "").split("\n"),
+    company.email ? `Email : ${company.email}` : null,
+    company.siret ? `Siret : ${company.siret}` : null,
+  ].filter(Boolean) as string[];
+  for (const hl of headerLines) {
+    cell(hl, HX, hy, { size: 7.5, color: GRY }); hy += 10;
   }
 
-  // ── Montant en lettres + Conditions ──
-  doc.save();
+  // ── TITRE + INFOS DOCUMENT (droite) ──────────────────────────────────────
+  cell(TITLE, 310, 36, { bold: true, size: 28, color: BLK, width: 241, align: "right" });
+  let iy = 76;
+  const docInfos = [
+    `N\u00b0 : ${number}`,
+    `Date d\u2019\u00e9mission : ${fmtDate(issueDate)}`,
+    `N\u00b0 TVA : ${company.vatNumber || "NC"}`,
+    ...(input.clientNumber ? [`N\u00b0 client : ${input.clientNumber}`] : []),
+  ];
+  for (const di of docInfos) {
+    cell(di, 310, iy, { size: 8.5, width: 241, align: "right" }); iy += 12;
+  }
+
+  // ── BLOC CLIENT (droite) ──────────────────────────────────────────────────
+  const CY = 155;
+  cell(client.name, 320, CY, { bold: true, size: 10, width: 231 });
+  let cy = CY + 14;
+  for (const cl of [
+    ...(client.address || "").split("\n"),
+    client.siret ? `Siret : ${client.siret}` : null,
+    client.email || null,
+    client.phone || null,
+  ].filter(Boolean) as string[]) {
+    cell(cl, 320, cy, { size: 8.5, width: 231, color: GRY }); cy += 11;
+  }
+
+  // ── SÉPARATEUR + RÉFÉRENCE ────────────────────────────────────────────────
+  let y = Math.max(cy + 10, 235);
+  line(L, y, R, y);
+  y += 10;
+  if (input.reference) {
+    cell(`Réf. : ${input.reference}`, L, y, { bold: true, size: 8.5 }); y += 14;
+  }
+  if (input.description) {
+    cell(input.description, L, y, { size: 8.5, width: W }); y += 14;
+  }
+
+  // ── TABLEAU ──────────────────────────────────────────────────────────────
+  const C = {
+    lib: { x: L + 4,   w: 185 },
+    qte: { x: L + 193, w: 36  },
+    uni: { x: L + 233, w: 40  },
+    pu:  { x: L + 277, w: 66  },
+    rem: { x: L + 347, w: 36  },
+    mht: { x: L + 387, w: 68  },
+    tva: { x: L + 459, w: 48  },
+  };
+  const ROW_H = 18;
+
+  // header
+  fillRect(L, y, W, ROW_H, BLK);
+  const hcols: [string, any][] = [
+    ["Libellé",     { ...C.lib, color: WHT, bold: true }],
+    ["Qté",         { ...C.qte, color: WHT, bold: true, align: "right" }],
+    ["Unité",       { ...C.uni, color: WHT, bold: true }],
+    ["PU HT",       { ...C.pu,  color: WHT, bold: true, align: "right" }],
+    ["Rem.",        { ...C.rem, color: WHT, bold: true, align: "right" }],
+    ["Montant HT",  { ...C.mht, color: WHT, bold: true, align: "right" }],
+    ["TVA",         { ...C.tva, color: WHT, bold: true, align: "right" }],
+  ];
+  for (const [txt, opt] of hcols) cell(txt, opt.x, y + 5, opt);
+  y += ROW_H;
+
+  // rows
+  for (let i = 0; i < lines.length; i++) {
+    const l = lines[i];
+    if (i % 2 === 1) fillRect(L, y, W, ROW_H, BG2);
+    cell(l.productName,                          C.lib.x, y+5, { width: C.lib.w });
+    cell(l.quantity.toFixed(2),                  C.qte.x, y+5, { width: C.qte.w, align: "right" });
+    cell(l.unit ?? "u",                          C.uni.x, y+5, { width: C.uni.w });
+    cell(fmt(l.unitPriceHT),                     C.pu.x,  y+5, { width: C.pu.w,  align: "right" });
+    cell(`${(l.discount ?? 0).toFixed(2)}%`,     C.rem.x, y+5, { width: C.rem.w, align: "right" });
+    cell(fmt(l.lineTotal),                       C.mht.x, y+5, { width: C.mht.w, align: "right" });
+    cell(`${l.vatRate.toFixed(2)}%`,             C.tva.x, y+5, { width: C.tva.w, align: "right" });
+    y += ROW_H;
+    if (y > 660) { doc.addPage(); y = 50; }
+  }
+
+  cell("Type de vente : Vente de services", L, y + 4, { size: 7.5, color: LGT });
+
+  // ── BAS DE PAGE (position fixe) ───────────────────────────────────────────
+  const BOT = PH - 290;
+
+  // TVA gauche
+  fillRect(L, BOT, 250, 17, BLK);
+  cell("Détail de la TVA", L + 4, BOT + 4, { bold: true, size: 8, color: WHT });
+  cell("Code",    L + 4,   BOT + 22, { bold: true, size: 8 });
+  cell("Base HT", L + 70,  BOT + 22, { bold: true, size: 8, width: 65, align: "right" });
+  cell("Taux",    L + 145, BOT + 22, { bold: true, size: 8, width: 35, align: "right" });
+  cell("Montant", L + 185, BOT + 22, { bold: true, size: 8, width: 60, align: "right" });
+
+  const vatMap = new Map<number, { base: number; vat: number }>();
+  for (const l of lines) {
+    const e = vatMap.get(l.vatRate) ?? { base: 0, vat: 0 };
+    e.base += l.lineTotal;
+    e.vat  += Math.round(l.lineTotal * l.vatRate / 100 * 100) / 100;
+    vatMap.set(l.vatRate, e);
+  }
+  let tvy = BOT + 37;
+  for (const [rate, v] of vatMap) {
+    const label = rate === 20 ? "Normale" : rate === 10 ? "Intermédiaire" : `${rate}%`;
+    cell(label,         L + 4,   tvy, { size: 8 });
+    cell(fmt(v.base),   L + 70,  tvy, { size: 8, width: 65, align: "right" });
+    cell(`${rate.toFixed(2)}%`, L + 145, tvy, { size: 8, width: 35, align: "right" });
+    cell(fmt(v.vat),    L + 185, tvy, { size: 8, width: 60, align: "right" });
+    tvy += 14;
+  }
+
+  const RY = tvy + 8;
+  cell(`Règlement :`, L, RY, { bold: true, size: 8 });
+  cell(paymentMethod || "Virement", L + 62, RY, { size: 8 });
+  if (dueDate) {
+    cell(`Échéance(s) :`, L, RY + 13, { bold: true, size: 8 });
+    cell(`${fmt(totalTTC)} au ${fmtDate(dueDate)}`, L + 68, RY + 13, { size: 8 });
+  }
+
+  // Totaux droite
+  const TX = 355, TW = 196;
+  cell("Total HT",  TX, BOT + 4,  { size: 9, width: TW });
+  cell(fmt(totalHT), TX, BOT + 4,  { size: 9, width: TW, align: "right" });
+  cell("TVA",       TX, BOT + 18, { size: 9, width: TW });
+  cell(fmt(totalVAT), TX, BOT + 18, { size: 9, width: TW, align: "right" });
+
+  fillRect(TX - 4, BOT + 35, TW + 4, 26, BLK);
+  cell("Total TTC",  TX, BOT + 43, { bold: true, size: 10, color: WHT, width: TW });
+  cell(fmt(totalTTC), TX, BOT + 43, { bold: true, size: 10, color: WHT, width: TW, align: "right" });
+
+  // acompte
+  if (acompteAmount > 0) {
+    let ay = BOT + 68;
+    cell(`Acompte versé le ${fmtDate(acompteDate)} :`, TX, ay, { size: 8, width: TW });
+    cell(`- ${fmt(acompteAmount / 100)}`, TX, ay, { size: 8, bold: true, width: TW, align: "right" });
+    ay += 13;
+    cell("Reste à payer :", TX, ay, { size: 9, bold: true, width: TW });
+    cell(fmt((resteAPayer ?? 0) / 100), TX, ay, { size: 9, bold: true, width: TW, align: "right" });
+  }
+
+  // lettres + conditions
+  const LY = RY + 30;
   const entiers = Math.floor(totalTTC);
-  const centimes = Math.round((totalTTC - entiers) * 100);
-  const enLettres = nbEnLettres(entiers) + (centimes > 0 ? ` euros et ${nbEnLettres(centimes)} centimes` : " euros");
-  const lettresY = regY + 28;
-  doc.fontSize(7.5).fillColor(C.dark).strokeColor(C.dark).font("Helvetica")
-     .text(`Le montant total s\u2019\u00e9l\u00e8ve \u00e0 ${enLettres}`, L, lettresY, { width: W, lineBreak: false });
+  const cts = Math.round((totalTTC - entiers) * 100);
+  const words = toWords(entiers) + (cts > 0 ? ` euros et ${toWords(cts)} centimes` : " euros");
+  cell(`Le montant total s'élève à ${words}`, L, LY, { size: 7.5, color: BLK, width: W });
   if (company.paymentConditions) {
-    doc.fontSize(7).fillColor(C.light).strokeColor(C.light).font("Helvetica")
-       .text(company.paymentConditions, L, lettresY + 11, { width: W, lineBreak: false });
+    cell(company.paymentConditions, L, LY + 11, { size: 7, color: LGT, width: W });
   }
-  doc.restore();
 
-  // ─── RIB : ligne simple centrée ─────────────────────────────────────────
-  const ribY = pageH - 72;
-  const ribText = `RIB  —  Titulaire : ${company.bankOwner || "LES CRE'ARTEURS"}   |   Banque : ${company.bankName || "CIC MONTROUGE"}   |   IBAN : ${company.iban || "FR76 3006 6107 3100 0201 1710 183"}   |   BIC : ${company.bic || "CMCIFRPP"}`;
-  doc.fontSize(7).fillColor(C.mid).font("Helvetica");
-  const ribW = doc.widthOfString(ribText);
-  const ribX = L + (W - ribW) / 2;
-  doc.text(ribText, ribX, ribY, { lineBreak: false });
+  // ── RIB centré ───────────────────────────────────────────────────────────
+  const ribY = PH - 72;
+  const ribTxt = `RIB  —  Titulaire : ${company.bankOwner || "LES CRE'ARTEURS"}   |   Banque : ${company.bankName || "CIC MONTROUGE"}   |   IBAN : ${company.iban || "FR76 3006 6107 3100 0201 1710 183"}   |   BIC : ${company.bic || "CMCIFRPP"}`;
+  doc.fontSize(7).fillColor(GRY).font("Helvetica");
+  const rw = doc.widthOfString(ribTxt);
+  doc.text(ribTxt, L + (W - rw) / 2, ribY, { lineBreak: false });
 
-  // ─── FOOTER : mentions légales centrées ─────────────────────────────────
+  // ── FOOTER mentions légales ───────────────────────────────────────────────
   if (company.legalMentions) {
-    doc.fontSize(6.5).fillColor(C.light).font("Helvetica")
-       .text(company.legalMentions, L, pageH - 47, { width: W, align: "center", lineBreak: false });
+    doc.fontSize(6.5).fillColor(LGT).font("Helvetica")
+       .text(company.legalMentions, L, PH - 48, { width: W, align: "center", lineBreak: false });
   }
 
   doc.end();
-  return pdfPromise;
+  return done;
 }

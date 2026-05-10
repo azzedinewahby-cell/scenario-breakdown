@@ -9,7 +9,8 @@ interface Props {
 }
 
 export default function InvoicePreview({ invoiceId, onClose, onDownload }: Props) {
-  const { data: invoice, isLoading } = trpc.commercial.invoices.get.useQuery({ invoiceId: invoiceId });
+  const { data: invoice, isLoading } = trpc.commercial.invoices.get.useQuery({ invoiceId });
+  const { data: clients = [] } = trpc.commercial.clients.list.useQuery();
 
   if (isLoading) return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
@@ -17,6 +18,8 @@ export default function InvoicePreview({ invoiceId, onClose, onDownload }: Props
     </div>
   );
   if (!invoice) return null;
+
+  const client = clients.find((c: any) => c.id === invoice.clientId);
 
 
   const fmtNum = (n: number) => {

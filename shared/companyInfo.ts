@@ -2,7 +2,7 @@ export const COMPANY_INFO = {
   companyName: "LES CRE'ARTEURS",
   tradeName: "LA KABINE PRODUCTION",
   siret: "53534086300021",
-  vatNumber: "",
+  vatNumber: "FR03535340863",
   address: "14 rue Babères\n92120 MONTROUGE",
   phone: "",
   email: "contact@lakabine.net",

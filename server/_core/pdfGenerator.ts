@@ -107,10 +107,9 @@ export async function generateDocumentPdf(input: Input): Promise<Buffer> {
     if (y>640) { doc.addPage(); doc.rect(0,0,PW,6).fill("#111111"); y=30; }
   }
   txt("Type de vente : Vente de services", ML, y+5, { size:8, color:"#aaaaaa" });
-  y += 32;
 
-  // ── TVA + TOTAUX ──────────────────────────────────────────────────────────
-  const BY = y;
+  // ── TVA + TOTAUX (ancrés en bas) ──────────────────────────────────────────
+  const BY = PH - 290;
 
   // TVA gauche
   doc.rect(ML, BY, 245, RH).fill("#111111");

@@ -100,13 +100,8 @@ export async function generateDocumentPdf(input: GeneratePdfInput): Promise<Buff
   const pageH = doc.page.height; // 841.89
 
   // ─── LOGO + EN-TÊTE SOCIÉTÉ ───────────────────────────────────────────────
-  const logoPath = path.join(process.cwd(), "server", "assets", "logo.png");
-  try {
-    doc.image(logoPath, L, 36, { width: 45 }); // ratio préservé, pas de height
-  } catch {}
-
   const tradeName = company.tradeName || company.companyName;
-  doc.fontSize(11).fillColor(C.black).font("Helvetica-Bold").text(tradeName, L + 56, 36);
+  doc.fontSize(11).fillColor(C.black).font("Helvetica-Bold").text(tradeName, L, 36);
   doc.fontSize(8).fillColor(C.mid).font("Helvetica");
   let cy = 50;
   if (company.address) {

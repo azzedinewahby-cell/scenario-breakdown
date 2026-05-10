@@ -1478,6 +1478,7 @@ Règles importantes:
             await createQuoteLine({
               quoteId, productId,
               productName: line.productName || line.newProduct?.name,
+              unit: line.unit ?? "u",
               quantity: line.quantity,
               unitPriceHT: line.unitPriceHT,
               vatRate: line.vatRate,
@@ -1594,6 +1595,7 @@ Règles importantes:
               unitPriceHT: l.unitPriceHT ?? 0,
               vatRate: l.vatRate ?? 20,
               lineTotal: l.lineTotal ?? 0,
+              unit: (l as any).unit ?? "u",
             };
           }));
           const pdfBuffer = await generateDocumentPdf({
@@ -1668,6 +1670,7 @@ Règles importantes:
             await createQuoteLine({
               quoteId: input.quoteId, productId,
               productName: line.productName || line.newProduct?.name,
+              unit: line.unit ?? "u",
               quantity: line.quantity,
               unitPriceHT: line.unitPriceHT,
               vatRate: line.vatRate,
@@ -1743,7 +1746,8 @@ Règles importantes:
             const lineHT = line.quantity * line.unitPriceHT;
             const lineVAT = lineHT * (line.vatRate / 100);
             totalHT += lineHT; totalVAT += lineVAT;
-            await createInvoiceLine({ invoiceId, productId, productName: line.productName || line.newProduct?.name, quantity: line.quantity, unitPriceHT: line.unitPriceHT, vatRate: line.vatRate, lineTotal: lineHT });
+            await createInvoiceLine({ invoiceId, productId, productName: line.productName || line.newProduct?.name,
+              unit: (line as any).unit ?? "u", quantity: line.quantity, unitPriceHT: line.unitPriceHT, vatRate: line.vatRate, lineTotal: lineHT });
           }
           await updateInvoice(invoiceId, { totalHT, totalVAT, totalTTC: totalHT + totalVAT });
           return { invoiceId, number };
@@ -1961,6 +1965,7 @@ Règles importantes:
               unitPriceHT: l.unitPriceHT ?? 0,
               vatRate: l.vatRate ?? 20,
               lineTotal: l.lineTotal ?? 0,
+              unit: (l as any).unit ?? "u",
             };
           }));
           const pdfBuffer = await generateDocumentPdf({
@@ -2013,6 +2018,7 @@ Règles importantes:
             await createInvoiceLine({
               invoiceId: Number(invoiceId), productId: line.productId,
               productName: (line as any).productName ?? undefined,
+              unit: (line as any).unit ?? "u",
               quantity: line.quantity ?? 1, unitPriceHT: line.unitPriceHT ?? 0,
               vatRate: line.vatRate ?? 20, lineTotal: lineHT,
             });

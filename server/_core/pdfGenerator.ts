@@ -288,14 +288,15 @@ export async function generateDocumentPdf(input: GeneratePdfInput): Promise<Buff
        .text(company.paymentConditions, L, lettresY + 11, { width: W, height: 28, lineBreak: true });
   }
 
-  // ─── RIB centré sans trait ───────────────────────────────────────────────
-  const ribY = pageH - 78;
-  const ribText = `RIB — Titulaire : ${company.bankOwner || "LES CRE'ARTEURS"}   |   Banque : ${company.bankName || "CIC MONTROUGE"}   |   IBAN : ${company.iban || "FR76 3006 6107 3100 0201 1710 183"}   |   BIC : ${company.bic || "CMCIFRPP"}`;
-  doc.fontSize(7).fillColor(C.dark).font("Helvetica")
-     .text(ribText, L, ribY, { width: W, align: "center", lineBreak: false });
+  // ─── RIB : ligne simple centrée ─────────────────────────────────────────
+  const ribY = pageH - 72;
+  const ribText = `RIB  —  Titulaire : ${company.bankOwner || "LES CRE'ARTEURS"}   |   Banque : ${company.bankName || "CIC MONTROUGE"}   |   IBAN : ${company.iban || "FR76 3006 6107 3100 0201 1710 183"}   |   BIC : ${company.bic || "CMCIFRPP"}`;
+  doc.fontSize(7).fillColor(C.mid).font("Helvetica");
+  const ribW = doc.widthOfString(ribText);
+  const ribX = L + (W - ribW) / 2;
+  doc.text(ribText, ribX, ribY, { lineBreak: false });
 
-  doc.save().moveTo(L, pageH - 52).lineTo(R, pageH - 52)
-     .strokeColor(C.border).lineWidth(0.5).stroke().restore();
+  // ─── FOOTER : mentions légales centrées ─────────────────────────────────
   if (company.legalMentions) {
     doc.fontSize(6.5).fillColor(C.light).font("Helvetica")
        .text(company.legalMentions, L, pageH - 47, { width: W, align: "center", lineBreak: false });

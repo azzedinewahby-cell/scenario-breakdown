@@ -2,8 +2,9 @@ import { useState } from "react";
 import { trpc } from "@/lib/trpc";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, Download, Trash2, FileCheck2, Pencil, CheckCircle } from "lucide-react";
+import { Plus, Download, Trash2, FileCheck2, Pencil, CheckCircle, Eye } from "lucide-react";
 import QuoteFormFull from "./QuoteFormFull";
+import QuotePreview from "./QuotePreview";
 
 const STATUS_LABELS: Record<string, { label: string; color: string }> = {
   brouillon:  { label: "Brouillon",  color: "bg-slate-100 text-slate-600" },
@@ -16,6 +17,7 @@ const STATUS_LABELS: Record<string, { label: string; color: string }> = {
 export default function QuotesTab() {
   const [showForm, setShowForm] = useState(false);
   const [editQuoteId, setEditQuoteId] = useState<number | undefined>();
+  const [previewId, setPreviewId] = useState<number | null>(null);
 
   const { data: quotes, isLoading, refetch } = trpc.commercial.quotes.list.useQuery();
   const deleteMutation = trpc.commercial.quotes.delete.useMutation({ onSuccess: () => refetch() });
@@ -100,6 +102,9 @@ export default function QuotesTab() {
                   </div>
                 </div>
                 <div className="flex gap-2 flex-wrap justify-end">
+                    <Button variant="outline" size="sm" onClick={() => setPreviewId(quote.id)} title="Prévisualiser">
+                      <Eye size={14} />
+                    </Button>
                   {quote.status === "brouillon" && (
                     <Button variant="outline" size="sm" className="gap-1 border-green-300 text-green-700 hover:bg-green-50"
                       onClick={() => updateMutation.mutate({ quoteId: quote.id, data: { status: "confirmé" as any } })}
@@ -146,6 +151,14 @@ export default function QuotesTab() {
             </Card>
           ))}
         </div>
+      )}
+
+      {previewId && (
+        <QuotePreview
+          quoteId={previewId}
+          onClose={() => setPreviewId(null)}
+          onDownload={() => { generatePdfMutation.mutate({ quoteId: previewId }); setPreviewId(null); }}
+        />
       )}
     </div>
   );

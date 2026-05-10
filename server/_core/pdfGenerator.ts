@@ -200,8 +200,8 @@ export async function generateDocumentPdf(input: GeneratePdfInput): Promise<Buff
   doc.fontSize(7.5).fillColor(C.light).font("Helvetica")
      .text("Type de vente : Vente de services", L, y, { lineBreak: false });
 
-  // Utiliser doc.y (curseur réel de pdfkit) pour coller le bloc TVA sans espace
-  const bottomY = Math.max(doc.y + 14, y + 14);
+  // Totaux toujours en bas de page (position fixe)
+  const bottomY = pageH - 280;
 
   // ── Détail TVA (gauche) ──
   doc.rect(L, bottomY, 250, 16).fill(C.black);
@@ -262,6 +262,7 @@ export async function generateDocumentPdf(input: GeneratePdfInput): Promise<Buff
   const acompteDate = (input as any).acompteDate;
   const resteAPayer = (input as any).resteAPayer;
   if (acompteAmt && acompteAmt > 0) {
+    doc.save();
     doc.fontSize(8.5).fillColor(C.dark).font("Helvetica");
     doc.text(`Acompte versé le ${formatDate(acompteDate)} (${paymentMethod || "Virement"}) :`, totX, afterTotY, { lineBreak:false });
     doc.fillColor("#e53e3e").font("Helvetica-Bold")
@@ -270,6 +271,7 @@ export async function generateDocumentPdf(input: GeneratePdfInput): Promise<Buff
     doc.fillColor(C.dark).font("Helvetica-Bold").fontSize(9)
        .text("Reste à payer :", totX, afterTotY, { lineBreak:false });
     doc.text(eurVal((resteAPayer ?? 0) / 100), totX, afterTotY, { width:totW, align:"right", lineBreak:false });
+    doc.restore();
   }
 
   // ── Montant en lettres ──

@@ -198,10 +198,10 @@ export async function generateDocumentPdf(input: GeneratePdfInput): Promise<Buff
 
   y += 6;
   doc.fontSize(7.5).fillColor(C.light).font("Helvetica")
-     .text("Type de vente : Vente de services", L, y, { lineBreak:false });
+     .text("Type de vente : Vente de services", L, y, { lineBreak: false });
 
-  // ─── BAS DE PAGE — position dynamique, au minimum à 540 ──────────────────
-  const bottomY = y + 18; // TVA juste après le tableau
+  // Utiliser doc.y (curseur réel de pdfkit) pour coller le bloc TVA sans espace
+  const bottomY = Math.max(doc.y + 14, y + 14);
 
   // ── Détail TVA (gauche) ──
   doc.rect(L, bottomY, 250, 16).fill(C.black);

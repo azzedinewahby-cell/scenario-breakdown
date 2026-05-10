@@ -2,11 +2,12 @@ import { useState } from "react";
 import { trpc } from "@/lib/trpc";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, Download, Trash2, X, CheckCircle, CreditCard } from "lucide-react";
+import { Plus, Download, Trash2, X, CheckCircle, CreditCard, Eye } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import InvoiceFormDirect from "./InvoiceFormDirect";
+import InvoicePreview from "./InvoicePreview";
 
 const STATUS_LABELS: Record<string, { label: string; color: string }> = {
   brouillon: { label: "Brouillon",  color: "bg-slate-100 text-slate-600"    },
@@ -24,6 +25,7 @@ export default function InvoicesTab() {
   const [payModal, setPayModal] = useState<{ invoiceId: number; type: "payée" | "acompte"; totalTTC: number } | null>(null);
   const [selectedMethod, setSelectedMethod] = useState("Virement");
   const [acompteAmount, setAcompteAmount] = useState("");
+  const [previewId, setPreviewId] = useState<number | null>(null);
 
   const { data: invoices, isLoading, refetch } = trpc.commercial.invoices.list.useQuery();
   const { data: clients } = trpc.commercial.clients.list.useQuery();
@@ -187,8 +189,12 @@ export default function InvoicesTab() {
                       </>
                     )}
                     <Button variant="outline" size="sm"
+                      onClick={() => setPreviewId(invoice.id)} title="Prévisualiser">
+                      <Eye size={14} />
+                    </Button>
+                    <Button variant="outline" size="sm"
                       onClick={() => generatePdfMutation.mutate({ invoiceId: invoice.id })}
-                      disabled={generatePdfMutation.isPending} title="Télécharger le PDF">
+                      disabled={generatePdfMutation.isPending} title="Télécharger PDF">
                       <Download size={14} />
                     </Button>
                     <Button variant="destructive" size="sm"
@@ -201,6 +207,14 @@ export default function InvoicesTab() {
             ))}
           </div>
         </>
+      )}
+
+      {previewId && (
+        <InvoicePreview
+          invoiceId={previewId}
+          onClose={() => setPreviewId(null)}
+          onDownload={() => { generatePdfMutation.mutate({ invoiceId: previewId }); setPreviewId(null); }}
+        />
       )}
     </div>
   );

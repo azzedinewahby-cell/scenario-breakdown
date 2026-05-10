@@ -288,18 +288,11 @@ export async function generateDocumentPdf(input: GeneratePdfInput): Promise<Buff
        .text(company.paymentConditions, L, lettresY + 11, { width: W, height: 28, lineBreak: true });
   }
 
-  // ─── RIB + FOOTER (coordonnées absolues, toujours page 1) ───────────────
+  // ─── RIB centré sans trait ───────────────────────────────────────────────
   const ribY = pageH - 78;
-  doc.save().moveTo(L, ribY - 4).lineTo(R, ribY - 4)
-     .strokeColor(C.border).lineWidth(0.5).stroke().restore();
-
-  doc.fontSize(7).fillColor(C.dark).font("Helvetica-Bold")
-     .text("RIB \u2014 ", L, ribY, { continued: true })
-     .font("Helvetica")
-     .text(
-       `Titulaire : ${company.bankOwner || "LES CRE'ARTEURS"}   |   Banque : ${company.bankName || "CIC MONTROUGE"}   |   IBAN : ${company.iban || "FR76 3006 6107 3100 0201 1710 183"}   |   BIC : ${company.bic || "CMCIFRPP"}`,
-       { lineBreak: false }
-     );
+  const ribText = `RIB — Titulaire : ${company.bankOwner || "LES CRE'ARTEURS"}   |   Banque : ${company.bankName || "CIC MONTROUGE"}   |   IBAN : ${company.iban || "FR76 3006 6107 3100 0201 1710 183"}   |   BIC : ${company.bic || "CMCIFRPP"}`;
+  doc.fontSize(7).fillColor(C.dark).font("Helvetica")
+     .text(ribText, L, ribY, { width: W, align: "center", lineBreak: false });
 
   doc.save().moveTo(L, pageH - 52).lineTo(R, pageH - 52)
      .strokeColor(C.border).lineWidth(0.5).stroke().restore();

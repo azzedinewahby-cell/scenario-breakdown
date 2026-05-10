@@ -100,8 +100,17 @@ export async function generateDocumentPdf(input: GeneratePdfInput): Promise<Buff
   const pageH = doc.page.height; // 841.89
 
   // ─── LOGO + EN-TÊTE SOCIÉTÉ ───────────────────────────────────────────────
+  // Logo isolé dans save/restore pour éviter contamination de l'état graphique
+  const logoPath = path.join(process.cwd(), "server", "assets", "logo.png");
+  try {
+    doc.save();
+    doc.image(logoPath, L, 36, { width: 45 });
+    doc.restore();
+    doc.fillColor(C.black).strokeColor(C.black); // reset explicite après le logo
+  } catch {}
+
   const tradeName = company.tradeName || company.companyName;
-  doc.fontSize(11).fillColor(C.black).font("Helvetica-Bold").text(tradeName, L, 36);
+  doc.fontSize(11).fillColor(C.black).font("Helvetica-Bold").text(tradeName, L + 56, 36);
   doc.fontSize(8).fillColor(C.mid).font("Helvetica");
   let cy = 50;
   if (company.address) {
@@ -175,9 +184,15 @@ export async function generateDocumentPdf(input: GeneratePdfInput): Promise<Buff
   doc.text("TVA",          cols.tva.x,     y+5, { width:cols.tva.w,     align:"right", lineBreak:false });
   y += 18;
 
-  // Lignes — texte uniquement, zéro opération graphique
+  // Lignes
   lines.forEach((line, i) => {
     const lh = 16;
+    if (i % 2 === 1) {
+      doc.save();
+      doc.fillColor(C.bg).strokeColor(C.bg).rect(L, y, W, lh).fill();
+      doc.fillColor(C.black).strokeColor(C.black); // reset après fill
+      doc.restore();
+    }
     doc.fontSize(8).fillColor(C.dark).font("Helvetica");
     doc.text(line.productName,             cols.libelle.x, y+4, { width:cols.libelle.w, lineBreak:false });
     doc.text(line.quantity.toFixed(2),     cols.qte.x,     y+4, { width:cols.qte.w,     align:"right", lineBreak:false });

@@ -151,8 +151,8 @@ export default function InvoicePreview({ invoiceId, onClose, onDownload }: Props
                 <div style={{ display: "flex", justifyContent: "space-between", fontSize: "8.5px", color: "#333", padding: "3px 0", borderBottom: "0.5px solid #ddd", marginBottom: "6px" }}>
                   <span>TVA</span><span>{fmtNum(totalVAT)}</span>
                 </div>
-                <div style={{ background: "#111", color: "white", display: "flex", justifyContent: "space-between", padding: "7px 10px", fontWeight: 700, fontSize: "10.5px" }}>
-                  <span>Total TTC</span><span>{fmtNum(totalTTC)}</span>
+                <div style={{ background: "#111", color: "white", display: "flex", justifyContent: "space-between", padding: "7px 10px", fontWeight: 700, fontSize: "10.5px", boxSizing: "border-box" }}>
+                  <span>Total TTC</span><span style={{ paddingRight: "2px" }}>{fmtNum(totalTTC)}</span>
                 </div>
               </div>
             </div>

@@ -58,12 +58,15 @@ export default function InvoicePreview({ invoiceId, onClose, onDownload }: Props
 
           {/* HEADER */}
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", padding: "18px 36px 14px" }}>
-            <div>
-              <div style={{ fontSize: "13px", fontWeight: 700, letterSpacing: "0.4px", color: "#111", marginBottom: "5px" }}>
-                LA KABINE PRODUCTION
-              </div>
-              <div style={{ color: "#666", lineHeight: 1.7, fontSize: "8.5px" }}>
-                14 rue Babères<br />92120 MONTROUGE<br />Email : contact@lakabine.net<br />Siret : 53534086300021
+            <div style={{ display: "flex", alignItems: "flex-start", gap: "10px" }}>
+              <img src="/assets/logo.png" alt="Logo" style={{ width: "44px", height: "auto", objectFit: "contain" }} onError={e => (e.currentTarget.style.display = "none")} />
+              <div>
+                <div style={{ fontSize: "13px", fontWeight: 700, letterSpacing: "0.4px", color: "#111", marginBottom: "5px" }}>
+                  LA KABINE PRODUCTION
+                </div>
+                <div style={{ color: "#666", lineHeight: 1.7, fontSize: "8.5px" }}>
+                  14 rue Babères<br />92120 MONTROUGE<br />Email : contact@lakabine.net<br />Siret : 53534086300021
+                </div>
               </div>
             </div>
             <div style={{ textAlign: "right" }}>

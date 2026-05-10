@@ -37,6 +37,7 @@ async function startServer() {
 
   // Fichiers uploadés
   app.use("/uploads", express.static(path.resolve(ENV.uploadDir)));
+  app.use("/assets", express.static(path.join(process.cwd(), "server", "assets")));
 
   // OAuth Google & Facebook
   registerGoogleOAuth(app);

@@ -122,8 +122,8 @@ export async function generateDocumentPdf(input: Input): Promise<Buffer> {
   }
   doc.fontSize(7.5).fillColor("#aaaaaa").font("Helvetica").text("Type de vente : Vente de services", ML, y+5, {lineBreak:false});
 
-  // ── totaux (bas de page fixe) ─────────────────────────────────────────────
-  const BY = PH - 295;
+  // ── totaux (juste après le contenu) ──────────────────────────────────────
+  const BY = y + 20;
 
   // TVA
   doc.rect(ML, BY, 248, RH).fill("#111111");

@@ -133,13 +133,16 @@ export async function generateDocumentPdf(input: GeneratePdfInput): Promise<Buff
        });
   };
 
-  // ── LOGO ──────────────────────────────────────────────────────────────────
+  // ── LOGO (converti en JPEG pour éviter les problèmes d'alpha PNG) ────────
   const logoPath = path.join(process.cwd(), "server", "assets", "logo.png");
   let logoH = 0;
   try {
-    // fond blanc pour neutraliser l'alpha du PNG
-    fillRect(L, 36, 55, 55, WHT);
-    doc.image(logoPath, L, 36, { width: 50 });
+    const sharp = await import("sharp");
+    const jpegBuf = await sharp.default(logoPath)
+      .flatten({ background: { r: 255, g: 255, b: 255 } }) // fond blanc, supprime alpha
+      .jpeg({ quality: 95 })
+      .toBuffer();
+    doc.image(jpegBuf, L, 36, { width: 50 });
     logoH = 50;
   } catch { logoH = 0; }
 

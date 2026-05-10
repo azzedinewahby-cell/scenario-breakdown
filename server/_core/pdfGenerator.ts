@@ -183,16 +183,26 @@ export async function generateDocumentPdf(input: GeneratePdfInput): Promise<Buff
   // Lignes
   lines.forEach((line, i) => {
     const lh = 16;
-    if (i % 2 === 1) { doc.rect(L, y, W, lh).fill(C.bg); }
-    doc.fillColor(C.dark).font("Helvetica").fontSize(8);
-    doc.text(line.productName,                                                 cols.libelle.x, y+4, { width:cols.libelle.w, lineBreak:false });
-    doc.text(line.quantity.toFixed(2),                                         cols.qte.x,     y+4, { width:cols.qte.w,     align:"right", lineBreak:false });
-    doc.text(line.unit ?? "u",                                                 cols.unite.x,   y+4, { lineBreak:false });
-    doc.text(eurVal(line.unitPriceHT, 2),                                      cols.pu.x,      y+4, { width:cols.pu.w,      align:"right", lineBreak:false });
-    doc.text(`${(line.discount??0).toFixed(2)}%`,                              cols.rem.x,     y+4, { width:cols.rem.w,     align:"right", lineBreak:false });
-    doc.text(eurVal(line.lineTotal),                                            cols.montant.x, y+4, { width:cols.montant.w, align:"right", lineBreak:false });
-    doc.text(`${line.vatRate.toFixed(2)}%`,                                    cols.tva.x,     y+4, { width:cols.tva.w,     align:"right", lineBreak:false });
-    doc.save().moveTo(L, y+lh).lineTo(R, y+lh).strokeColor(C.border).lineWidth(0.3).stroke().restore();
+    if (i % 2 === 1) {
+      doc.save();
+      doc.rect(L, y, W, lh).fillColor(C.bg).fill();
+      doc.strokeColor(C.bg); // reset stroke pour éviter path résiduel
+      doc.restore();
+    }
+    doc.save();
+    doc.fillColor(C.dark).strokeColor(C.dark).font("Helvetica").fontSize(8);
+    doc.text(line.productName,                                  cols.libelle.x, y+4, { width:cols.libelle.w, lineBreak:false });
+    doc.text(line.quantity.toFixed(2),                          cols.qte.x,     y+4, { width:cols.qte.w,     align:"right", lineBreak:false });
+    doc.text(line.unit ?? "u",                                  cols.unite.x,   y+4, { lineBreak:false });
+    doc.text(eurVal(line.unitPriceHT, 2),                       cols.pu.x,      y+4, { width:cols.pu.w,      align:"right", lineBreak:false });
+    doc.text(`${(line.discount??0).toFixed(2)}%`,               cols.rem.x,     y+4, { width:cols.rem.w,     align:"right", lineBreak:false });
+    doc.text(eurVal(line.lineTotal),                            cols.montant.x, y+4, { width:cols.montant.w, align:"right", lineBreak:false });
+    doc.text(`${line.vatRate.toFixed(2)}%`,                     cols.tva.x,     y+4, { width:cols.tva.w,     align:"right", lineBreak:false });
+    doc.restore();
+    // Séparateur fin entre lignes
+    doc.save();
+    doc.moveTo(L, y+lh).lineTo(R, y+lh).strokeColor(C.border).lineWidth(0.3).stroke();
+    doc.restore();
     y += lh;
   });
 

@@ -13,7 +13,7 @@ type Input = {
 };
 
 const f = (n: number, d = 2) => {
-  const s = n.toFixed(d), [i, c] = s.split(".");
+  const [i, c] = n.toFixed(d).split(".");
   return i.replace(/\B(?=(\d{3})+(?!\d))/g, " ") + "," + c + " \u20ac";
 };
 const fd = (d: any) => d ? new Date(d).toLocaleDateString("fr-FR", {day:"2-digit",month:"2-digit",year:"numeric"}) : "";
@@ -21,9 +21,9 @@ const words = (n: number): string => {
   if (n===0) return "zéro";
   const u=["","un","deux","trois","quatre","cinq","six","sept","huit","neuf","dix","onze","douze","treize","quatorze","quinze","seize","dix-sept","dix-huit","dix-neuf"];
   const t=["","","vingt","trente","quarante","cinquante","soixante","soixante","quatre-vingt","quatre-vingt"];
-  const lt100=(x:number)=>{if(x<20)return u[x];const[q,r]=[Math.floor(x/10),x%10];if(q===7||q===9)return t[q]+"-"+(q===7&&r===1?"et-":"")+u[10+r];if(r===0)return t[q]+(q===8?"s":"");if(r===1&&q<8)return t[q]+"-et-un";return t[q]+"-"+u[r];};
-  const lt1k=(x:number)=>{if(x<100)return lt100(x);const[c,r]=[Math.floor(x/100),x%100];const h=c===1?"cent":u[c]+" cent"+(r===0?"s":"");return r===0?h:h+" "+lt100(r);};
-  if(n<1000)return lt1k(n);const[k,r]=[Math.floor(n/1000),n%1000];return(k===1?"mille":lt1k(k)+" mille")+(r===0?"":" "+lt1k(r));
+  const lt100=(x:number):string=>{if(x<20)return u[x];const q=Math.floor(x/10),r=x%10;if(q===7||q===9)return t[q]+"-"+(q===7&&r===1?"et-":"")+u[10+r];if(r===0)return t[q]+(q===8?"s":"");if(r===1&&q<8)return t[q]+"-et-un";return t[q]+"-"+u[r];};
+  const lt1k=(x:number):string=>{if(x<100)return lt100(x);const c=Math.floor(x/100),r=x%100;const h=c===1?"cent":u[c]+" cent"+(r===0?"s":"");return r===0?h:h+" "+lt100(r);};
+  if(n<1000)return lt1k(n);const k=Math.floor(n/1000),r=n%1000;return(k===1?"mille":lt1k(k)+" mille")+(r===0?"":" "+lt1k(r));
 };
 
 export async function generateDocumentPdf(input: Input): Promise<Buffer> {
@@ -38,173 +38,144 @@ export async function generateDocumentPdf(input: Input): Promise<Buffer> {
   const done = new Promise<Buffer>(res => doc.on("end", () => res(Buffer.concat(chunks))));
 
   const PW = 595.28, PH = 841.89;
-  const ML = 44, MR = 551, MW = MR - ML;
+  const ML = 36, MR = 559, MW = MR - ML;
 
-  // ── bande noire du haut ───────────────────────────────────────────────────
-  doc.rect(0, 0, PW, 8).fill("#111111");
+  const txt = (t: string, x: number, y: number, opts: any = {}) => {
+    doc.fillColor(opts.color||"#111111")
+       .font(opts.bold ? "Helvetica-Bold" : "Helvetica")
+       .fontSize(opts.size||8.5)
+       .text(t, x, y, { width:opts.width, align:opts.align||"left", lineBreak:false });
+  };
 
-  // ── en-tête émetteur ─────────────────────────────────────────────────────
-  const tradeName = (company.tradeName || company.companyName || "").toUpperCase();
-  doc.fontSize(13).fillColor("#111111").font("Helvetica-Bold").text(tradeName, ML, 22, {lineBreak:false});
-  doc.fontSize(8).fillColor("#666666").font("Helvetica");
-  let hy = 39;
-  for (const l of [...(company.address||"").split("\n"), company.email ? `Email : ${company.email}` : null, company.siret ? `Siret : ${company.siret}` : null].filter(Boolean) as string[]) {
-    doc.text(l, ML, hy, {lineBreak:false}); hy += 10;
+  // bande noire top
+  doc.rect(0, 0, PW, 6).fill("#111111");
+
+  // ── EN-TÊTE ÉMETTEUR ──────────────────────────────────────────────────────
+  const tradeName = (company.tradeName||company.companyName||"").toUpperCase();
+  txt(tradeName, ML, 20, { bold:true, size:13 });
+  let hy = 37;
+  for (const l of [...(company.address||"").split("\n"), company.email?`Email : ${company.email}`:null, company.siret?`Siret : ${company.siret}`:null].filter(Boolean) as string[]) {
+    txt(l, ML, hy, { size:8.5, color:"#666666" }); hy += 11;
   }
 
-  // ── titre + numéro (droite) ───────────────────────────────────────────────
-  doc.fontSize(34).fillColor("#111111").font("Helvetica-Bold").text(TITLE, 0, 18, {width: MR, align:"right", lineBreak:false});
-  doc.fontSize(9).fillColor("#111111").font("Helvetica");
-  let iy = 60;
-  for (const [lbl, val] of [
-    ["N°", number],
-    ["Date", fd(issueDate)],
-    ["N° TVA", company.vatNumber||"NC"],
-    ...(input.clientNumber ? [["N° client", input.clientNumber]] : []),
-  ] as [string,string][]) {
-    doc.font("Helvetica-Bold").text(lbl, 0, iy, {width: MR - 2, align:"right", lineBreak:false});
-    const lw = doc.widthOfString(lbl);
-    doc.font("Helvetica").text(` : ${val}`, MR - lw - 2, iy, {lineBreak:false});
-    iy += 12;
+  // ── TITRE + NUMÉRO ────────────────────────────────────────────────────────
+  txt(TITLE, 0, 18, { bold:true, size:30, color:"#111111", width:MR, align:"right" });
+  let iy = 58;
+  for (const [lbl, val] of [["N°",number],["Date d'émission",fd(issueDate)],["N° TVA",company.vatNumber||"NC"]] as [string,string][]) {
+    const line = `${lbl} : ${val}`;
+    txt(line, 0, iy, { size:8.5, color:"#444444", width:MR, align:"right" }); iy += 12;
   }
 
-  // ── bloc client ───────────────────────────────────────────────────────────
-  const CY = 130;
-  doc.rect(ML + MW * 0.55, CY - 6, MW * 0.45, 1).fill("#111111");
-  doc.fontSize(10).fillColor("#111111").font("Helvetica-Bold").text(client.name, ML + MW * 0.55 + 2, CY + 4, {width: MW*0.45-4, lineBreak:false});
+  // ── BLOC CLIENT ───────────────────────────────────────────────────────────
+  const CY = 140;
+  doc.rect(ML + MW * 0.55, CY - 5, MW * 0.45, 1.5).fill("#111111");
+  txt(client.name, ML + MW * 0.55 + 3, CY + 5, { bold:true, size:10, width:MW*0.45-6 });
   let cy = CY + 18;
-  doc.fontSize(8.5).font("Helvetica").fillColor("#444444");
   for (const l of [...(client.address||"").split("\n"), client.siret?`Siret : ${client.siret}`:null, client.email||null].filter(Boolean) as string[]) {
-    doc.text(l, ML + MW * 0.55 + 2, cy, {width: MW*0.45-4, lineBreak:false}); cy += 11;
+    txt(l, ML + MW * 0.55 + 3, cy, { size:8.5, color:"#555555", width:MW*0.45-6 }); cy += 11;
   }
 
-  // ── ligne séparatrice ─────────────────────────────────────────────────────
-  let y = Math.max(cy + 12, 215);
+  // ── SÉPARATEUR ────────────────────────────────────────────────────────────
+  let y = Math.max(cy + 12, 220);
   doc.rect(ML, y, MW, 0.5).fill("#dddddd"); y += 12;
+  if (input.reference) { txt(`Réf. : ${input.reference}`, ML, y, { bold:true, size:8.5 }); y += 13; }
+  if (input.description) { txt(input.description, ML, y, { size:8.5, color:"#333333", width:MW }); y += 13; }
 
-  if (input.reference) { doc.fontSize(8.5).fillColor("#111111").font("Helvetica-Bold").text(`Réf. : ${input.reference}`, ML, y, {lineBreak:false}); y += 14; }
-  if (input.description) { doc.fontSize(8.5).fillColor("#333333").font("Helvetica").text(input.description, ML, y, {width:MW, lineBreak:false}); y += 14; }
-
-  // ── tableau ───────────────────────────────────────────────────────────────
+  // ── TABLEAU ───────────────────────────────────────────────────────────────
   const RH = 17;
-  const cols = [
-    {label:"Libellé",    x:ML+3,    w:185, align:"left"  as const},
-    {label:"Qté",        x:ML+192,  w:36,  align:"right" as const},
-    {label:"Unité",      x:ML+232,  w:42,  align:"left"  as const},
-    {label:"PU HT",      x:ML+278,  w:64,  align:"right" as const},
-    {label:"Rem.",       x:ML+346,  w:36,  align:"right" as const},
-    {label:"Montant HT", x:ML+386,  w:68,  align:"right" as const},
-    {label:"TVA",        x:ML+458,  w:48,  align:"right" as const},
+  const C = [
+    {x:ML+3,   w:180, a:"left"  as const, h:"Libellé"},
+    {x:ML+187, w:36,  a:"right" as const, h:"Qté"},
+    {x:ML+227, w:44,  a:"left"  as const, h:"Unité"},
+    {x:ML+275, w:64,  a:"right" as const, h:"PU HT"},
+    {x:ML+343, w:36,  a:"right" as const, h:"Rem."},
+    {x:ML+383, w:70,  a:"right" as const, h:"Montant HT"},
+    {x:ML+457, w:48,  a:"right" as const, h:"TVA"},
   ];
 
-  // header
   doc.rect(ML, y, MW, RH).fill("#111111");
-  for (const c of cols) doc.fontSize(8).fillColor("#ffffff").font("Helvetica-Bold").text(c.label, c.x, y+5, {width:c.w, align:c.align, lineBreak:false});
+  for (const c of C) txt(c.h, c.x, y+5, { bold:true, size:9, color:"#ffffff", width:c.w, align:c.a });
   y += RH;
 
-  // lignes
-  for (let i = 0; i < lines.length; i++) {
+  for (let i=0; i<lines.length; i++) {
     const l = lines[i];
-    if (i%2===1) doc.rect(ML, y, MW, RH).fill("#f6f6f6");
-    const vals = [
-      {v:l.productName, c:cols[0]},
-      {v:l.quantity.toFixed(2), c:cols[1]},
-      {v:l.unit||"u", c:cols[2]},
-      {v:f(l.unitPriceHT), c:cols[3]},
-      {v:`${(l.discount??0).toFixed(2)}%`, c:cols[4]},
-      {v:f(l.lineTotal), c:cols[5]},
-      {v:`${l.vatRate.toFixed(2)}%`, c:cols[6]},
-    ];
-    for (const {v,c} of vals) doc.fontSize(8).fillColor("#222222").font("Helvetica").text(v, c.x, y+5, {width:c.w, align:c.align, lineBreak:false});
+    if (i%2===1) doc.rect(ML, y, MW, RH).fill("#f7f7f7");
+    const vals = [l.productName, l.quantity.toFixed(2), l.unit||"u", f(l.unitPriceHT), `${(l.discount??0).toFixed(2)}%`, f(l.lineTotal), `${l.vatRate.toFixed(2)}%`];
+    for (let j=0;j<C.length;j++) txt(vals[j], C[j].x, y+5, { size:9, color:"#222222", width:C[j].w, align:C[j].a });
     doc.rect(ML, y+RH-0.3, MW, 0.3).fill("#e0e0e0");
     y += RH;
-    if (y > 640) { doc.addPage(); doc.rect(0,0,PW,8).fill("#111111"); y=30; }
+    if (y>640) { doc.addPage(); doc.rect(0,0,PW,6).fill("#111111"); y=30; }
   }
-  doc.fontSize(7.5).fillColor("#aaaaaa").font("Helvetica").text("Type de vente : Vente de services", ML, y+5, {lineBreak:false});
+  txt("Type de vente : Vente de services", ML, y+5, { size:8, color:"#aaaaaa" });
+  y += 20;
 
-  // ── totaux (juste après le contenu) ──────────────────────────────────────
-  const BY = y + 20;
+  // ── TVA + TOTAUX ──────────────────────────────────────────────────────────
+  const BY = y;
 
-  // TVA
-  doc.rect(ML, BY, 248, RH).fill("#111111");
-  doc.fontSize(8).fillColor("#ffffff").font("Helvetica-Bold").text("Détail de la TVA", ML+4, BY+5, {lineBreak:false});
-  doc.fontSize(7.5).fillColor("#222222");
-  const tvh = BY+RH;
-  doc.font("Helvetica-Bold");
-  [[4,"Code"],[70,"Base HT"],[148,"Taux"],[192,"Montant"]].forEach(([x,lbl])=>
-    doc.text(lbl as string, ML+(x as number), tvh+4, {lineBreak:false, width:60})
-  );
+  // TVA gauche
+  doc.rect(ML, BY, 245, RH).fill("#111111");
+  txt("Détail de la TVA", ML+4, BY+5, { bold:true, size:9, color:"#ffffff" });
+  const tvH = BY + RH;
+  for (const [x,lbl,w,a] of [[ML+4,"Code",60,"left"],[ML+68,"Base HT",65,"right"],[ML+142,"Taux",40,"right"],[ML+190,"Montant",55,"right"]] as [number,string,number,string][])
+    txt(lbl, x, tvH+4, { bold:true, size:8.5, width:w, align:a as any });
 
   const vatMap = new Map<number,{b:number,v:number}>();
-  for (const l of lines) {
-    const e = vatMap.get(l.vatRate) ?? {b:0,v:0};
-    e.b += l.lineTotal; e.v += Math.round(l.lineTotal*l.vatRate/100*100)/100;
-    vatMap.set(l.vatRate, e);
-  }
-  let tvy = tvh + RH;
-  doc.font("Helvetica");
+  for (const l of lines) { const e=vatMap.get(l.vatRate)??{b:0,v:0}; e.b+=l.lineTotal; e.v+=Math.round(l.lineTotal*l.vatRate/100*100)/100; vatMap.set(l.vatRate,e); }
+  let tvy = tvH + RH;
   for (const [rate,v] of vatMap) {
     const lbl = rate===20?"Normale":rate===10?"Intermédiaire":`${rate}%`;
-    doc.text(lbl,            ML+4,   tvy, {lineBreak:false});
-    doc.text(f(v.b),         ML+70,  tvy, {width:60, align:"right", lineBreak:false});
-    doc.text(`${rate.toFixed(2)}%`, ML+148, tvy, {width:40, lineBreak:false});
-    doc.text(f(v.v),         ML+192, tvy, {width:56, align:"right", lineBreak:false});
+    txt(lbl,    ML+4,   tvy, { size:8.5, width:60 });
+    txt(f(v.b), ML+68,  tvy, { size:8.5, width:65, align:"right" });
+    txt(`${rate.toFixed(2)}%`, ML+142, tvy, { size:8.5, width:40 });
+    txt(f(v.v), ML+190, tvy, { size:8.5, width:55, align:"right" });
     tvy += 13;
   }
+  const RY = tvy + 8;
+  txt("Règlement :", ML, RY, { bold:true, size:8.5 });
+  txt(paymentMethod||"Virement", ML+62, RY, { size:8.5, color:"#333333" });
+  if (dueDate) { txt("Échéance(s) :", ML, RY+13, { bold:true, size:8.5 }); txt(`${f(totalTTC)} au ${fd(dueDate)}`, ML+72, RY+13, { size:8.5, color:"#333333" }); }
 
-  const RG = tvy + 8;
-  doc.font("Helvetica-Bold").fontSize(8).fillColor("#111111").text("Règlement :", ML, RG, {lineBreak:false});
-  doc.font("Helvetica").text(`  ${paymentMethod||"Virement"}`, ML+64, RG, {lineBreak:false});
-  if (dueDate) {
-    doc.font("Helvetica-Bold").text("Échéance(s) :", ML, RG+13, {lineBreak:false});
-    doc.font("Helvetica").text(`  ${f(totalTTC)} au ${fd(dueDate)}`, ML+70, RG+13, {lineBreak:false});
+  // Totaux droite
+  const TX = 360, TW = MR - TX;
+  txt("Total HT",  TX, BY+4,  { size:9, width:TW });
+  txt(f(totalHT),  TX, BY+4,  { size:9, width:TW, align:"right" });
+  txt("TVA",       TX, BY+18, { size:9, width:TW });
+  txt(f(totalVAT), TX, BY+18, { size:9, width:TW, align:"right" });
+  doc.rect(TX-4, BY+34, TW+4, 26).fill("#111111");
+  txt("Total TTC", TX, BY+42, { bold:true, size:10.5, color:"#ffffff", width:TW });
+  txt(f(totalTTC), TX, BY+42, { bold:true, size:10.5, color:"#ffffff", width:TW, align:"right" });
+
+  if (acompteAmount>0) {
+    txt(`Acompte (${fd(acompteDate)}) :`, TX, BY+68, { size:8.5, width:TW });
+    txt(`- ${f(acompteAmount/100)}`, TX, BY+68, { size:8.5, width:TW, align:"right" });
+    txt("Reste à payer :", TX, BY+82, { bold:true, size:9, width:TW });
+    txt(f((resteAPayer??0)/100), TX, BY+82, { bold:true, size:9, width:TW, align:"right" });
   }
 
-  // totaux droite
-  const TX = 358, TW = MR - TX;
-  doc.fontSize(9).fillColor("#222222").font("Helvetica");
-  [[BY+4,"Total HT",totalHT],[BY+18,"TVA",totalVAT]].forEach(([yy,lbl,val])=>{
-    doc.text(lbl as string, TX, yy as number, {width:TW, lineBreak:false});
-    doc.text(f(val as number), TX, yy as number, {width:TW, align:"right", lineBreak:false});
-  });
-
-  // Total TTC bandeau
-  doc.rect(TX-4, BY+36, TW+4, 28).fill("#111111");
-  doc.fontSize(11).fillColor("#ffffff").font("Helvetica-Bold");
-  doc.text("Total TTC", TX, BY+46, {width:TW, lineBreak:false});
-  doc.text(f(totalTTC), TX, BY+46, {width:TW, align:"right", lineBreak:false});
-
-  if (acompteAmount > 0) {
-    doc.fontSize(8).fillColor("#222222").font("Helvetica");
-    doc.text(`Acompte (${fd(acompteDate)}) :`, TX, BY+72, {width:TW, lineBreak:false});
-    doc.text(`- ${f(acompteAmount/100)}`, TX, BY+72, {width:TW, align:"right", lineBreak:false});
-    doc.font("Helvetica-Bold").text("Reste à payer :", TX, BY+86, {width:TW, lineBreak:false});
-    doc.text(f((resteAPayer??0)/100), TX, BY+86, {width:TW, align:"right", lineBreak:false});
-  }
-
-  // lettres
-  const LY = RG + 30;
+  // ── MENTIONS BAS DE PAGE ──────────────────────────────────────────────────
   const ent = Math.floor(totalTTC);
   const cts = Math.round((totalTTC-ent)*100);
-  doc.fontSize(7.5).fillColor("#222222").font("Helvetica")
-     .text(`Le montant total s'élève à ${words(ent)}${cts>0?` euros et ${words(cts)} centimes`:" euros"}`, ML, LY, {width:MW, lineBreak:false});
+  const letY = RY + 30;
+  txt(`Le montant total s'élève à ${words(ent)}${cts>0?` euros et ${words(cts)} centimes`:" euros"}`, ML, letY, { size:8.5, color:"#333333", width:MW });
   if (company.paymentConditions) {
-    doc.fontSize(7).fillColor("#aaaaaa").font("Helvetica")
-       .text(company.paymentConditions, ML, LY+12, {width:MW, lineBreak:false});
+    txt(company.paymentConditions, ML, letY+13, { size:8.5, color:"#888888", width:MW });
   }
 
   // ── RIB centré ────────────────────────────────────────────────────────────
-  const ribY = PH - 68;
+  const ribY = PH - 62;
+  doc.rect(ML, ribY-5, MW, 0.5).fill("#e0e0e0");
+  doc.rect(ML, ribY+12, MW, 0.5).fill("#e0e0e0");
   const ribTxt = `RIB — Titulaire : ${company.bankOwner||"LES CRE'ARTEURS"}  |  Banque : ${company.bankName||"CIC MONTROUGE"}  |  IBAN : ${company.iban||"FR76 3006 6107 3100 0201 1710 183"}  |  BIC : ${company.bic||"CMCIFRPP"}`;
-  doc.fontSize(7).fillColor("#888888").font("Helvetica");
+  doc.fontSize(8.5).font("Helvetica").fillColor("#888888");
   const rw = doc.widthOfString(ribTxt);
-  doc.text(ribTxt, ML + (MW - rw) / 2, ribY, {lineBreak:false});
+  txt(ribTxt, ML + (MW-rw)/2, ribY, { size:8.5, color:"#888888" });
 
-  // ── footer ────────────────────────────────────────────────────────────────
-  doc.rect(0, PH-46, PW, 0.5).fill("#dddddd");
+  // ── FOOTER mentions légales ───────────────────────────────────────────────
   if (company.legalMentions) {
-    doc.fontSize(6.5).fillColor("#bbbbbb").font("Helvetica")
-       .text(company.legalMentions, ML, PH-40, {width:MW, align:"center", lineBreak:false});
+    doc.fontSize(8.5).fillColor("#888888").font("Helvetica");
+    const lw = doc.widthOfString(company.legalMentions);
+    const lx = lw < MW ? ML + (MW-lw)/2 : ML;
+    txt(company.legalMentions, lx, PH-40, { size:8.5, color:"#888888", width:MW, align: lw < MW ? "left" : "center" });
   }
 
   doc.end();

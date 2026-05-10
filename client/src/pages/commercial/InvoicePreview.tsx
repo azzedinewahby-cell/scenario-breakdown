@@ -59,7 +59,7 @@ export default function InvoicePreview({ invoiceId, onClose, onDownload }: Props
           {/* HEADER */}
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", padding: "18px 36px 14px" }}>
             <div style={{ display: "flex", alignItems: "flex-start", gap: "10px" }}>
-              <img src="/assets/logo.png" alt="Logo" style={{ width: "52px", height: "52px", objectFit: "contain", objectPosition: "left center" }} onError={e => (e.currentTarget.style.display = "none")} />
+              <img src="/logo-kabine.png" alt="Logo" style={{ width: "52px", height: "52px", objectFit: "contain", objectPosition: "left center" }} onError={e => (e.currentTarget.style.display = "none")} />
               <div>
                 <div style={{ fontSize: "13px", fontWeight: 700, letterSpacing: "0.4px", color: "#111", marginBottom: "5px" }}>
                   LA KABINE PRODUCTION
@@ -151,8 +151,8 @@ export default function InvoicePreview({ invoiceId, onClose, onDownload }: Props
                 <div style={{ display: "flex", justifyContent: "space-between", fontSize: "8.5px", color: "#333", padding: "3px 0", borderBottom: "0.5px solid #ddd", marginBottom: "6px" }}>
                   <span>TVA</span><span>{fmtNum(totalVAT)}</span>
                 </div>
-                <div style={{ background: "#111", color: "white", display: "flex", justifyContent: "space-between", padding: "7px 10px", fontWeight: 700, fontSize: "10.5px", boxSizing: "border-box" }}>
-                  <span>Total TTC</span><span style={{ paddingRight: "2px" }}>{fmtNum(totalTTC)}</span>
+                <div style={{ background: "#111", color: "white", display: "flex", justifyContent: "space-between", padding: "7px 12px 7px 10px", fontWeight: 700, fontSize: "10.5px" }}>
+                  <span>Total TTC</span><span>{fmtNum(totalTTC)}</span>
                 </div>
               </div>
             </div>

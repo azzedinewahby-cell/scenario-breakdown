@@ -274,19 +274,19 @@ export async function generateDocumentPdf(input: GeneratePdfInput): Promise<Buff
     doc.restore();
   }
 
-  // ── Montant en lettres ──
+  // ── Montant en lettres + Conditions ──
+  doc.save();
   const entiers = Math.floor(totalTTC);
   const centimes = Math.round((totalTTC - entiers) * 100);
   const enLettres = nbEnLettres(entiers) + (centimes > 0 ? ` euros et ${nbEnLettres(centimes)} centimes` : " euros");
   const lettresY = regY + 28;
-  doc.fontSize(7.5).fillColor(C.dark).font("Helvetica")
+  doc.fontSize(7.5).fillColor(C.dark).strokeColor(C.dark).font("Helvetica")
      .text(`Le montant total s\u2019\u00e9l\u00e8ve \u00e0 ${enLettres}`, L, lettresY, { width: W, lineBreak: false });
-
-  // ── Conditions ──
   if (company.paymentConditions) {
-    doc.fontSize(7).fillColor(C.light).font("Helvetica")
-       .text(company.paymentConditions, L, lettresY + 11, { width: W, height: 28, lineBreak: true });
+    doc.fontSize(7).fillColor(C.light).strokeColor(C.light).font("Helvetica")
+       .text(company.paymentConditions, L, lettresY + 11, { width: W, lineBreak: false });
   }
+  doc.restore();
 
   // ─── RIB : ligne simple centrée ─────────────────────────────────────────
   const ribY = pageH - 72;

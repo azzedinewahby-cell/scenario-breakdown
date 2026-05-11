@@ -54,9 +54,16 @@ export async function getDb() {
   }
   try {
     const mysql = await import("mysql2/promise");
-    const connection = await mysql.createConnection(url);
-    _db = drizzle(connection);
-    console.log("[Database] ✅ Connecté");
+    const pool = mysql.createPool({
+      uri: url,
+      waitForConnections: true,
+      connectionLimit: 10,
+      queueLimit: 0,
+      enableKeepAlive: true,
+      keepAliveInitialDelay: 10000,
+    });
+    _db = drizzle(pool);
+    console.log("[Database] ✅ Pool connecté");
     return _db;
   } catch (error: any) {
     console.error("[Database] ❌ Erreur connexion:", error?.message ?? error);

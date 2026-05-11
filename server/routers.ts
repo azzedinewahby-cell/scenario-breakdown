@@ -1185,6 +1185,53 @@ Règles importantes:
           filename: `${scenario.title}-Budget-${input.version}.csv`,
         };
       }),
+
+    generateTraitement: protectedProcedure
+      .input(z.object({ scenarioId: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        const scenario = await getScenarioById(input.scenarioId);
+        if (!scenario || scenario.userId !== ctx.user.id) throw new TRPCError({ code: "NOT_FOUND", message: "Scénario introuvable" });
+        const scenes = await getScenesByScenarioId(input.scenarioId);
+        if (scenes.length === 0) throw new TRPCError({ code: "BAD_REQUEST", message: "Aucune scène trouvée" });
+
+        const { getCharactersByScenarioId, getPropsByScenarioId } = await import("./db");
+        const characters = await getCharactersByScenarioId(input.scenarioId);
+        const props = await getPropsByScenarioId(input.scenarioId);
+
+        const scenesText = scenes.map((s, i) =>
+          `SCÈNE ${i+1}: ${s.intExt||"?"} ${s.location||"lieu inconnu"} - ${s.dayNight||"JOUR"}\n${s.description||""}`
+        ).join("\n\n");
+
+        const { invokeLLM } = await import("./_core/llm");
+        const response = await invokeLLM({
+          model: "claude-sonnet-4-6",
+          max_tokens: 8000,
+          messages: [{
+            role: "user",
+            content: `Tu es un assistant de production cinématographique expert. Génère un TRAITEMENT COMPLET et minutieux du scénario suivant.
+
+TITRE: ${scenario.title}
+NOMBRE DE SCÈNES: ${scenes.length}
+PERSONNAGES: ${characters.map(c => c.name).join(", ")}
+ACCESSOIRES PRINCIPAUX: ${props.slice(0,20).map((p:any) => p.name).join(", ")}
+
+SCÈNES:
+${scenesText.slice(0, 15000)}
+
+Génère un traitement littéraire complet en français, scène par scène, avec :
+1. Une prose narrative riche décrivant l'action et les enjeux dramatiques
+2. La psychologie des personnages dans chaque scène
+3. Les tensions, conflits et évolutions
+4. Les indications d'atmosphère et de rythme
+5. Les enjeux dramatiques de chaque séquence
+
+Format : texte narratif structuré, style professionnel, environ 3-5 paragraphes par scène.`
+          }],
+        });
+
+        const content = response.choices[0]?.message?.content ?? "";
+        return { traitement: content, scenesCount: scenes.length };
+      }),
   }),
 
   // ─── Commercial Module (Gestion Commerciale) ──────────────────────────────────

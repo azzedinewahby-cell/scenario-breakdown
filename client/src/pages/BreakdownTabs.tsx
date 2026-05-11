@@ -4,6 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { TraitementTab } from "./TraitementTab";
 import {
   Users, MapPin, Package, Film, Search, Plus, BookOpen,
   ChevronDown, ChevronUp, Loader2, Layers, Sun, Moon,
@@ -876,7 +877,7 @@ export function BreakdownTabs({ scenarioId, onSceneSelect }: BreakdownTabsProps)
   return (
     <div className="w-full">
       <Tabs defaultValue="storyboard" className="w-full">
-        <TabsList className="grid w-full grid-cols-7 mb-6">
+        <TabsList className="grid w-full grid-cols-8 mb-6">
           <TabsTrigger value="storyboard" className="flex items-center gap-1.5">
             <BookOpen className="w-4 h-4" />
             <span className="hidden sm:inline text-xs">Storyboard</span>
@@ -908,6 +909,9 @@ export function BreakdownTabs({ scenarioId, onSceneSelect }: BreakdownTabsProps)
           <TabsTrigger value="structure" className="flex items-center gap-1.5">
             <Lightbulb className="w-4 h-4" />
             <span className="hidden sm:inline text-xs">Structure</span>
+          </TabsTrigger>
+          <TabsTrigger value="traitement" className="flex items-center gap-1.5">
+            <span className="hidden sm:inline text-xs">Traitement</span>
           </TabsTrigger>
         </TabsList>
 
@@ -1181,6 +1185,11 @@ export function BreakdownTabs({ scenarioId, onSceneSelect }: BreakdownTabsProps)
         {/* CORRECTION STRUCTURE */}
         <TabsContent value="structure" className="space-y-4">
           <StructureAnalysisTab scenarioId={scenarioId} />
+        </TabsContent>
+
+        {/* TRAITEMENT */}
+        <TabsContent value="traitement" className="space-y-4">
+          <TraitementTab scenarioId={scenarioId} />
         </TabsContent>
       </Tabs>
     </div>

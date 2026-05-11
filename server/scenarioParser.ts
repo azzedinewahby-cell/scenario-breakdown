@@ -102,6 +102,7 @@ Numérote les scènes séquentiellement si elles ne sont pas numérotées dans l
       { role: "system", content: systemPrompt },
       { role: "user", content: userContent },
     ],
+    max_tokens: 64000,
     response_format: {
       type: "json_schema",
       json_schema: {
@@ -219,6 +220,23 @@ Numérote les scènes séquentiellement si elles ne sont pas numérotées dans l
   try {
     return JSON.parse(content) as ParsedScenario;
   } catch (err) {
-    throw new Error(`Failed to parse LLM response as JSON: ${err}`);
+    // Tentative de réparation si JSON tronqué
+    try {
+      // Trouver le dernier objet complet et fermer le JSON
+      let fixed = content.trim();
+      if (!fixed.endsWith("}")) {
+        // Compter les accolades ouvertes et fermer
+        let opens = 0;
+        for (const c of fixed) { if (c === "{" || c === "[") opens++; else if (c === "}" || c === "]") opens--; }
+        // Fermer les structures ouvertes
+        const openChars = fixed.match(/[{[]/g)?.length ?? 0;
+        const closeChars = fixed.match(/[}\]]/g)?.length ?? 0;
+        const diff = openChars - closeChars;
+        for (let i = 0; i < diff; i++) fixed += fixed.includes("[") ? "]" : "}";
+      }
+      return JSON.parse(fixed) as ParsedScenario;
+    } catch {
+      throw new Error(`Failed to parse LLM response as JSON: ${err}`);
+    }
   }
 }

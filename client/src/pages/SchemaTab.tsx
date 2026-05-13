@@ -92,7 +92,7 @@ export function SchemaTab({ scenarioId }: { scenarioId: number }) {
 
       {/* ARC DE TENSION */}
       <div style={{ background: "#fff", borderRadius: 12, padding: "20px 16px 12px", border: "1px solid #e5e4e0" }}>
-        <svg width="100%" viewBox={`0 0 ${W} ${H}`} style={{ display: "block" }}>
+        <svg width="100%" viewBox={`0 0 ${W} ${H + 40}`} style={{ display: "block" }}>
           {/* Bandes actes */}
           {schema.acts.map((act, i) => {
             const c = ACTS_COLORS[i % ACTS_COLORS.length];
@@ -103,9 +103,9 @@ export function SchemaTab({ scenarioId }: { scenarioId: number }) {
             const midX = x + w / 2;
             return (
               <g key={i}>
-                <rect x={x} y={45} width={w} height={55} rx={4} fill={c.bg} stroke={c.border} strokeWidth={0.5} />
-                <text x={midX} y={38} textAnchor="middle" fontSize={11} fontWeight={600} fill={c.title}>Acte {act.number}</text>
-                <text x={midX} y={80} textAnchor="middle" fontSize={8} fill="#999">Séq. {act.scenes[0]?.num}–{act.scenes[act.scenes.length-1]?.num}</text>
+                <rect x={x} y={10} width={w} height={55} rx={4} fill={c.bg} stroke={c.border} strokeWidth={0.5} />
+                <text x={midX} y={26} textAnchor="middle" fontSize={11} fontWeight={600} fill={c.title}>Acte {act.number}</text>
+                <text x={midX} y={48} textAnchor="middle" fontSize={8} fill="#999">Séq. {act.scenes[0]?.num}–{act.scenes[act.scenes.length-1]?.num}</text>
               </g>
             );
           })}
@@ -113,14 +113,14 @@ export function SchemaTab({ scenarioId }: { scenarioId: number }) {
           {/* Courbe tension */}
           {pathD && <path d={pathD} fill="none" stroke="#555" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />}
 
-          {/* Labels beats clés */}
-          {pts.filter(p => p.label).map((p, i) => {
+          {/* Labels beats clés — en dessous de la courbe */}
+          {pts.filter(p => p.label).map((p, idx) => {
             const x = 40 + (p.x / 100) * (W - 50);
             const y = H - 20 - (p.tension / 100) * (H - 40);
             return (
-              <g key={i}>
-                <text x={x} y={y - 8} textAnchor="middle" fontSize={9} fontWeight={700} fill="#9E2A1A">{p.label}</text>
-                <line x1={x} y1={y - 5} x2={x} y2={y} stroke="#9E2A1A" strokeWidth={0.8} strokeDasharray="2 1.5" />
+              <g key={idx}>
+                <line x1={x} y1={y + 3} x2={x} y2={H + 8} stroke="#9E2A1A" strokeWidth={0.8} strokeDasharray="2 2" />
+                <text x={x} y={H + 22} textAnchor="middle" fontSize={8} fontWeight={600} fill="#9E2A1A">{p.label}</text>
               </g>
             );
           })}

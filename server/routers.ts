@@ -1063,7 +1063,7 @@ Génère UNIQUEMENT ce JSON valide, sans texte avant ou après :
   ]
 }
 
-Règles: 3 ou 4 actes selon la structure. Titres de scènes courts (3-4 mots max). isKey=true seulement pour les beats dramatiques clés (5-8 max). tensionPoints doit refléter la vraie courbe de tension du scénario.`,
+Règles: Détermine toi-même le nombre d'actes (2, 3 ou 4) selon la vraie structure dramatique du scénario — ne force pas 4 actes. Titres de scènes courts (3-4 mots max). isKey=true seulement pour les beats dramatiques clés (5-8 max). tensionPoints doit refléter la vraie courbe de tension. Maximum 6 labels dans tensionPoints.`,
           }],
         });
 

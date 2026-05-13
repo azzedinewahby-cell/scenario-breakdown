@@ -1013,6 +1013,66 @@ Génère un traitement littéraire complet en français, scène par scène, avec
         const content = response.choices[0]?.message?.content ?? "";
         return { traitement: content, scenesCount: scenes.length };
       }),
+
+    generateSchema: protectedProcedure
+      .input(z.object({ scenarioId: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        const scenario = await getScenarioById(input.scenarioId);
+        if (!scenario || scenario.userId !== ctx.user.id) throw new TRPCError({ code: "NOT_FOUND", message: "Scénario introuvable" });
+        const scenes = await getScenesByScenarioId(input.scenarioId);
+        if (scenes.length === 0) throw new TRPCError({ code: "BAD_REQUEST", message: "Aucune scène trouvée" });
+
+        const scenesText = scenes.map((s, i) =>
+          `${i+1}. ${s.intExt||"?"} ${s.location||"?"} ${s.dayNight||""} — ${s.description?.slice(0,80)||""}`
+        ).join("\n");
+
+        const { invokeLLM } = await import("./_core/llm");
+        const response = await invokeLLM({
+          model: "claude-haiku-4-5-20251001",
+          max_tokens: 4000,
+          messages: [{
+            role: "user",
+            content: `Analyse ce scénario et génère un schéma narratif JSON.
+
+TITRE: ${scenario.title}
+SCÈNES (${scenes.length}):
+${scenesText.slice(0, 8000)}
+
+Génère UNIQUEMENT ce JSON valide, sans texte avant ou après :
+{
+  "title": "${scenario.title}",
+  "totalScenes": ${scenes.length},
+  "acts": [
+    {
+      "number": 1,
+      "title": "Titre de l'acte",
+      "subtitle": "sous-titre",
+      "scenes": [
+        { "num": "Sc. 1", "title": "Titre court", "beat": "Beat clé optionnel", "isKey": true },
+        { "num": "Sc. 2", "title": "Titre court" }
+      ]
+    }
+  ],
+  "tensionPoints": [
+    { "x": 0, "tension": 20 },
+    { "x": 25, "tension": 45, "label": "Élément perturbateur" },
+    { "x": 50, "tension": 65, "label": "Point médian" },
+    { "x": 75, "tension": 95, "label": "CLIMAX" },
+    { "x": 90, "tension": 40 },
+    { "x": 100, "tension": 25 }
+  ]
+}
+
+Règles: 3 ou 4 actes selon la structure. Titres de scènes courts (3-4 mots max). isKey=true seulement pour les beats dramatiques clés (5-8 max). tensionPoints doit refléter la vraie courbe de tension du scénario.`,
+          }],
+        });
+
+        const raw = response.choices[0]?.message?.content ?? "";
+        const first = raw.indexOf("{");
+        const last = raw.lastIndexOf("}");
+        if (first === -1) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Réponse LLM invalide" });
+        return JSON.parse(raw.slice(first, last + 1));
+      }),
   }),
   budget: router({
     // Get existing budget for a scenario

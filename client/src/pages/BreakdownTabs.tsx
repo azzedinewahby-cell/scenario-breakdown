@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { TraitementTab } from "./TraitementTab";
+import { SchemaTab } from "./SchemaTab";
 import {
   Users, MapPin, Package, Film, Search, Plus, BookOpen,
   ChevronDown, ChevronUp, Loader2, Layers, Sun, Moon,
@@ -913,6 +914,9 @@ export function BreakdownTabs({ scenarioId, onSceneSelect }: BreakdownTabsProps)
           <TabsTrigger value="traitement" className="flex items-center gap-1.5">
             <span className="hidden sm:inline text-xs">Traitement</span>
           </TabsTrigger>
+          <TabsTrigger value="schema" className="flex items-center gap-1.5">
+            <span className="hidden sm:inline text-xs">Schéma</span>
+          </TabsTrigger>
         </TabsList>
 
         {/* STORYBOARD */}
@@ -1190,6 +1194,10 @@ export function BreakdownTabs({ scenarioId, onSceneSelect }: BreakdownTabsProps)
         {/* TRAITEMENT */}
         <TabsContent value="traitement" className="space-y-4">
           <TraitementTab scenarioId={scenarioId} />
+        </TabsContent>
+
+        <TabsContent value="schema" className="space-y-4">
+          <SchemaTab scenarioId={scenarioId} />
         </TabsContent>
       </Tabs>
     </div>

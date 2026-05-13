@@ -878,43 +878,43 @@ export function BreakdownTabs({ scenarioId, onSceneSelect }: BreakdownTabsProps)
   return (
     <div className="w-full">
       <Tabs defaultValue="storyboard" className="w-full">
-        <TabsList className="grid w-full grid-cols-8 mb-6">
-          <TabsTrigger value="storyboard" className="flex items-center gap-1.5">
+        <TabsList className="flex w-full overflow-x-auto mb-6 h-auto p-1 gap-0.5 justify-start">
+          <TabsTrigger value="storyboard" className="flex-shrink-0 text-xs px-3 py-1.5">
             <BookOpen className="w-4 h-4" />
             <span className="hidden sm:inline text-xs">Storyboard</span>
           </TabsTrigger>
-          <TabsTrigger value="sequences" className="flex items-center gap-1.5">
+          <TabsTrigger value="sequences" className="flex-shrink-0 text-xs px-3 py-1.5">
             <Film className="w-4 h-4" />
             <span className="hidden sm:inline text-xs">Séquences</span>
             {sequences.length > 0 && <Badge variant="secondary" className="text-xs ml-1 bg-blue-100 text-blue-700 border-blue-200">{sequences.length}</Badge>}
           </TabsTrigger>
-          <TabsTrigger value="characters" className="flex items-center gap-1.5">
+          <TabsTrigger value="characters" className="flex-shrink-0 text-xs px-3 py-1.5">
             <Users className="w-4 h-4" />
             <span className="hidden sm:inline text-xs">Personnages</span>
             {characters.length > 0 && <Badge variant="secondary" className="text-xs ml-1 bg-blue-100 text-blue-700 border-blue-200">{characters.length}</Badge>}
           </TabsTrigger>
-          <TabsTrigger value="locations" className="flex items-center gap-1.5">
+          <TabsTrigger value="locations" className="flex-shrink-0 text-xs px-3 py-1.5">
             <MapPin className="w-4 h-4" />
             <span className="hidden sm:inline text-xs">Lieux</span>
             {locations.length > 0 && <Badge variant="secondary" className="text-xs ml-1 bg-blue-100 text-blue-700 border-blue-200">{locations.length}</Badge>}
           </TabsTrigger>
-          <TabsTrigger value="props" className="flex items-center gap-1.5">
+          <TabsTrigger value="props" className="flex-shrink-0 text-xs px-3 py-1.5">
             <Package className="w-4 h-4" />
             <span className="hidden sm:inline text-xs">Accessoires</span>
             {props.length > 0 && <Badge variant="secondary" className="text-xs ml-1 bg-blue-100 text-blue-700 border-blue-200">{props.length}</Badge>}
           </TabsTrigger>
-          <TabsTrigger value="breakdown" className="flex items-center gap-1.5">
+          <TabsTrigger value="breakdown" className="flex-shrink-0 text-xs px-3 py-1.5">
             <Layers className="w-4 h-4" />
             <span className="hidden sm:inline text-xs">Découpage</span>
           </TabsTrigger>
-          <TabsTrigger value="structure" className="flex items-center gap-1.5">
+          <TabsTrigger value="structure" className="flex-shrink-0 text-xs px-3 py-1.5">
             <Lightbulb className="w-4 h-4" />
             <span className="hidden sm:inline text-xs">Structure</span>
           </TabsTrigger>
-          <TabsTrigger value="traitement" className="flex items-center gap-1.5">
+          <TabsTrigger value="traitement" className="flex-shrink-0 text-xs px-3 py-1.5">
             <span className="hidden sm:inline text-xs">Traitement</span>
           </TabsTrigger>
-          <TabsTrigger value="schema" className="flex items-center gap-1.5">
+          <TabsTrigger value="schema" className="flex-shrink-0 text-xs px-3 py-1.5">
             <span className="hidden sm:inline text-xs">Schéma</span>
           </TabsTrigger>
         </TabsList>

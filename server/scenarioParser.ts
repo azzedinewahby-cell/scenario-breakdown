@@ -66,24 +66,30 @@ Numérote les scènes séquentiellement si elles ne sont pas numérotées dans l
   ];
 
   if (isPdf) {
-    // PDF: extraire le texte localement (Claude API lit aussi les PDFs en text)
-    const extractedText = await fetchAndExtractText(fileUrl, fileName);
-    if (extractedText) {
-      userContent.push({
-        type: "text" as const,
-        text: `Voici le contenu du scénario PDF :\n\n${extractedText}`,
-      });
-    } else {
-      // Fallback: send as base64 PDF (Claude API supports it)
+    // Envoyer le PDF directement à Claude en base64 (API Anthropic supporte les PDFs nativement)
+    try {
       const fs = await import("fs/promises");
       const path = await import("path");
       const uploadDir = process.env.UPLOAD_DIR ?? "./uploads";
       const localFile = fileUrl.replace(/^\/uploads\//, "");
       const buffer = await fs.readFile(path.resolve(uploadDir, localFile));
+      const base64 = buffer.toString("base64");
       userContent.push({
-        type: "text" as const,
-        text: `Voici le contenu du scénario PDF (lu en binaire) :\n\n${buffer.toString("utf-8").substring(0, 100000)}`,
-      });
+        type: "document" as const,
+        source: {
+          type: "base64",
+          media_type: "application/pdf",
+          data: base64,
+        },
+      } as any);
+    } catch (e) {
+      // Fallback: extraction texte
+      const extractedText = await fetchAndExtractText(fileUrl, fileName);
+      if (extractedText && extractedText.trim().length > 100) {
+        userContent.push({ type: "text" as const, text: `Voici le contenu extrait du PDF :\n\n${extractedText}` });
+      } else {
+        throw new Error("Impossible de lire le PDF. Vérifiez que le fichier n'est pas protégé ou corrompu.");
+      }
     }
   } else {
     // DOCX/FDX: extract text first, then send as text

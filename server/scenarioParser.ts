@@ -109,113 +109,6 @@ Numérote les scènes séquentiellement si elles ne sont pas numérotées dans l
       { role: "user", content: userContent },
     ],
     max_tokens: 64000,
-    response_format: {
-      type: "json_schema",
-      json_schema: {
-        name: "scenario_breakdown",
-        strict: true,
-        schema: {
-          type: "object",
-          properties: {
-            title: { type: "string", description: "Titre du scénario" },
-            screenwriterName: {
-              type: ["string", "null"],
-              description: "Nom complet du scénariste/auteur (prénom et nom). Si plusieurs auteurs, les séparer par ' & '. null si non trouvé.",
-            },
-            screenwriterEmail: {
-              type: ["string", "null"],
-              description: "Email du scénariste si mentionné dans le document, sinon null.",
-            },
-            screenwriterPhone: {
-              type: ["string", "null"],
-              description: "Téléphone du scénariste si mentionné dans le document, sinon null.",
-            },
-            characters: {
-              type: "array",
-              items: {
-                type: "object",
-                properties: {
-                  name: { type: "string", description: "Nom du personnage" },
-                  gender: {
-                    type: "string",
-                    enum: ["male", "female", "unknown"],
-                    description: "Genre du personnage : male, female, ou unknown si incertain",
-                  },
-                  age: {
-                    type: "string",
-                    enum: ["adult", "child", "unknown"],
-                    description: "Age du personnage : adult, child, ou unknown si incertain",
-                  },
-                },
-                required: ["name", "gender", "age"],
-                additionalProperties: false,
-              },
-              description: "Liste de tous les personnages uniques avec leur genre et age",
-            },
-            scenes: {
-              type: "array",
-              items: {
-                type: "object",
-                properties: {
-                  sceneNumber: { type: "integer", description: "Numéro de la scène" },
-                  intExt: {
-                    type: ["string", "null"],
-                    description: "INT. ou EXT. ou INT./EXT.",
-                  },
-                  location: {
-                    type: ["string", "null"],
-                    description: "Lieu de la scène",
-                  },
-                  dayNight: {
-                    type: ["string", "null"],
-                    description: "JOUR, NUIT, AUBE, CRÉPUSCULE, etc.",
-                  },
-                  description: {
-                    type: ["string", "null"],
-                    description: "Brève description de l'action",
-                  },
-                  characters: {
-                    type: "array",
-                    items: { type: "string" },
-                    description: "Personnages présents dans la scène",
-                  },
-                  dialogues: {
-                    type: "array",
-                    items: {
-                      type: "object",
-                      properties: {
-                        character: { type: "string" },
-                        text: { type: "string" },
-                      },
-                      required: ["character", "text"],
-                      additionalProperties: false,
-                    },
-                    description: "Dialogues de la scène",
-                  },
-                },
-                required: [
-                  "sceneNumber",
-                  "intExt",
-                  "location",
-                  "dayNight",
-                  "description",
-                  "characters",
-                  "dialogues",
-                ],
-                additionalProperties: false,
-              },
-            },
-            props: {
-              type: "array",
-              items: { type: "string" },
-              description: "Liste de tous les accessoires/props du scénario (objets, armes, véhicules, etc.)",
-            },
-          },
-          required: ["title", "screenwriterName", "screenwriterEmail", "screenwriterPhone", "characters", "scenes", "props"],
-          additionalProperties: false,
-        },
-      },
-    },
   });
 
   const content = result.choices[0]?.message?.content;
@@ -227,12 +120,13 @@ Numérote les scènes séquentiellement si elles ne sont pas numérotées dans l
   const first = content.indexOf("{");
   const last = content.lastIndexOf("}");
   if (first === -1 || last === -1 || last <= first) {
+    console.error("[Parser] No JSON found in response, first 200 chars:", content.slice(0, 200));
     throw new Error(`Failed to parse LLM response as JSON: no JSON object found`);
   }
   try {
     return JSON.parse(content.slice(first, last + 1)) as ParsedScenario;
   } catch (err) {
+    console.error("[Parser] JSON parse error, first 200 chars of slice:", content.slice(first, first + 200));
     throw new Error(`Failed to parse LLM response as JSON: ${err}`);
-  }
   }
 }

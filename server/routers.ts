@@ -2251,10 +2251,20 @@ JSON attendu :
         });
 
         const raw = response.choices[0]?.message?.content ?? "";
-        const first = raw.indexOf("{");
-        const last = raw.lastIndexOf("}");
-        if (first === -1) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Impossible de récupérer les données" });
-        return JSON.parse(raw.slice(first, last + 1));
+        // Extraction robuste
+        const first = raw.indexOf("[");
+        const firstBrace = raw.indexOf("{");
+        if (first === -1 && firstBrace === -1) {
+          throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Réponse vide du modèle" });
+        }
+        // Si le JSON commence par [ (tableau direct) ou { (objet avec clé appels)
+        if (firstBrace !== -1 && (first === -1 || firstBrace < first)) {
+          const last = raw.lastIndexOf("}");
+          return JSON.parse(raw.slice(firstBrace, last + 1));
+        }
+        // Tableau direct
+        const lastBracket = raw.lastIndexOf("]");
+        return { appels: JSON.parse(raw.slice(first, lastBracket + 1)) };
       }),
   }),
 });

@@ -77,7 +77,19 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
   const systemMessages = params.messages.filter(m => m.role === "system").map(m => contentToText(m.content));
   const otherMessages = params.messages
     .filter(m => m.role === "user" || m.role === "assistant")
-    .map(m => ({ role: m.role as "user" | "assistant", content: contentToText(m.content) }));
+    .map(m => ({
+      role: m.role as "user" | "assistant",
+      // Si content est un tableau (ex: PDF en base64), on le passe tel quel à l'API Anthropic
+      content: Array.isArray(m.content) && m.content.some((c: any) => c.type === "document" || c.type === "image")
+        ? (m.content as any[]).map((c: any) => {
+            if (typeof c === "string") return { type: "text", text: c };
+            if (c.type === "text") return c;
+            if (c.type === "document") return c;
+            if (c.type === "image") return c;
+            return { type: "text", text: "" };
+          })
+        : contentToText(m.content),
+    }));
 
   // Si une réponse JSON est demandée, on instruit Claude dans le system prompt
   let systemPrompt = systemMessages.join("\n\n");

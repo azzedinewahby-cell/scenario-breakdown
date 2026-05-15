@@ -2233,7 +2233,9 @@ Règles importantes:
 
 Inclus OBLIGATOIREMENT ces organismes :
 
-FRANCE : CNC (avance sur recettes avant/après réalisation, aide développement LM/CM, aide aux cinémas du monde, COSIP), PROCIREP, Creative Europe MEDIA, fonds régionaux (IDF, PACA, Occitanie), SOFICA, Arte, France Télévisions.
+FRANCE NATIONAL : CNC (avance sur recettes avant/après réalisation, aide développement LM/CM, aide aux cinémas du monde, COSIP), PROCIREP, Creative Europe MEDIA, SOFICA, Arte, France Télévisions.
+
+RÉGIONS FRANÇAISES : Île-de-France Cinéma, Auvergne-Rhône-Alpes Cinéma, Occitanie Films, PACA Cinéma, Bretagne Cinéma, Nouvelle-Aquitaine, Grand Est, Pays de la Loire, Normandie, Hauts-de-France, Centre-Val de Loire, Bourgogne-Franche-Comté, Corse, Martinique, Guadeloupe, La Réunion.
 
 INTERNATIONAL : Doha Film Institute (Qatar), Institut français (Paris), AFAC - Arab Fund for Arts and Culture, Red Sea International Film Festival Fund (Arabie Saoudite), El Gouna Film Festival Fund (Égypte).
 
@@ -2243,14 +2245,14 @@ Format JSON :
 {
   "appels": [
     {
-      "organisme": "Doha Film Institute",
-      "nom": "DFI Grants",
-      "type": "Subvention",
-      "montant": "jusqu'à 100 000 USD",
-      "echeance": "2 sessions/an",
-      "prochaineDeadline": "date exacte si connue",
-      "description": "Soutien aux films arabes et du monde en développement et production.",
-      "url": "https://dohafilminstitute.com/grants",
+      "organisme": "Nom de l'organisme",
+      "nom": "Nom de l'aide",
+      "type": "Subvention / Avance remboursable / Investissement / Crédit d'impôt",
+      "montant": "montant max",
+      "echeance": "dates des sessions",
+      "prochaineDeadline": "date exacte si connue, sinon null",
+      "description": "Description courte.",
+      "url": "https://...",
       "ouvert": true
     }
   ]

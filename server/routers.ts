@@ -2218,8 +2218,8 @@ Règles importantes:
         const { invokeLLM } = await import("./_core/llm");
         const year = new Date().getFullYear();
         const response = await invokeLLM({
-          model: "claude-sonnet-4-6",
-          max_tokens: 3000,
+          speed: "smart",
+          maxTokens: 3000,
           messages: [
             {
               role: "system",

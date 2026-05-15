@@ -223,26 +223,16 @@ Numérote les scènes séquentiellement si elles ne sont pas numérotées dans l
     throw new Error("LLM returned empty or invalid response");
   }
 
+  // Extraction robuste : trouver le premier { et le dernier }
+  const first = content.indexOf("{");
+  const last = content.lastIndexOf("}");
+  if (first === -1 || last === -1 || last <= first) {
+    throw new Error(`Failed to parse LLM response as JSON: no JSON object found`);
+  }
   try {
-    return JSON.parse(content) as ParsedScenario;
+    return JSON.parse(content.slice(first, last + 1)) as ParsedScenario;
   } catch (err) {
-    // Tentative de réparation si JSON tronqué
-    try {
-      // Trouver le dernier objet complet et fermer le JSON
-      let fixed = content.trim();
-      if (!fixed.endsWith("}")) {
-        // Compter les accolades ouvertes et fermer
-        let opens = 0;
-        for (const c of fixed) { if (c === "{" || c === "[") opens++; else if (c === "}" || c === "]") opens--; }
-        // Fermer les structures ouvertes
-        const openChars = fixed.match(/[{[]/g)?.length ?? 0;
-        const closeChars = fixed.match(/[}\]]/g)?.length ?? 0;
-        const diff = openChars - closeChars;
-        for (let i = 0; i < diff; i++) fixed += fixed.includes("[") ? "]" : "}";
-      }
-      return JSON.parse(fixed) as ParsedScenario;
-    } catch {
-      throw new Error(`Failed to parse LLM response as JSON: ${err}`);
-    }
+    throw new Error(`Failed to parse LLM response as JSON: ${err}`);
+  }
   }
 }

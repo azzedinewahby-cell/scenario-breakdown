@@ -1028,15 +1028,21 @@ Génère un traitement littéraire complet en français, scène par scène, avec
 
         const { invokeLLM } = await import("./_core/llm");
         const response = await invokeLLM({
-          model: "claude-haiku-4-5-20251001",
+          model: "claude-sonnet-4-6",
           max_tokens: 4000,
           messages: [{
             role: "user",
-            content: `Analyse ce scénario et génère un schéma narratif JSON.
+            content: `Tu es expert en dramaturgie. Analyse rigoureusement ce scénario et détermine sa vraie structure narrative.
 
 TITRE: ${scenario.title}
-SCÈNES (${scenes.length}):
+SCÈNES (${scenes.length} au total):
 ${scenesText.slice(0, 8000)}
+
+INSTRUCTIONS IMPORTANTES :
+- Analyse d'abord les ruptures dramatiques réelles : où le récit change de direction ? où la tension monte ou redescend structurellement ?
+- Un scénario court ou linéaire peut n'avoir que 2 ou 3 actes. Ne crée JAMAIS un 4ème acte artificiel.
+- Si tu identifies 3 grandes parties (exposition / développement+crise / résolution), c'est 3 actes.
+- Répartis les scènes dans les actes selon leur appartenance dramatique réelle.
 
 Génère UNIQUEMENT ce JSON valide, sans texte avant ou après :
 {
@@ -1045,25 +1051,23 @@ Génère UNIQUEMENT ce JSON valide, sans texte avant ou après :
   "acts": [
     {
       "number": 1,
-      "title": "Titre de l'acte",
-      "subtitle": "sous-titre",
+      "title": "Nom dramatique de l'acte",
+      "subtitle": "sous-titre court",
       "scenes": [
-        { "num": "Sc. 1", "title": "Titre court", "beat": "Beat clé optionnel", "isKey": true },
+        { "num": "Sc. 1", "title": "Titre 3-4 mots", "beat": "nom du beat", "isKey": true },
         { "num": "Sc. 2", "title": "Titre court" }
       ]
     }
   ],
   "tensionPoints": [
-    { "x": 0, "tension": 20 },
-    { "x": 25, "tension": 45, "label": "Élément perturbateur" },
-    { "x": 50, "tension": 65, "label": "Point médian" },
-    { "x": 75, "tension": 95, "label": "CLIMAX" },
-    { "x": 90, "tension": 40 },
-    { "x": 100, "tension": 25 }
+    { "x": 0, "tension": 15 },
+    { "x": 30, "tension": 55, "label": "Élément déclencheur" },
+    { "x": 65, "tension": 90, "label": "CLIMAX" },
+    { "x": 100, "tension": 20 }
   ]
 }
 
-Règles: Détermine toi-même le nombre d'actes (2, 3 ou 4) selon la vraie structure dramatique du scénario — ne force pas 4 actes. Titres de scènes courts (3-4 mots max). isKey=true seulement pour les beats dramatiques clés (5-8 max). tensionPoints doit refléter la vraie courbe de tension. Maximum 6 labels dans tensionPoints.`,
+Règles JSON : isKey=true seulement pour 4-6 beats dramatiques vraiment clés. tensionPoints doit refléter la courbe de tension RÉELLE du scénario (min 4, max 7 points). Maximum 5 labels.`,
           }],
         });
 

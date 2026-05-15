@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import DashboardLayout from "@/components/DashboardLayout";
+import FinancementSearch from "./FinancementSearch";
 import {
   Search,
   Filter,
@@ -395,6 +396,9 @@ export default function FinancementPage() {
             </CardContent>
           </Card>
         </div>
+
+        {/* Appels en cours — recherche automatique */}
+        <FinancementSearch />
 
         {/* Barre de recherche et filtres */}
         <div className="flex flex-col sm:flex-row gap-3">

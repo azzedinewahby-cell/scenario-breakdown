@@ -111,6 +111,7 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
     messages: otherMessages,
   };
   if (systemPrompt.trim()) payload.system = systemPrompt;
+  if ((params as any).anthropicTools) payload.tools = (params as any).anthropicTools;
 
   const expectsJson = fmt?.type === "json_object" || fmt?.type === "json_schema" || !!schema;
 

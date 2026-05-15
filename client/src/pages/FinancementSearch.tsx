@@ -11,6 +11,7 @@ type Appel = {
   montant: string;
   echeance: string;
   prochaineDeadline?: string;
+  joursRestants?: number;
   description: string;
   url?: string;
   ouvert: boolean;
@@ -99,8 +100,19 @@ export default function FinancementSearch() {
                   {appel.echeance && <span className="flex items-center gap-1"><Calendar className="w-3 h-3" />{appel.echeance}</span>}
                 </div>
                 {appel.prochaineDeadline && (
-                  <div className="text-xs font-semibold text-orange-600 mb-1.5 flex items-center gap-1">
-                    <Calendar className="w-3 h-3" /> Prochaine deadline : {appel.prochaineDeadline}
+                  <div className="flex items-center gap-2 mb-1.5">
+                    <span className="text-xs font-semibold text-orange-600 flex items-center gap-1">
+                      <Calendar className="w-3 h-3" /> {appel.prochaineDeadline}
+                    </span>
+                    {appel.joursRestants !== undefined && (
+                      <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${
+                        appel.joursRestants <= 7 ? "bg-red-100 text-red-700" :
+                        appel.joursRestants <= 30 ? "bg-orange-100 text-orange-700" :
+                        "bg-slate-100 text-slate-600"
+                      }`}>
+                        {appel.joursRestants <= 0 ? "Fermé" : `J-${appel.joursRestants}`}
+                      </span>
+                    )}
                   </div>
                 )}
                 <p className="text-xs text-slate-600 leading-relaxed">{appel.description}</p>

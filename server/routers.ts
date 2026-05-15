@@ -2215,59 +2215,72 @@ Règles importantes:
   financement: router({
     searchAppels: protectedProcedure
       .mutation(async () => {
-        const { invokeLLM } = await import("./_core/llm");
-        const year = new Date().getFullYear();
+        const today = new Date();
+        const todayStr = today.toLocaleDateString("fr-FR", { day: "2-digit", month: "long", year: "numeric" });
+        const year = today.getFullYear();
 
-        const response = await invokeLLM({
-          speed: "smart",
-          maxTokens: 6000,
-          responseFormat: { type: "json_object" },
-          messages: [
-            {
-              role: "system",
-              content: `Tu es un expert en financement du cinéma français. Tu connais parfaitement les dates de dépôt des dossiers pour ${year}. Réponds UNIQUEMENT en JSON valide.`,
-            },
-            {
+        // Étape 1 : recherche web des deadlines réelles
+        const searchResponse = await fetch("https://api.anthropic.com/v1/messages", {
+          method: "POST",
+          headers: {
+            "content-type": "application/json",
+            "x-api-key": process.env.ANTHROPIC_API_KEY!,
+            "anthropic-version": "2023-06-01",
+          },
+          body: JSON.stringify({
+            model: "claude-sonnet-4-6",
+            max_tokens: 8000,
+            tools: [{ type: "web_search_20250305", name: "web_search" }],
+            system: `Tu es un expert en financement du cinéma. Aujourd'hui nous sommes le ${todayStr}. Recherche les vraies deadlines de dépôt ${year} pour chaque organisme de financement cinéma.`,
+            messages: [{
               role: "user",
-              content: `Génère la liste des principales aides au cinéma et audiovisuel pour ${year} avec les VRAIES dates limites de dépôt connues.
+              content: `Recherche sur le web les dates limites de dépôt de dossier ${year} pour ces organismes de financement cinéma :
 
-Inclus OBLIGATOIREMENT ces organismes :
+1. AFAC Arab Fund for Arts and Culture - site: arabculturefund.org
+2. Doha Film Institute DFI Grants - site: dohafilminstitute.com  
+3. Red Sea International Film Festival Fund
+4. El Gouna Film Festival Fund
+5. Institut français - aide aux projets de cinéma
+6. CNC avance sur recettes - cnc.fr
+7. PROCIREP
+8. Creative Europe MEDIA
+9. Île-de-France Cinéma
+10. Occitanie Films
+11. Auvergne-Rhône-Alpes Cinéma
 
-FRANCE NATIONAL : CNC (avance sur recettes avant/après réalisation, aide développement LM/CM, aide aux cinémas du monde, COSIP), PROCIREP, Creative Europe MEDIA, SOFICA, Arte, France Télévisions.
+Pour chaque organisme, trouve la VRAIE date limite de dépôt ${year}. Calcule combien de jours il reste avant chaque deadline (aujourd'hui = ${todayStr}).
 
-RÉGIONS FRANÇAISES : Île-de-France Cinéma, Auvergne-Rhône-Alpes Cinéma, Occitanie Films, PACA Cinéma, Bretagne Cinéma, Nouvelle-Aquitaine, Grand Est, Pays de la Loire, Normandie, Hauts-de-France, Centre-Val de Loire, Bourgogne-Franche-Comté, Corse, Martinique, Guadeloupe, La Réunion.
-
-INTERNATIONAL : Doha Film Institute (Qatar), Institut français (Paris), AFAC - Arab Fund for Arts and Culture, Red Sea International Film Festival Fund (Arabie Saoudite), El Gouna Film Festival Fund (Égypte).
-
-Pour chaque aide, indique les dates exactes de dépôt ${year}, la prochaine deadline, et si l'appel est ouvert.
-
-Format JSON :
+Réponds en JSON uniquement :
 {
   "appels": [
     {
-      "organisme": "Nom de l'organisme",
-      "nom": "Nom de l'aide",
-      "type": "Subvention / Avance remboursable / Investissement / Crédit d'impôt",
-      "montant": "montant max",
-      "echeance": "dates des sessions",
-      "prochaineDeadline": "date exacte si connue, sinon null",
-      "description": "Description courte.",
-      "url": "https://...",
+      "organisme": "AFAC",
+      "nom": "AFAC Regular Grants",
+      "type": "Subvention",
+      "montant": "jusqu'à 15 000 USD",
+      "echeance": "Sessions annuelles",
+      "prochaineDeadline": "19 juin 2026",
+      "joursRestants": 35,
+      "description": "Soutien aux artistes et créateurs arabes.",
+      "url": "https://www.arabculturefund.org/Programs/12",
       "ouvert": true
     }
   ]
-}`,
-            },
-          ],
+}`
+            }],
+          }),
         });
 
-        const raw = response.choices[0]?.message?.content ?? "";
-        const first = raw.indexOf("{");
-        const last = raw.lastIndexOf("}");
-        if (first === -1) {
-          throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Impossible de récupérer les données" });
-        }
-        return JSON.parse(raw.slice(first, last + 1));
+        const data = await searchResponse.json() as any;
+        const textContent = (data.content ?? [])
+          .filter((b: any) => b.type === "text")
+          .map((b: any) => b.text)
+          .join("");
+
+        const first = textContent.indexOf("{");
+        const last = textContent.lastIndexOf("}");
+        if (first === -1) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Impossible de récupérer les données de financement" });
+        return JSON.parse(textContent.slice(first, last + 1));
       }),
   }),
 });

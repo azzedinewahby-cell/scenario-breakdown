@@ -2215,25 +2215,56 @@ Règles importantes:
   financement: router({
     searchAppels: protectedProcedure
       .mutation(async () => {
-        // Données des principales aides cinéma françaises (mises à jour manuellement)
-        const appels = [
-          { organisme: "CNC", nom: "Avance sur recettes avant réalisation", type: "Avance remboursable", montant: "jusqu'à 800 000 €", echeance: "4 sessions/an", description: "Soutien à la production de longs métrages. Comité de lecture puis jury.", url: "https://www.cnc.fr/professionnels/aides-et-financements/cinema/production/avance-sur-recettes-avant-realisation", ouvert: true },
-          { organisme: "CNC", nom: "Aide au développement long métrage", type: "Subvention", montant: "jusqu'à 80 000 €", echeance: "Continu", description: "Aide à l'écriture et au développement de projets de longs métrages.", url: "https://www.cnc.fr/professionnels/aides-et-financements/cinema/developpement", ouvert: true },
-          { organisme: "CNC", nom: "Aide au développement court métrage", type: "Subvention", montant: "jusqu'à 20 000 €", echeance: "Continu", description: "Soutien au développement de courts métrages de cinéma.", url: "https://www.cnc.fr/professionnels/aides-et-financements/cinema/developpement", ouvert: true },
-          { organisme: "CNC", nom: "COSIP (Fonds de soutien TV)", type: "Subvention", montant: "Variable", echeance: "Continu", description: "Compte de soutien à l'industrie des programmes audiovisuels.", url: "https://www.cnc.fr/professionnels/aides-et-financements/television", ouvert: true },
-          { organisme: "PROCIREP", nom: "Aide à la production documentaire", type: "Subvention", montant: "jusqu'à 30 000 €", echeance: "3 sessions/an", description: "Aide aux producteurs de films documentaires diffusés à la TV.", url: "https://www.procirep.fr", ouvert: true },
-          { organisme: "Creative Europe MEDIA", nom: "Aide au développement single project", type: "Subvention", montant: "10 000 – 60 000 €", echeance: "2 appels/an", description: "Développement de projets audiovisuels avec potentiel de distribution européenne.", url: "https://creative-europe-desk.eu", ouvert: true },
-          { organisme: "Creative Europe MEDIA", nom: "Aide à la distribution", type: "Subvention", montant: "Variable", echeance: "Continu", description: "Soutien à la distribution transfrontalière de films européens.", url: "https://creative-europe-desk.eu", ouvert: true },
-          { organisme: "Île-de-France (IDFCM)", nom: "Aide à la production cinéma", type: "Subvention", montant: "jusqu'à 300 000 €", echeance: "4 sessions/an", description: "Soutien aux productions tournées en Île-de-France.", url: "https://www.iledefrancecinema.fr", ouvert: true },
-          { organisme: "Occitanie Films", nom: "Aide à la production", type: "Subvention", montant: "jusqu'à 100 000 €", echeance: "3 sessions/an", description: "Soutien aux projets liés à la région Occitanie.", url: "https://www.occitaniefilms.fr", ouvert: true },
-          { organisme: "Bretagne", nom: "Fonds de soutien audiovisuel", type: "Subvention", montant: "jusqu'à 80 000 €", echeance: "Continu", description: "Aide aux productions ancrées en Bretagne.", url: "https://www.bretagne.bzh", ouvert: true },
-          { organisme: "PACA", nom: "Provence-Alpes-Côte d'Azur Cinéma", type: "Subvention", montant: "jusqu'à 150 000 €", echeance: "3 sessions/an", description: "Soutien aux tournages en région PACA.", url: "https://www.pacacinema.com", ouvert: true },
-          { organisme: "SOFICA", nom: "Investissement SOFICA", type: "Investissement", montant: "Variable (part du budget)", echeance: "Continu", description: "Sociétés de financement de l'industrie cinématographique et audiovisuelle.", url: "https://www.cnc.fr/professionnels/aides-et-financements/sofica", ouvert: true },
-          { organisme: "Arte", nom: "Coproduction Arte Cinema", type: "Investissement", montant: "Variable", echeance: "Continu", description: "Coproduction de films d'auteur et documentaires de création.", url: "https://www.arte.tv/fr/arte-pro", ouvert: true },
-          { organisme: "France Télévisions", nom: "Coproduction / préachat", type: "Investissement", montant: "Variable", echeance: "Continu", description: "Préachats et coproductions de films et documentaires.", url: "https://www.francetelevisions.fr/groupe/presse/france-televisions-et-le-cinema", ouvert: true },
-          { organisme: "CNC", nom: "Aide aux cinémas du monde", type: "Subvention", montant: "jusqu'à 200 000 €", echeance: "3 sessions/an", description: "Soutien aux coproductions internationales impliquant des pays hors Europe.", url: "https://www.cnc.fr/professionnels/aides-et-financements/cinema/production/aide-aux-cinemas-du-monde", ouvert: true },
-        ];
-        return { appels };
+        const { invokeLLM } = await import("./_core/llm");
+        const year = new Date().getFullYear();
+
+        const response = await invokeLLM({
+          speed: "smart",
+          maxTokens: 6000,
+          responseFormat: { type: "json_object" },
+          messages: [
+            {
+              role: "system",
+              content: `Tu es un expert en financement du cinéma français. Tu connais parfaitement les dates de dépôt des dossiers pour ${year}. Réponds UNIQUEMENT en JSON valide.`,
+            },
+            {
+              role: "user",
+              content: `Génère la liste des principales aides au cinéma et audiovisuel en France pour ${year} avec les VRAIES dates limites de dépôt connues.
+
+Pour chaque aide, indique :
+- Les dates exactes des sessions de dépôt (ex: "15 janvier, 15 avril, 15 septembre 2026")
+- La prochaine deadline la plus proche
+- Si l'aide est actuellement ouverte ou fermée aux dépôts
+
+Inclus obligatoirement : CNC avance sur recettes (avant et après réalisation), CNC aide au développement, PROCIREP, Creative Europe MEDIA, fonds régionaux majeurs (IDF, PACA, Occitanie), SOFICA, Arte, France Télévisions.
+
+Format JSON :
+{
+  "appels": [
+    {
+      "organisme": "CNC",
+      "nom": "Avance sur recettes avant réalisation",
+      "type": "Avance remboursable",
+      "montant": "jusqu'à 800 000 €",
+      "echeance": "15 janv / 15 avril / 15 sept / 15 nov 2026",
+      "prochaineDeadline": "15 septembre 2026",
+      "description": "Soutien aux longs métrages cinéma, comité de lecture.",
+      "url": "https://www.cnc.fr/professionnels/aides-et-financements/cinema/production/avance-sur-recettes-avant-realisation",
+      "ouvert": true
+    }
+  ]
+}`,
+            },
+          ],
+        });
+
+        const raw = response.choices[0]?.message?.content ?? "";
+        const first = raw.indexOf("{");
+        const last = raw.lastIndexOf("}");
+        if (first === -1) {
+          throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Impossible de récupérer les données" });
+        }
+        return JSON.parse(raw.slice(first, last + 1));
       }),
   }),
 });

@@ -10,6 +10,7 @@ type Appel = {
   type: string;
   montant: string;
   echeance: string;
+  prochaineDeadline?: string;
   description: string;
   url?: string;
   ouvert: boolean;
@@ -97,6 +98,11 @@ export default function FinancementSearch() {
                   {appel.montant && <span className="flex items-center gap-1"><Euro className="w-3 h-3" />{appel.montant}</span>}
                   {appel.echeance && <span className="flex items-center gap-1"><Calendar className="w-3 h-3" />{appel.echeance}</span>}
                 </div>
+                {appel.prochaineDeadline && (
+                  <div className="text-xs font-semibold text-orange-600 mb-1.5 flex items-center gap-1">
+                    <Calendar className="w-3 h-3" /> Prochaine deadline : {appel.prochaineDeadline}
+                  </div>
+                )}
                 <p className="text-xs text-slate-600 leading-relaxed">{appel.description}</p>
               </div>
               <div className="flex flex-col items-end gap-2 shrink-0">

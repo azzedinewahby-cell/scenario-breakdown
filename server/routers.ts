@@ -2229,27 +2229,28 @@ Règles importantes:
             },
             {
               role: "user",
-              content: `Génère la liste des principales aides au cinéma et audiovisuel en France pour ${year} avec les VRAIES dates limites de dépôt connues.
+              content: `Génère la liste des principales aides au cinéma et audiovisuel pour ${year} avec les VRAIES dates limites de dépôt connues.
 
-Pour chaque aide, indique :
-- Les dates exactes des sessions de dépôt (ex: "15 janvier, 15 avril, 15 septembre 2026")
-- La prochaine deadline la plus proche
-- Si l'aide est actuellement ouverte ou fermée aux dépôts
+Inclus OBLIGATOIREMENT ces organismes :
 
-Inclus obligatoirement : CNC avance sur recettes (avant et après réalisation), CNC aide au développement, PROCIREP, Creative Europe MEDIA, fonds régionaux majeurs (IDF, PACA, Occitanie), SOFICA, Arte, France Télévisions.
+FRANCE : CNC (avance sur recettes avant/après réalisation, aide développement LM/CM, aide aux cinémas du monde, COSIP), PROCIREP, Creative Europe MEDIA, fonds régionaux (IDF, PACA, Occitanie), SOFICA, Arte, France Télévisions.
+
+INTERNATIONAL : Doha Film Institute (Qatar), Institut français (Paris), AFAC - Arab Fund for Arts and Culture, Red Sea International Film Festival Fund (Arabie Saoudite), El Gouna Film Festival Fund (Égypte).
+
+Pour chaque aide, indique les dates exactes de dépôt ${year}, la prochaine deadline, et si l'appel est ouvert.
 
 Format JSON :
 {
   "appels": [
     {
-      "organisme": "CNC",
-      "nom": "Avance sur recettes avant réalisation",
-      "type": "Avance remboursable",
-      "montant": "jusqu'à 800 000 €",
-      "echeance": "15 janv / 15 avril / 15 sept / 15 nov 2026",
-      "prochaineDeadline": "15 septembre 2026",
-      "description": "Soutien aux longs métrages cinéma, comité de lecture.",
-      "url": "https://www.cnc.fr/professionnels/aides-et-financements/cinema/production/avance-sur-recettes-avant-realisation",
+      "organisme": "Doha Film Institute",
+      "nom": "DFI Grants",
+      "type": "Subvention",
+      "montant": "jusqu'à 100 000 USD",
+      "echeance": "2 sessions/an",
+      "prochaineDeadline": "date exacte si connue",
+      "description": "Soutien aux films arabes et du monde en développement et production.",
+      "url": "https://dohafilminstitute.com/grants",
       "ouvert": true
     }
   ]

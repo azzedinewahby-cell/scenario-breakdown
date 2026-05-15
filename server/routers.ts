@@ -2211,6 +2211,52 @@ Règles importantes:
         }),
     }),
   }),
+
+  financement: router({
+    searchAppels: protectedProcedure
+      .mutation(async () => {
+        const { invokeLLM } = await import("./_core/llm");
+        const year = new Date().getFullYear();
+        const response = await invokeLLM({
+          model: "claude-sonnet-4-6",
+          max_tokens: 3000,
+          messages: [
+            {
+              role: "system",
+              content: "Tu es un expert en financement du cinéma français. Réponds UNIQUEMENT en JSON valide, sans texte avant ou après.",
+            },
+            {
+              role: "user",
+              content: `Liste les principales aides et appels à projets pour le cinéma et l'audiovisuel en France en ${year}.
+
+Inclus : CNC (avance sur recettes, aide au développement, COSIP), PROCIREP, fonds régionaux (IDF, PACA, Occitanie, Bretagne, Grand Est…), Creative Europe Media, SOFICA, Arte, France Télévisions.
+
+JSON attendu :
+{
+  "appels": [
+    {
+      "organisme": "CNC",
+      "nom": "Avance sur recettes avant réalisation",
+      "type": "Avance remboursable",
+      "montant": "jusqu'à 800 000 €",
+      "echeance": "4 sessions/an",
+      "description": "Soutien à la production de longs métrages de cinéma.",
+      "url": "https://www.cnc.fr",
+      "ouvert": true
+    }
+  ]
+}`,
+            },
+          ],
+        });
+
+        const raw = response.choices[0]?.message?.content ?? "";
+        const first = raw.indexOf("{");
+        const last = raw.lastIndexOf("}");
+        if (first === -1) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Impossible de récupérer les données" });
+        return JSON.parse(raw.slice(first, last + 1));
+      }),
+  }),
 });
 
 export type AppRouter = typeof appRouter;

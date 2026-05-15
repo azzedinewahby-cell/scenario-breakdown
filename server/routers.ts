@@ -2267,11 +2267,12 @@ async function processScenario(
 
     // Insert scenes, scene-characters, and dialogues
     const uniqueLocations = new Set<string>();
-    for (const scene of parsed.scenes) {
+    for (let idx = 0; idx < parsed.scenes.length; idx++) {
+      const scene = parsed.scenes[idx];
       const sceneIds = await insertScenes([
         {
           scenarioId,
-          sceneNumber: scene.sceneNumber,
+          sceneNumber: scene.sceneNumber ?? (idx + 1),
           intExt: scene.intExt,
           location: scene.location,
           dayNight: scene.dayNight,

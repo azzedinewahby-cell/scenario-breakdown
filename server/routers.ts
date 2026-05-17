@@ -2361,7 +2361,8 @@ async function processScenario(
 
       // Link characters to scene
       const scLinks: { sceneId: number; characterId: number }[] = [];
-      for (const charName of scene.characters) {
+      for (const charNameRaw of scene.characters) {
+        const charName = typeof charNameRaw === "string" ? charNameRaw : (charNameRaw as any)?.name ?? String(charNameRaw);
         const charId = charNameToId.get(charName.toUpperCase());
         if (charId) {
           scLinks.push({ sceneId, characterId: charId });
@@ -2376,7 +2377,7 @@ async function processScenario(
         await insertDialogues(
           scene.dialogues.map((d, idx) => ({
             sceneId,
-            characterId: charNameToId.get(d.character.toUpperCase()) ?? null,
+            characterId: charNameToId.get((typeof d.character === "string" ? d.character : (d.character as any)?.name ?? "").toUpperCase()) ?? null,
             text: d.text,
             orderIndex: idx,
           }))

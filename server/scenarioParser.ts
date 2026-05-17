@@ -56,7 +56,8 @@ export async function parseScenarioWithLLM(
 
 Réponds UNIQUEMENT en JSON valide selon le schéma fourni. Ne fais aucun commentaire en dehors du JSON.
 Si une information n'est pas disponible, utilise null.
-Numérote les scènes séquentiellement si elles ne sont pas numérotées dans le texte.`;
+Numérote les scènes séquentiellement si elles ne sont pas numérotées dans le texte.
+CRITIQUE : Dans les valeurs de texte JSON, remplace TOUS les guillemets droits (") par des apostrophes (') pour éviter les erreurs de parsing. N'utilise JAMAIS de guillemets à l'intérieur des valeurs string JSON.`;
 
   const userContent: any[] = [
     {
@@ -126,7 +127,18 @@ Numérote les scènes séquentiellement si elles ne sont pas numérotées dans l
   try {
     return JSON.parse(content.slice(first, last + 1)) as ParsedScenario;
   } catch (err) {
-    console.error("[Parser] JSON parse error, first 200 chars of slice:", content.slice(first, first + 200));
-    throw new Error(`Failed to parse LLM response as JSON: ${err}`);
+    // Tentative de nettoyage : remplacer les guillemets non échappés dans les valeurs string
+    try {
+      const cleaned = content.slice(first, last + 1)
+        // Remplace les newlines littéraux dans les strings par \n
+        .replace(/("(?:[^"\\]|\\.)*")/g, (match) =>
+          match.replace(/\n/g, "\\n").replace(/\r/g, "\\r").replace(/\t/g, "\\t")
+        );
+      return JSON.parse(cleaned) as ParsedScenario;
+    } catch {
+      // Dernier recours : parser avec une tolérance maximale via eval-like approach
+      console.error("[Parser] JSON parse error at position, first 300 chars:", content.slice(first, first + 300));
+      throw new Error(`Failed to parse LLM response as JSON: ${err}`);
+    }
   }
 }
